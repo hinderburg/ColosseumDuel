@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f59907e4ed9d34f4b9104bad35aeda67, type: 3}
   m_Name: ViewPalette
   m_EditorClassIdentifier: ColosseumDuel.Gameplay::ColosseumDuel.Gameplay.View.ViewPalette
-  Body: {fileID: 2100000, guid: 7d19019dc6d882b449868c9c9cbfab76, type: 2}
+  PlayerBody: {fileID: 2100000, guid: 721e3c13fee93a74aa97b632445a4d3e, type: 2}
+  BotBody: {fileID: 2100000, guid: b40ce1abaf04d3848b5ef5b55150cf3a, type: 2}
   PlayerHelmet: {fileID: 2100000, guid: 49c1337288debe0419395a116a5c760e, type: 2}
   BotHelmet: {fileID: 2100000, guid: f5104bc60a55f234380bbe44b33116d2, type: 2}
   Weapon: {fileID: 2100000, guid: ee6fe21f7b83ac649be759c22471908c, type: 2}
@@ -26,6 +27,7 @@ MonoBehaviour:
   Trajectory: {fileID: 2100000, guid: 0904c02e5cb8f324a851dd407171ddc0, type: 2}
   Burst: {fileID: 2100000, guid: 61487793139d73742b5bb77a01e7503d, type: 2}
   HudFont: {fileID: 12800000, guid: d3fb6687adc8e6148adead412fb389b7, type: 3}
+  Skull: {fileID: 21300000, guid: e230024a182ab6c44b267021fda9cf87, type: 3}
   Cube: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   Sphere: {fileID: 10200, guid: 0000000000000000e000000000000000, type: 0}
   Capsule: {fileID: 10205, guid: 0000000000000000e000000000000000, type: 0}

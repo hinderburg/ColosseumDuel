@@ -19,6 +19,9 @@ namespace ColosseumDuel.Gameplay.View
 
         public ViewPalette Palette;
 
+        [Tooltip("The fixed arena camera. World-space labels billboard towards it.")]
+        public Camera ArenaCamera;
+
         [Tooltip("Height above the floor at which the danger rings are drawn, to avoid z-fighting.")]
         public float HazardRingHeight = 0.03f;
 

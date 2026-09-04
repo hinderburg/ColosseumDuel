@@ -15,7 +15,6 @@ namespace ColosseumDuel.Gameplay
     {
         [Header("Scene references")]
         public ArenaView Arena;
-        public CameraShake Shake;
 
         [Header("Squad setup (defaults to the 3 starting gladiators for both sides)")]
         public bool AutoStartOnPlay = true;
@@ -56,7 +55,6 @@ namespace ColosseumDuel.Gameplay
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
             Manager.Damaged += OnDamaged;
-            Manager.Impact += OnImpact;
             Manager.AbilityFired += OnAbilityFired;
 
             if (AutoStartOnPlay) RestartMatch();
@@ -84,8 +82,8 @@ namespace ColosseumDuel.Gameplay
             var viewRoot = new GameObject("Views").transform;
             viewRoot.SetParent(transform, false);
 
-            _playerView = GladiatorView.Create("Player", viewRoot, Arena, Arena.Palette.PlayerHelmet);
-            _botView = GladiatorView.Create("Bot", viewRoot, Arena, Arena.Palette.BotHelmet);
+            _playerView = GladiatorView.Create("Player", viewRoot, Arena, Arena.Palette.PlayerBody, Arena.Palette.PlayerHelmet);
+            _botView = GladiatorView.Create("Bot", viewRoot, Arena, Arena.Palette.BotBody, Arena.Palette.BotHelmet);
 
             for (int i = 0; i < GameConstants.ItemCountOnArena; i++)
                 _itemViews.Add(ItemView.Create($"Item_{i}", viewRoot, Arena));
@@ -132,12 +130,6 @@ namespace ColosseumDuel.Gameplay
             ViewFor(side).PlayHit();
         }
 
-        private void OnImpact(Vector2 virtualPosition)
-        {
-            // A head-on collision is the hardest beat in a cycle, so it gets the full shake; the
-            // glancing damage of a pass-by only rings the gladiators.
-            if (Shake != null) Shake.Shake();
-        }
 
         private void OnAbilityFired(PlayerSide side)
         {

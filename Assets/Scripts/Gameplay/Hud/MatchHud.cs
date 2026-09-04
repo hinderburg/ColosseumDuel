@@ -21,7 +21,6 @@ namespace ColosseumDuel.Gameplay.Hud
 
         private readonly List<RosterEntryView> _playerIcons = new List<RosterEntryView>();
         private readonly List<RosterEntryView> _botIcons = new List<RosterEntryView>();
-        private readonly List<RosterEntryView> _playerCards = new List<RosterEntryView>();
         private readonly List<Button> _pickButtons = new List<Button>();
         private readonly List<Text> _pickButtonLabels = new List<Text>();
 
@@ -70,65 +69,92 @@ namespace ColosseumDuel.Gameplay.Hud
             BuildOverlay(root);
         }
 
+        /// <summary>
+        /// The opponent's squad, top right. Portrait leaves the corners free, and putting each side
+        /// in its own corner means a glance at one corner answers "how is my team doing" without
+        /// having to separate two teams sharing one strip.
+        /// </summary>
         private void BuildTopBar(RectTransform root)
         {
-            var bar = HudFactory.CreatePanel("TopBar", root, new Color(0.05f, 0.05f, 0.07f, 0.55f)).rectTransform;
-            HudFactory.AnchorToEdge(bar, RectTransform.Edge.Top, 78f);
+            var skull = Controller != null && Controller.Arena != null && Controller.Arena.Palette != null
+                ? Controller.Arena.Palette.Skull
+                : null;
 
-            var playerRow = HudFactory.CreateRect("PlayerSquad", bar);
-            HudFactory.Stretch(playerRow);
-            HudFactory.AddRow(playerRow, 8f, TextAnchor.MiddleLeft);
+            var botCorner = HudFactory.CreateRect("BotSquad", root);
+            botCorner.anchorMin = new Vector2(1f, 1f);
+            botCorner.anchorMax = new Vector2(1f, 1f);
+            botCorner.pivot = new Vector2(1f, 1f);
+            botCorner.sizeDelta = new Vector2(GameConstants.SquadSize * (RosterEntryView.Width + 6f) + 12f,
+                RosterEntryView.Height + 12f);
+            botCorner.anchoredPosition = new Vector2(-10f, -10f);
+            HudFactory.AddRow(botCorner, 6f, TextAnchor.UpperRight, new RectOffset(6, 6, 6, 6));
 
-            var botRow = HudFactory.CreateRect("BotSquad", bar);
-            HudFactory.Stretch(botRow);
-            HudFactory.AddRow(botRow, 8f, TextAnchor.MiddleRight);
+            var playerCorner = HudFactory.CreateRect("PlayerSquad", root);
+            playerCorner.anchorMin = Vector2.zero;
+            playerCorner.anchorMax = Vector2.zero;
+            playerCorner.pivot = Vector2.zero;
+            playerCorner.sizeDelta = botCorner.sizeDelta;
+            playerCorner.anchoredPosition = new Vector2(10f, 10f);
+            HudFactory.AddRow(playerCorner, 6f, TextAnchor.LowerLeft, new RectOffset(6, 6, 6, 6));
 
             for (int i = 0; i < GameConstants.SquadSize; i++)
             {
-                _playerIcons.Add(RosterEntryView.Create($"P1_{i}", playerRow, HudFactory.PlayerColor, detailed: false));
-                _botIcons.Add(RosterEntryView.Create($"Bot_{i}", botRow, HudFactory.BotColor, detailed: false));
+                _botIcons.Add(RosterEntryView.Create($"Bot_{i}", botCorner, HudFactory.BotColor, skull));
+                _playerIcons.Add(RosterEntryView.Create($"P1_{i}", playerCorner, HudFactory.PlayerColor, skull));
             }
 
-            _phaseLabel = HudFactory.CreateLabel("PhaseLabel", bar, "", 26);
-            _phaseLabel.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            _phaseLabel.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            _phaseLabel.rectTransform.sizeDelta = new Vector2(420f, 40f);
-            _phaseLabel.rectTransform.anchoredPosition = Vector2.zero;
+            // Below the opponent's corner, not beside it: at this width a phase line long enough to
+            // be useful runs straight into the squad tiles.
+            _phaseLabel = HudFactory.CreateLabel("PhaseLabel", root, "", 20, TextAnchor.UpperLeft);
+            _phaseLabel.rectTransform.anchorMin = new Vector2(0f, 1f);
+            _phaseLabel.rectTransform.anchorMax = new Vector2(1f, 1f);
+            _phaseLabel.rectTransform.pivot = new Vector2(0.5f, 1f);
+            _phaseLabel.rectTransform.offsetMin = new Vector2(14f, 0f);
+            _phaseLabel.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            _phaseLabel.rectTransform.sizeDelta = new Vector2(_phaseLabel.rectTransform.sizeDelta.x, 26f);
+            _phaseLabel.rectTransform.anchoredPosition = new Vector2(0f, -(RosterEntryView.Height + 26f));
         }
 
+        /// <summary>Action buttons and the control hint, bottom right - opposite the player's squad.</summary>
         private void BuildBottomBar(RectTransform root)
         {
-            var bar = HudFactory.CreatePanel("BottomBar", root, new Color(0.05f, 0.05f, 0.07f, 0.55f)).rectTransform;
-            HudFactory.AnchorToEdge(bar, RectTransform.Edge.Bottom, 148f);
+            var actions = HudFactory.CreateRect("Actions", root);
+            actions.anchorMin = new Vector2(1f, 0f);
+            actions.anchorMax = new Vector2(1f, 0f);
+            actions.pivot = new Vector2(1f, 0f);
+            actions.sizeDelta = new Vector2(210f, 130f);
+            actions.anchoredPosition = new Vector2(-10f, 34f);
 
-            var cards = HudFactory.CreateRect("Cards", bar);
-            HudFactory.Stretch(cards);
-            HudFactory.AddRow(cards, 10f, TextAnchor.MiddleLeft, new RectOffset(16, 16, 10, 26));
+            var layout = actions.gameObject.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 8f;
+            layout.childAlignment = TextAnchor.LowerRight;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
 
-            for (int i = 0; i < GameConstants.SquadSize; i++)
-                _playerCards.Add(RosterEntryView.Create($"Card_{i}", cards, HudFactory.PlayerColor, detailed: true));
-
-            var actions = HudFactory.CreateRect("Actions", bar);
-            HudFactory.Stretch(actions);
-            HudFactory.AddRow(actions, 12f, TextAnchor.MiddleRight, new RectOffset(16, 16, 10, 26));
-
-            _defendButton = HudFactory.CreateButton("Defend", actions, "Защита");
-            _defendButton.GetComponent<RectTransform>().sizeDelta = new Vector2(170f, 60f);
-            _defendButton.onClick.AddListener(() => Input?.SubmitDefend());
-
-            _abilityButton = HudFactory.CreateButton("Ability", actions, "Способность");
-            _abilityButton.GetComponent<RectTransform>().sizeDelta = new Vector2(210f, 60f);
+            _abilityButton = HudFactory.CreateButton("Ability", actions, "Способность", 20);
+            _abilityButton.GetComponent<RectTransform>().sizeDelta = new Vector2(196f, 54f);
             _abilityLabel = _abilityButton.GetComponentInChildren<Text>();
             _abilityButton.onClick.AddListener(() => Input?.ToggleAbility());
 
-            _hint = HudFactory.CreateLabel("Hint", bar,
-                "Потяни от гладиатора и отпусти — рывок   ·   Space — защита   ·   Q — способность",
-                16, TextAnchor.LowerCenter, HudFactory.MutedTextColor);
+            _defendButton = HudFactory.CreateButton("Defend", actions, "Защита", 20);
+            _defendButton.GetComponent<RectTransform>().sizeDelta = new Vector2(196f, 54f);
+            _defendButton.onClick.AddListener(() => Input?.SubmitDefend());
+
+            _hint = HudFactory.CreateLabel("Hint", root,
+                "Потяни от гладиатора и отпусти — рывок",
+                14, TextAnchor.LowerCenter, HudFactory.MutedTextColor);
+            // Above the player's corner, for the same reason the phase line sits below the opponent's.
             _hint.rectTransform.anchorMin = new Vector2(0f, 0f);
             _hint.rectTransform.anchorMax = new Vector2(1f, 0f);
             _hint.rectTransform.pivot = new Vector2(0.5f, 0f);
-            _hint.rectTransform.sizeDelta = new Vector2(0f, 22f);
-            _hint.rectTransform.anchoredPosition = new Vector2(0f, 6f);
+            _hint.rectTransform.offsetMin = new Vector2(14f, 0f);
+
+            _hint.rectTransform.offsetMax = new Vector2(-14f, 0f);
+            _hint.rectTransform.sizeDelta = new Vector2(_hint.rectTransform.sizeDelta.x, 20f);
+            // Clear of both the squad corner and the action buttons, which sit at the same height.
+            _hint.rectTransform.anchoredPosition = new Vector2(0f, 190f);
         }
 
         private void BuildOverlay(RectTransform root)
@@ -137,41 +163,50 @@ namespace ColosseumDuel.Gameplay.Hud
             HudFactory.Stretch(panel.rectTransform);
             _overlay = panel.gameObject;
 
-            _overlayTitle = HudFactory.CreateLabel("Title", panel.transform, "", 56);
+            _overlayTitle = HudFactory.CreateLabel("Title", panel.transform, "", 42);
             _overlayTitle.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             _overlayTitle.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            _overlayTitle.rectTransform.sizeDelta = new Vector2(900f, 70f);
-            _overlayTitle.rectTransform.anchoredPosition = new Vector2(0f, 110f);
+            _overlayTitle.rectTransform.sizeDelta = new Vector2(520f, 56f);
+            _overlayTitle.rectTransform.anchoredPosition = new Vector2(0f, 210f);
 
-            _overlaySubtitle = HudFactory.CreateLabel("Subtitle", panel.transform, "", 24,
+            _overlaySubtitle = HudFactory.CreateLabel("Subtitle", panel.transform, "", 20,
                 TextAnchor.MiddleCenter, HudFactory.MutedTextColor);
             _overlaySubtitle.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             _overlaySubtitle.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            _overlaySubtitle.rectTransform.sizeDelta = new Vector2(900f, 40f);
-            _overlaySubtitle.rectTransform.anchoredPosition = new Vector2(0f, 50f);
+            _overlaySubtitle.rectTransform.sizeDelta = new Vector2(520f, 34f);
+            _overlaySubtitle.rectTransform.anchoredPosition = new Vector2(0f, 165f);
 
+            // Stacked, not in a row: three cards side by side do not fit a portrait frame, and
+            // full-width buttons are the easier target on a phone anyway.
             _pickRow = HudFactory.CreateRect("PickRow", panel.transform);
             _pickRow.anchorMin = new Vector2(0.5f, 0.5f);
             _pickRow.anchorMax = new Vector2(0.5f, 0.5f);
-            _pickRow.sizeDelta = new Vector2(900f, 90f);
-            _pickRow.anchoredPosition = new Vector2(0f, -40f);
-            HudFactory.AddRow(_pickRow, 16f, TextAnchor.MiddleCenter);
+            _pickRow.sizeDelta = new Vector2(400f, 260f);
+            _pickRow.anchoredPosition = new Vector2(0f, 20f);
+
+            var pickLayout = _pickRow.gameObject.AddComponent<VerticalLayoutGroup>();
+            pickLayout.spacing = 12f;
+            pickLayout.childAlignment = TextAnchor.UpperCenter;
+            pickLayout.childForceExpandWidth = false;
+            pickLayout.childForceExpandHeight = false;
+            pickLayout.childControlWidth = false;
+            pickLayout.childControlHeight = false;
 
             foreach (var def in GladiatorDef.All)
             {
                 var id = def.Id;
-                var button = HudFactory.CreateButton($"Pick_{def.Name}", _pickRow, def.Name, 22);
-                button.GetComponent<RectTransform>().sizeDelta = new Vector2(260f, 76f);
+                var button = HudFactory.CreateButton($"Pick_{def.Name}", _pickRow, def.Name, 20);
+                button.GetComponent<RectTransform>().sizeDelta = new Vector2(380f, 72f);
                 button.onClick.AddListener(() => Controller?.SubmitPlayerPick(id));
                 _pickButtons.Add(button);
                 _pickButtonLabels.Add(button.GetComponentInChildren<Text>());
             }
 
-            _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Ещё раз", 26);
+            _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Ещё раз", 24);
             _restartButton.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
             _restartButton.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
-            _restartButton.GetComponent<RectTransform>().sizeDelta = new Vector2(240f, 70f);
-            _restartButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -40f);
+            _restartButton.GetComponent<RectTransform>().sizeDelta = new Vector2(240f, 66f);
+            _restartButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, 60f);
             _restartButton.onClick.AddListener(() => Controller?.RestartMatch());
 
             _overlay.SetActive(false);
@@ -197,7 +232,6 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             SyncSide(_playerIcons, state.P1);
             SyncSide(_botIcons, state.Bot);
-            SyncSide(_playerCards, state.P1);
         }
 
         private static void SyncSide(List<RosterEntryView> views, PlayerState player)

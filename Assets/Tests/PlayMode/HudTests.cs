@@ -162,6 +162,33 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator AFallenGladiatorIsMarkedWithASkull_AndTheActiveOneIsFramed()
+        {
+            var tile = Find("P1_0");
+            var skull = tile.GetComponentsInChildren<Transform>(true).First(t => t.name == "Skull");
+            var frame = tile.GetComponentsInChildren<Transform>(true).First(t => t.name == "ActiveFrame");
+
+            Assert.IsFalse(skull.gameObject.activeSelf, "nobody has fallen yet");
+            Assert.IsNotNull(skull.GetComponent<Image>().sprite,
+                "the skull needs a sprite - without one it would draw as a blank square");
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius); // roster index 0
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+            Assert.IsTrue(frame.gameObject.activeSelf, "the gladiator on the arena is framed");
+
+            State.P1.Active.Hp = 0.01f;
+            State.P1.Active.Pos = new Vector2(-40f, 0f);
+            State.Bot.Active.Pos = new Vector2(40f, 0f);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
+
+            yield return RunUntil(() => !State.P1.Roster[0].Alive, 30f);
+
+            Assert.IsTrue(skull.gameObject.activeSelf, "a fallen gladiator carries a skull");
+            Assert.IsFalse(frame.gameObject.activeSelf, "and is no longer framed as the active one");
+        }
+
+        [UnityTest]
         public IEnumerator TheHpBarActuallyShrinksAsAGladiatorTakesDamage()
         {
             // Regression: the bars were built as Image.Type.Filled, whose fillAmount is ignored on an
@@ -169,7 +196,7 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            var card = Find("Card_0");
+            var card = Find("P1_0");
             var fill = card.GetComponentsInChildren<RectTransform>(true)
                 .First(t => t.name == "Fill" && t.parent.name == "Hp");
 

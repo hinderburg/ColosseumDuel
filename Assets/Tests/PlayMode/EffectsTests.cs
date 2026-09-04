@@ -52,34 +52,35 @@ namespace ColosseumDuel.Tests
         // ------------------------------------------------------------------
 
         [Test]
-        public void TheSceneHasACameraShake()
+        public void TheCameraLooksDownAtTheArenaInPerspective()
         {
-            Assert.IsNotNull(_controller.Shake, "GameController.Shake must be wired by the bootstrap");
+            var camera = Camera.main;
+            Assert.IsFalse(camera.orthographic, "the arena is presented in 3D, not flattened");
+            Assert.Greater(camera.transform.position.y, 0f, "the camera sits above the floor");
+            Assert.Less(camera.transform.position.z, 0f, "and in front of it, looking back at the arena");
+
+            float pitch = camera.transform.eulerAngles.x;
+            Assert.Greater(pitch, 20f, "a shallower angle than this would not read as looking down");
+            Assert.Less(pitch, 80f, "and a steeper one collapses back into a top-down view");
         }
 
         [UnityTest]
-        public IEnumerator ACollisionShakesTheCameraAndPutsItBack()
+        public IEnumerator TheCameraNeverMoves()
         {
+            // The design calls for a fixed camera: the arena always occupies the same place on
+            // screen, so aiming can be muscle memory. This is the regression guard for that - the
+            // planning zoom and the impact shake were both removed to honour it.
             var camera = Camera.main;
-            Vector3 resting = camera.transform.position;
+            Vector3 position = camera.transform.position;
+            Quaternion rotation = camera.transform.rotation;
+            float fov = camera.fieldOfView;
 
             yield return ForceCollision();
-            yield return RunUntil(() => _controller.Shake.IsShaking, 3f);
+            yield return RunSeconds(GameConstants.ActionTime + 0.5f);
 
-            // Sample across a few frames: a shake passes through zero twice per cycle, so a single
-            // frame could legitimately catch it at the origin.
-            float maxOffset = 0f;
-            for (int i = 0; i < 12; i++)
-            {
-                yield return null;
-                maxOffset = Mathf.Max(maxOffset, Vector3.Distance(camera.transform.position, resting));
-            }
-            Assert.Greater(maxOffset, 0.01f, "the camera should visibly move on a head-on collision");
-
-            yield return RunUntil(() => !_controller.Shake.IsShaking, 3f);
-            yield return null;
-            Assert.Less(Vector3.Distance(camera.transform.position, resting), 0.001f,
-                "and must come back to rest, not drift");
+            Assert.AreEqual(position, camera.transform.position, "the camera must not move");
+            Assert.AreEqual(rotation, camera.transform.rotation, "nor turn");
+            Assert.AreEqual(fov, camera.fieldOfView, 0.0001f, "nor zoom");
         }
 
         [UnityTest]

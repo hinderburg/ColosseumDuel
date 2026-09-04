@@ -15,7 +15,8 @@ namespace ColosseumDuel.Gameplay.View
     public sealed class ViewPalette : ScriptableObject
     {
         [Header("Gladiators")]
-        public Material Body;
+        public Material PlayerBody;
+        public Material BotBody;
         public Material PlayerHelmet;   // blue - the player, per the design doc
         public Material BotHelmet;      // red - the opponent
 
@@ -50,6 +51,9 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         [Header("HUD")]
         public Font HudFont;
+
+        /// <summary>Marker drawn over a gladiator who is out of the match.</summary>
+        public Sprite Skull;
 
         /// <summary>
         /// Unity's built-in primitive meshes, referenced as assets rather than fetched at runtime.

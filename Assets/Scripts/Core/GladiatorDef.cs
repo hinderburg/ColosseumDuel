@@ -18,8 +18,15 @@ namespace ColosseumDuel.Core
         public readonly string AbilityName;
         public readonly string AbilityDescription;
 
+        /// <summary>
+        /// Shown on the roster cards. Nothing consumes it yet - progression between matches is a
+        /// design question the doc leaves open - so every archetype starts at 1 and the HUD simply
+        /// reports whatever is here.
+        /// </summary>
+        public readonly int Level;
+
         public GladiatorDef(GladiatorId id, string name, float maxHp, float damage, float speed,
-            AbilityKey ability, string abilityName, string abilityDescription)
+            AbilityKey ability, string abilityName, string abilityDescription, int level = 1)
         {
             Id = id;
             Name = name;
@@ -29,6 +36,7 @@ namespace ColosseumDuel.Core
             Ability = ability;
             AbilityName = abilityName;
             AbilityDescription = abilityDescription;
+            Level = level;
         }
 
         public static readonly GladiatorDef Brutius = new GladiatorDef(

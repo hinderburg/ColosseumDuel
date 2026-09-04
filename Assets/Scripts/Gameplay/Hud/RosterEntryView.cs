@@ -5,59 +5,82 @@ using UnityEngine.UI;
 namespace ColosseumDuel.Gameplay.Hud
 {
     /// <summary>
-    /// One gladiator's slot in the HUD. The same class serves the compact squad icons in the top
-    /// bar and the detailed cards in the bottom bar - they show the same three states (fighting /
-    /// available / out) and differ only in how much they spell out.
+    /// One gladiator's slot in a squad panel: a coloured tile with HP and rage, a frame around
+    /// whoever is currently on the arena, a skull over anyone who is out, and the name and level
+    /// underneath.
+    ///
+    /// Both squads use the same class - they differ only in the accent colour - so the player's
+    /// corner and the opponent's corner cannot drift apart in layout or in what they report.
     /// </summary>
     public sealed class RosterEntryView : MonoBehaviour
     {
-        private Image _background;
-        private Image _accent;
-        private Text _name;
-        private Text _detail;
+        public const float Width = 104f;
+        public const float Height = 96f;
+
+        private Image _tile;
+        private Image _frame;
+        private Image _skull;
         private Image _hpFill;
         private Image _rageFill;
-        private bool _detailed;
+        private Text _name;
+        private Text _level;
+        private Color _sideColor;
 
-        public static RosterEntryView Create(string name, Transform parent, Color sideColor, bool detailed)
+        public static RosterEntryView Create(string name, Transform parent, Color sideColor, Sprite skullSprite)
         {
-            var background = HudFactory.CreatePanel(name, parent, HudFactory.PanelColor);
-            var rect = background.rectTransform;
-            rect.sizeDelta = detailed ? new Vector2(180f, 104f) : new Vector2(132f, 62f);
+            var tile = HudFactory.CreatePanel(name, parent, HudFactory.PanelColor);
+            var rect = tile.rectTransform;
+            rect.sizeDelta = new Vector2(Width, Height);
 
-            var view = background.gameObject.AddComponent<RosterEntryView>();
-            view._background = background;
-            view._detailed = detailed;
+            var view = tile.gameObject.AddComponent<RosterEntryView>();
+            view._tile = tile;
+            view._sideColor = sideColor;
 
-            // A thin stripe in the side's colour, which also doubles as the "currently fighting"
-            // highlight - it turns bright instead of a separate outline object.
-            var accent = HudFactory.CreatePanel("Accent", rect, sideColor);
-            accent.rectTransform.anchorMin = new Vector2(0f, 0f);
-            accent.rectTransform.anchorMax = new Vector2(0f, 1f);
-            accent.rectTransform.pivot = new Vector2(0f, 0.5f);
-            accent.rectTransform.sizeDelta = new Vector2(6f, 0f);
-            accent.rectTransform.anchoredPosition = Vector2.zero;
-            view._accent = accent;
+            // Portrait area: a flat block in the side's colour, standing in for the character art
+            // that will arrive with the humanoid models.
+            var portrait = HudFactory.CreatePanel("Portrait", rect, sideColor);
+            var portraitRect = portrait.rectTransform;
+            portraitRect.anchorMin = new Vector2(0f, 1f);
+            portraitRect.anchorMax = new Vector2(1f, 1f);
+            portraitRect.pivot = new Vector2(0.5f, 1f);
+            portraitRect.offsetMin = new Vector2(6f, 0f);
+            portraitRect.offsetMax = new Vector2(-6f, 0f);
+            portraitRect.sizeDelta = new Vector2(portraitRect.sizeDelta.x, 44f);
+            portraitRect.anchoredPosition = new Vector2(0f, -6f);
 
-            float top = detailed ? -8f : -6f;
+            // Frame marking the gladiator currently fighting. A separate outline object rather than
+            // a colour change on the tile, so "on the arena" and "still alive" stay independent.
+            var frame = HudFactory.CreatePanel("ActiveFrame", rect, Color.clear);
+            HudFactory.Stretch(frame.rectTransform);
+            frame.sprite = null;
+            var outline = frame.gameObject.AddComponent<Outline>();
+            outline.effectColor = HudFactory.ActiveOutline;
+            outline.effectDistance = new Vector2(3f, 3f);
+            frame.raycastTarget = false;
+            view._frame = frame;
 
-            view._name = HudFactory.CreateLabel("Name", rect, "", detailed ? 20 : 16, TextAnchor.UpperLeft);
-            PlaceRow(view._name.rectTransform, top, detailed ? 24f : 20f);
-
-            if (detailed)
-            {
-                view._detail = HudFactory.CreateLabel("Detail", rect, "", 15, TextAnchor.UpperLeft,
-                    HudFactory.MutedTextColor);
-                PlaceRow(view._detail.rectTransform, top - 26f, 20f);
-            }
+            view._skull = HudFactory.CreatePanel("Skull", rect, Color.white);
+            view._skull.sprite = skullSprite;
+            view._skull.preserveAspect = true;
+            var skullRect = view._skull.rectTransform;
+            skullRect.anchorMin = new Vector2(0.5f, 1f);
+            skullRect.anchorMax = new Vector2(0.5f, 1f);
+            skullRect.pivot = new Vector2(0.5f, 1f);
+            skullRect.sizeDelta = new Vector2(36f, 36f);
+            skullRect.anchoredPosition = new Vector2(0f, -10f);
 
             view._hpFill = HudFactory.CreateBar("Hp", rect, HudFactory.HpColor);
-            PlaceRow(view._hpFill.transform.parent.GetComponent<RectTransform>(),
-                detailed ? top - 52f : top - 26f, 12f);
+            PlaceRow(view._hpFill.transform.parent.GetComponent<RectTransform>(), -52f, 8f);
 
             view._rageFill = HudFactory.CreateBar("Rage", rect, HudFactory.RageColor);
-            PlaceRow(view._rageFill.transform.parent.GetComponent<RectTransform>(),
-                detailed ? top - 68f : top - 42f, 8f);
+            PlaceRow(view._rageFill.transform.parent.GetComponent<RectTransform>(), -62f, 6f);
+
+            view._name = HudFactory.CreateLabel("Name", rect, "", 14, TextAnchor.MiddleCenter);
+            PlaceRow(view._name.rectTransform, -70f, 18f);
+
+            view._level = HudFactory.CreateLabel("Level", rect, "", 12, TextAnchor.MiddleCenter,
+                HudFactory.MutedTextColor);
+            PlaceRow(view._level.rectTransform, -86f, 14f);
 
             return view;
         }
@@ -67,42 +90,27 @@ namespace ColosseumDuel.Gameplay.Hud
             rect.anchorMin = new Vector2(0f, 1f);
             rect.anchorMax = new Vector2(1f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.offsetMin = new Vector2(14f, 0f);
-            rect.offsetMax = new Vector2(-10f, 0f);
+            rect.offsetMin = new Vector2(6f, 0f);
+            rect.offsetMax = new Vector2(-6f, 0f);
             rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
-            rect.anchoredPosition = new Vector2(2f, top);
+            rect.anchoredPosition = new Vector2(0f, top);
         }
 
         public void Sync(GladiatorInstance g, bool isActive)
         {
-            _name.text = g.Def.Name;
-            _name.color = g.Alive ? HudFactory.TextColor : HudFactory.MutedTextColor;
+            bool alive = g.Alive;
 
-            _background.color = !g.Alive ? HudFactory.DeadColor : HudFactory.PanelColor;
-            // Bright stripe = this is the gladiator currently on the arena.
-            _accent.color = isActive
-                ? HudFactory.ActiveOutline
-                : new Color(_accent.color.r, _accent.color.g, _accent.color.b, g.Alive ? 0.55f : 0.25f);
+            _name.text = g.Def.Name;
+            _name.color = alive ? HudFactory.TextColor : HudFactory.MutedTextColor;
+            _level.text = $"ур. {g.Def.Level}";
+
+            _tile.color = alive ? HudFactory.PanelColor : HudFactory.DeadColor;
+            _frame.gameObject.SetActive(isActive && alive);
+            _skull.gameObject.SetActive(!alive);
 
             HudFactory.SetFill(_hpFill, g.Def.MaxHp > 0f ? g.Hp / g.Def.MaxHp : 0f);
             HudFactory.SetFill(_rageFill, g.Rage / GameConstants.RageMax);
-            _hpFill.color = g.Alive ? HudFactory.HpColor : HudFactory.MutedTextColor;
-
-            if (!_detailed) return;
-
-            if (!g.Alive)
-            {
-                _detail.text = "выбыл";
-                return;
-            }
-
-            string carried = "";
-            if (g.Weapon == WeaponType.OneHanded) carried = "  топор";
-            else if (g.Weapon == WeaponType.TwoHanded) carried = "  трезубец";
-            if (g.HasShield) carried += "  щит";
-
-            string status = isActive ? "на арене" : "в запасе";
-            _detail.text = $"{Mathf.CeilToInt(g.Hp)}/{Mathf.RoundToInt(g.Def.MaxHp)}  {status}{carried}";
+            _hpFill.color = alive ? HudFactory.HpColor : HudFactory.MutedTextColor;
         }
     }
 }

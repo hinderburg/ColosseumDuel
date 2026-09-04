@@ -20,8 +20,8 @@ namespace ColosseumDuel.Tests
     public class ArenaScreenshotTest
     {
         private const string ScenePath = "Assets/Scenes/Arena.unity";
-        private const int Width = 1280;
-        private const int Height = 720;
+        private const int Width = 576;
+        private const int Height = 1024;
 
         [UnityTest]
         public IEnumerator ArenaRendersAFrame()

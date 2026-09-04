@@ -39,6 +39,38 @@ namespace ColosseumDuel.EditorTools
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
 
+        // --- presentation format ---
+        // Portrait 9:16. The arena occupies the middle band and the two rosters sit above and below
+        // it, which is what the vertical shape buys.
+        private const int ScreenWidth = 576;
+        private const int ScreenHeight = 1024;
+
+        /// <summary>Degrees above the horizontal that the camera looks down at the arena.</summary>
+        private const float CameraPitch = 60f;
+        private const float CameraFieldOfView = 55f;
+
+        /// <summary>
+        /// Puts the camera on a fixed arc above and in front of the arena, far enough back that the
+        /// full circle fits the narrow dimension of a portrait frame.
+        ///
+        /// In portrait the horizontal field of view is the binding constraint - it is far narrower
+        /// than the vertical one - so the distance is derived from it rather than guessed.
+        /// </summary>
+        private static void PlaceArenaCamera(Transform camera, float arenaRadius)
+        {
+            float aspect = ScreenWidth / (float)ScreenHeight;
+            float halfVertical = CameraFieldOfView * 0.5f * Mathf.Deg2Rad;
+            float halfHorizontal = Mathf.Atan(Mathf.Tan(halfVertical) * aspect);
+
+            // A little margin so the wall does not touch the edge of the frame.
+            float needed = arenaRadius * 1.04f;
+            float distance = needed / Mathf.Tan(halfHorizontal);
+
+            var forward = Quaternion.Euler(CameraPitch, 0f, 0f) * Vector3.forward;
+            camera.position = -forward * distance;
+            camera.rotation = Quaternion.Euler(CameraPitch, 0f, 0f);
+        }
+
         [MenuItem("Tools/Colosseum/Bootstrap project (settings + scene)", priority = 0)]
         public static void RunAll()
         {
@@ -131,6 +163,11 @@ namespace ColosseumDuel.EditorTools
             PlayerSettings.productName = "Colosseum Duel";
             PlayerSettings.runInBackground = true;
 
+            // Portrait. The camera framing in PlaceArenaCamera is derived from this ratio, so the
+            // two have to be changed together or the arena stops fitting the frame.
+            PlayerSettings.defaultWebScreenWidth = ScreenWidth;
+            PlayerSettings.defaultWebScreenHeight = ScreenHeight;
+
             // GitHub Pages cannot be told to send Content-Encoding, which is why the usual advice is
             // to turn compression off entirely - at the cost of shipping a ~44 MB uncompressed
             // player. The decompression fallback is the better answer: Unity embeds a JS
@@ -208,9 +245,12 @@ namespace ColosseumDuel.EditorTools
                 AssetDatabase.CreateAsset(palette, PalettePath);
             }
 
-            palette.Body = Lit("GladiatorBody", new Color(0.72f, 0.70f, 0.66f));
-            palette.PlayerHelmet = Lit("HelmetPlayer", new Color(0.20f, 0.45f, 0.95f));
-            palette.BotHelmet = Lit("HelmetBot", new Color(0.90f, 0.22f, 0.20f));
+            // Whole body in the side colour, helmet a lighter tint: at this camera distance a small
+            // coloured helmet on a grey body was not enough to tell the two fighters apart.
+            palette.PlayerBody = Lit("BodyPlayer", new Color(0.18f, 0.42f, 0.92f));
+            palette.BotBody = Lit("BodyBot", new Color(0.86f, 0.20f, 0.18f));
+            palette.PlayerHelmet = Lit("HelmetPlayer", new Color(0.58f, 0.76f, 1.00f));
+            palette.BotHelmet = Lit("HelmetBot", new Color(1.00f, 0.60f, 0.55f));
 
             palette.Weapon = Lit("ItemWeapon", new Color(0.85f, 0.80f, 0.35f));
             palette.Shield = Lit("ItemShield", new Color(0.55f, 0.60f, 0.70f));
@@ -229,6 +269,8 @@ namespace ColosseumDuel.EditorTools
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with
             // its licence). Unity's built-in font has no Cyrillic glyphs, so it draws nothing at all
             // for the Russian captions once there are no OS fonts to fall back on - i.e. in a build.
+            palette.Skull = ProceduralTextures.EnsureSkull(TexturesDir + "/Skull.png");
+
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)
                 Debug.LogWarning($"[Colosseum] HUD font missing at {HudFontPath} - Cyrillic will not render in a build.");
@@ -267,7 +309,7 @@ namespace ColosseumDuel.EditorTools
             float r = WorldArenaRadius;
 
             var sandMat = Lit("Sand", new Color(0.76f, 0.66f, 0.44f));
-            var wallMat = Lit("Wall", new Color(0.32f, 0.29f, 0.27f));
+            var wallMat = Lit("Wall", new Color(0.52f, 0.36f, 0.24f)); // brown stone, per the layout sketch
             // The floor gets its texture once across the whole disc - no repeat, so no seams and no
             // tiling pattern to notice. The wall is 48 separate blocks, so that one does repeat.
             ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
@@ -278,6 +320,7 @@ namespace ColosseumDuel.EditorTools
             var arena = arenaGo.AddComponent<ArenaView>();
             arena.WorldArenaRadius = r;
             arena.Palette = palette;
+            // Assigned below, once the camera exists - world-space labels billboard towards it.
 
             // floor: a Unity cylinder is radius 0.5 and height 2
             var floor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -308,17 +351,21 @@ namespace ColosseumDuel.EditorTools
                 UnityEngine.Object.DestroyImmediate(block.GetComponent<Collider>());
             }
 
-            // --- camera: straight down, framing the whole arena ---
+            // --- camera: fixed, angled, perspective ---
+            // It never moves - no follow, no zoom, no shake - so the arena always sits in exactly
+            // the same place on screen and the player can aim by muscle memory.
             var cameraGo = new GameObject("ArenaCamera");
             cameraGo.tag = "MainCamera";
-            cameraGo.transform.position = new Vector3(0f, 20f, 0f);
-            cameraGo.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             var cam = cameraGo.AddComponent<Camera>();
-            cam.orthographic = true;
-            cam.orthographicSize = r * 1.15f;
+            cam.orthographic = false;
+            cam.fieldOfView = CameraFieldOfView;
+            cam.nearClipPlane = 0.5f;
+            cam.farClipPlane = 200f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.06f, 0.05f, 0.07f);
+            PlaceArenaCamera(cameraGo.transform, r);
             cameraGo.AddComponent<AudioListener>();
+            arena.ArenaCamera = cam;
 
             var lightGo = new GameObject("Sun");
             lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
@@ -336,10 +383,6 @@ namespace ColosseumDuel.EditorTools
             input.Controller = controller;
             input.ArenaCamera = cam;
 
-            var focus = cameraGo.AddComponent<PlanningFocusCamera>();
-            focus.Controller = controller;
-
-            controller.Shake = cameraGo.AddComponent<CameraShake>();
 
             BuildHud(controller, input);
 
@@ -361,7 +404,7 @@ namespace ColosseumDuel.EditorTools
 
             var scaler = canvasGo.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.referenceResolution = new Vector2(ScreenWidth, ScreenHeight);
             scaler.matchWidthOrHeight = 0.5f;
 
             canvasGo.AddComponent<GraphicRaycaster>();

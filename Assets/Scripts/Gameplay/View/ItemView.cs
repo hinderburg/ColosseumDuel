@@ -29,7 +29,7 @@ namespace ColosseumDuel.Gameplay.View
             // One shape per kind, all pre-built and toggled - swapping meshes at runtime would
             // allocate, and there are only three kinds.
             view._weapon = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Cube), "Weapon", root.transform, palette.Weapon);
-            view._weapon.transform.localScale = new Vector3(radius * 0.5f, radius * 1.8f, radius * 0.5f);
+            view._weapon.transform.localScale = new Vector3(radius * 0.8f, radius * 1.5f, radius * 0.5f);
             view._weapon.transform.localPosition = new Vector3(0f, radius * 0.9f, 0f);
 
             view._shield = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Cylinder), "Shield", root.transform, palette.Shield);

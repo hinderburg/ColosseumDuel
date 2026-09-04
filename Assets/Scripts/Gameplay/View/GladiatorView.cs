@@ -12,8 +12,8 @@ namespace ColosseumDuel.Gameplay.View
     /// </summary>
     public sealed class GladiatorView : MonoBehaviour
     {
-        private const float BarWidth = 1.1f;
-        private const float BarHeight = 0.14f;
+        private const float BarWidth = 0.95f;
+        private const float BarHeight = 0.11f;
         private const float BarGap = 0.05f;
 
         /// <summary>Seconds a hit reaction lasts.</summary>
@@ -21,6 +21,7 @@ namespace ColosseumDuel.Gameplay.View
 
         private ArenaView _arena;
         private Transform _model;
+        private Transform _bars;
         private Transform _burst;
         private MeshRenderer _burstRenderer;
         private MaterialPropertyBlock _burstProperties;
@@ -35,7 +36,8 @@ namespace ColosseumDuel.Gameplay.View
         private Transform _shieldMarker;
         private Transform _abilityMarker;
 
-        public static GladiatorView Create(string name, Transform parent, ArenaView arena, Material helmetMaterial)
+        public static GladiatorView Create(string name, Transform parent, ArenaView arena,
+            Material bodyMaterial, Material helmetMaterial)
         {
             var palette = arena.Palette;
 
@@ -49,13 +51,13 @@ namespace ColosseumDuel.Gameplay.View
             float radius = arena.ScaleLength(GameConstants.GladiatorRadius);
             float bodyHeight = radius * 2.2f;
 
-            // The model is a separate child so it can spin to face a direction while the bars above
-            // the head stay axis-aligned to the top-down camera.
+            // The model is a separate child so it can spin to face a direction without dragging the
+            // bars above the head around with it - those answer to the camera, not to the fight.
             var model = new GameObject("Model");
             model.transform.SetParent(root.transform, false);
             view._model = model.transform;
 
-            var body = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Capsule), "Body", model.transform, palette.Body);
+            var body = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Capsule), "Body", model.transform, bodyMaterial);
             body.transform.localScale = new Vector3(radius * 2f, bodyHeight * 0.5f, radius * 2f);
             body.transform.localPosition = new Vector3(0f, bodyHeight * 0.5f, 0f);
 
@@ -86,11 +88,14 @@ namespace ColosseumDuel.Gameplay.View
             abilityRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             view._abilityMarker = ability.transform;
 
-            // --- bars, laid flat on the ground plane above the head (screen-up is world +Z under
-            // the top-down camera) ---
+            // --- bars, standing upright above the head and turned to face the camera ---
+            // They used to lie flat on the ground, which only reads under a straight top-down view;
+            // with the camera tilted they would be seen edge-on and squashed.
             var bars = new GameObject("Bars");
             bars.transform.SetParent(root.transform, false);
-            bars.transform.localPosition = new Vector3(0f, 0.05f, radius * 2.6f);
+            // Generous, because a tilted camera foreshortens vertical offsets by roughly half.
+            bars.transform.localPosition = new Vector3(0f, bodyHeight * 3.4f, 0f);
+            view._bars = bars.transform;
 
             // An expanding ring for one-shot moments (a hit landing, an ability firing). Kept as a
             // single reusable object rather than spawned per event - at two gladiators there is
@@ -127,23 +132,24 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>Returns the fill transform; its local X scale is driven 0..1 by Sync.</summary>
         private static Transform MakeBar(ViewPalette palette, string name, Transform parent, Material background,
-            Material fill, float zOffset)
+            Material fill, float verticalOffset)
         {
             var root = new GameObject(name + "Bar");
             root.transform.SetParent(parent, false);
-            root.transform.localPosition = new Vector3(0f, 0f, zOffset);
+            root.transform.localPosition = new Vector3(0f, verticalOffset, 0f);
 
-            var bg = ViewPrimitives.CreateGroundQuad(palette.MeshFor(PrimitiveType.Quad), "Background", root.transform, background);
+            // Plain upright quads in the billboard's local XY plane; the parent turns them to camera.
+            var bg = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Quad), "Background", root.transform, background);
             bg.transform.localScale = new Vector3(BarWidth, BarHeight, 1f);
 
             // The fill is parented to a pivot sitting on the bar's left edge, so scaling the pivot
             // grows the bar rightwards instead of from the middle out.
             var pivot = new GameObject("FillPivot");
             pivot.transform.SetParent(root.transform, false);
-            pivot.transform.localPosition = new Vector3(-BarWidth * 0.5f, 0.001f, 0f);
+            pivot.transform.localPosition = new Vector3(-BarWidth * 0.5f, 0f, -0.01f);
 
-            var fillQuad = ViewPrimitives.CreateGroundQuad(palette.MeshFor(PrimitiveType.Quad), "Fill", pivot.transform, fill);
-            fillQuad.transform.localScale = new Vector3(BarWidth, BarHeight * 0.8f, 1f);
+            var fillQuad = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Quad), "Fill", pivot.transform, fill);
+            fillQuad.transform.localScale = new Vector3(BarWidth, BarHeight * 0.75f, 1f);
             fillQuad.transform.localPosition = new Vector3(BarWidth * 0.5f, 0f, 0f);
 
             return pivot.transform;
@@ -182,6 +188,12 @@ namespace ColosseumDuel.Gameplay.View
             var forward = new Vector3(g.Facing.x, 0f, g.Facing.y);
             if (forward.sqrMagnitude > 0.0001f)
                 _model.localRotation = Quaternion.LookRotation(forward, Vector3.up);
+
+            // Billboard the bars. The camera never moves, so this is the same rotation every frame -
+            // but reading it from the camera keeps the two from drifting apart if the framing is
+            // ever retuned, which it will be.
+            if (_arena.ArenaCamera != null)
+                _bars.rotation = _arena.ArenaCamera.transform.rotation;
 
             AdvanceEffects(Time.deltaTime);
 

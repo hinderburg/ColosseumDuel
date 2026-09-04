@@ -90,6 +90,76 @@ namespace ColosseumDuel.EditorTools
             return Write(path, pixels, WallSize);
         }
 
+        /// <summary>
+        /// The "this gladiator is out" marker, as a sprite.
+        ///
+        /// Drawn from a bitmap rather than taken from a font glyph: Inter has no skull character, and
+        /// a missing glyph renders as nothing at all - the same silent failure that made the whole
+        /// HUD's Cyrillic disappear in the first WebGL build.
+        /// </summary>
+        public static Sprite EnsureSkull(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            string[] rows =
+            {
+                "................",
+                "....########....",
+                "..############..",
+                ".##############.",
+                ".##############.",
+                ".###..####..###.",
+                ".##....##....##.",
+                ".##....##....##.",
+                ".###..####..###.",
+                ".##############.",
+                "..############..",
+                "...##########...",
+                "...#.#.##.#.#...",
+                "...##########...",
+                "....########....",
+                "................",
+            };
+
+            const int scale = 4;
+            int size = rows.Length * scale;
+            var pixels = new Color32[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                // Bitmap rows read top-down, texture rows read bottom-up.
+                string row = rows[rows.Length - 1 - y / scale];
+                for (int x = 0; x < size; x++)
+                {
+                    bool solid = row[x / scale] == '#';
+                    pixels[y * size + x] = solid
+                        ? new Color32(255, 255, 255, 255)
+                        : new Color32(255, 255, 255, 0);
+                }
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.filterMode = FilterMode.Point; // keep the pixel edges crisp
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
         // ------------------------------------------------------------------
 
         private static Color32 Tint(Color baseColor, float shade)
