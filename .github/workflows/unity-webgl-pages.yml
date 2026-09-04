@@ -1,26 +1,27 @@
-name: Build WebGL and deploy to GitHub Pages
+name: Build WebGL and publish to Pages
 
-# Builds the Unity project as WebGL on every push to main and publishes the result to
-# GitHub Pages.
+# Rebuilds the game in CI and publishes it to the gh-pages branch - the same branch
+# Tools/publish-webgl.ps1 pushes to from a local build, so there is one publishing target and
+# two ways to fill it.
 #
-# One-time setup before this can work:
-#   1. Repository secrets UNITY_EMAIL / UNITY_PASSWORD (a Unity Personal account is enough),
-#      or UNITY_LICENSE with an activation file - see https://game.ci/docs/github/activation
-#   2. Settings -> Pages -> Source: GitHub Actions (not a branch)
+# MANUAL-ONLY UNTIL UNITY CREDENTIALS EXIST. Unity cannot build headlessly without a licence,
+# so with no secrets this workflow can only fail, and a red X on every push is worse than no
+# automation. To turn it on:
+#   1. Settings -> Secrets and variables -> Actions: add UNITY_EMAIL and UNITY_PASSWORD
+#      (a free Unity Personal account is enough), or UNITY_LICENSE with an activation file -
+#      see https://game.ci/docs/github/activation
+#   2. Uncomment the `push` trigger below.
 #
-# The build uses ProjectBootstrap.BuildWebGL rather than unity-builder's default entry point, so
-# CI and a local "Tools > Colosseum > Build WebGL" produce byte-for-byte the same settings -
-# including Compression Format = Disabled, without which Pages serves a white screen.
+# Until then, publish with:  powershell -File Tools/publish-webgl.ps1
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch: {}
+  # push:
+  #   branches: [main]
 
 permissions:
-  contents: read
+  contents: write   # the deploy step pushes the built site to gh-pages
 
-# A second push while a deploy is in flight should supersede it, not race it.
 concurrency:
   group: pages-${{ github.ref }}
   cancel-in-progress: true
@@ -49,8 +50,8 @@ jobs:
           testMode: all
           githubToken: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
-    name: Build WebGL
+  build-and-publish:
+    name: Build WebGL and push to gh-pages
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +65,8 @@ jobs:
           key: Library-WebGL-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: Library-WebGL-
 
+      # The same entry point as a local build, so CI and a developer's machine cannot drift
+      # apart on the settings the published build depends on.
       - uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -74,22 +77,13 @@ jobs:
           buildName: WebGL
           buildMethod: ColosseumDuel.EditorTools.ProjectBootstrap.BuildWebGLForCI
 
-      # unity-builder writes to <buildsPath>/<targetPlatform>/<buildName>, i.e. build/WebGL/WebGL.
-      # That inner folder is the site root - index.html must sit at the top of the artifact.
-      - uses: actions/upload-pages-artifact@v3
+      # unity-builder writes to <buildsPath>/<targetPlatform>/<buildName>; that inner folder is
+      # the site root, so index.html ends up at the top of gh-pages.
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: build/WebGL/WebGL
-
-  deploy:
-    name: Deploy to GitHub Pages
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: build/WebGL/WebGL
+          publish_branch: gh-pages
+          # Pages runs Jekyll on branch sources otherwise, which mangles the build.
+          enable_jekyll: false
