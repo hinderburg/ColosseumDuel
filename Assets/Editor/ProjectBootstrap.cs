@@ -47,7 +47,7 @@ namespace ColosseumDuel.EditorTools
         private const int ScreenHeight = 1024;
 
         /// <summary>Degrees above the horizontal that the camera looks down at the arena.</summary>
-        private const float CameraPitch = 60f;
+        private const float CameraPitch = 66f;
         private const float CameraFieldOfView = 55f;
 
         /// <summary>
@@ -72,10 +72,12 @@ namespace ColosseumDuel.EditorTools
             float halfDepth = arenaRadius * GameConstants.ArenaElongation * margin;
             float projectedHalfHeight = halfDepth * Mathf.Sin(CameraPitch * Mathf.Deg2Rad);
 
-            // The squad corners own the top and bottom of the frame, so the arena only gets the band
-            // between them - roughly three quarters of the height. Framing to the full height puts
-            // the near edge of the oval underneath the player's own squad.
-            const float verticalBandFraction = 0.72f;
+            // How much of the frame height the arena may claim. At this elongation an oval that
+            // fills the width is taller than the frame, so something has to give: keeping the width
+            // and letting the ends run behind the squad corners reads better than a shape that fits
+            // entirely but sits small with margins on both sides. The corner tiles are opaque, so
+            // they stay legible over it.
+            const float verticalBandFraction = 0.95f;
 
             float distance = Mathf.Max(
                 halfWidth / Mathf.Tan(halfHorizontal),

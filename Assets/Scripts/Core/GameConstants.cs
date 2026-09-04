@@ -24,7 +24,7 @@ namespace ColosseumDuel.Core
         /// 9:16 frame instead of leaving a band of empty space above and below.
         /// See ArenaShape for the geometry everything else goes through.
         /// </summary>
-        public const float ArenaElongation = 1.55f;
+        public const float ArenaElongation = 2.0f;
         public const float GladiatorRadius = 16f;
         public const float ItemRadius = 12f;
 
