@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay;
 using ColosseumDuel.Gameplay.Hud;
 using ColosseumDuel.Gameplay.View;
@@ -62,12 +63,31 @@ namespace ColosseumDuel.EditorTools
             float halfVertical = CameraFieldOfView * 0.5f * Mathf.Deg2Rad;
             float halfHorizontal = Mathf.Atan(Mathf.Tan(halfVertical) * aspect);
 
-            // A little margin so the wall does not touch the edge of the frame.
-            float needed = arenaRadius * 1.04f;
-            float distance = needed / Mathf.Tan(halfHorizontal);
+            const float margin = 1.06f; // so the wall does not touch the edge of the frame
+
+            // Both axes have to fit, and which one binds depends on the elongation and the tilt: a
+            // portrait frame is narrow, but a long arena seen at an angle is also tall on screen.
+            // Taking the larger of the two distances lets either constraint win.
+            float halfWidth = arenaRadius * margin;
+            float halfDepth = arenaRadius * GameConstants.ArenaElongation * margin;
+            float projectedHalfHeight = halfDepth * Mathf.Sin(CameraPitch * Mathf.Deg2Rad);
+
+            // The squad corners own the top and bottom of the frame, so the arena only gets the band
+            // between them - roughly three quarters of the height. Framing to the full height puts
+            // the near edge of the oval underneath the player's own squad.
+            const float verticalBandFraction = 0.72f;
+
+            float distance = Mathf.Max(
+                halfWidth / Mathf.Tan(halfHorizontal),
+                projectedHalfHeight / (Mathf.Tan(halfVertical) * verticalBandFraction));
+
+            // Aim slightly nearer than the centre of the arena. Under perspective the near half of
+            // an oval takes up far more screen than the far half, so aiming dead centre leaves the
+            // shape sitting low in the frame and overlapping the player's own squad.
+            var target = new Vector3(0f, 0f, -arenaRadius * GameConstants.ArenaElongation * 0.16f);
 
             var forward = Quaternion.Euler(CameraPitch, 0f, 0f) * Vector3.forward;
-            camera.position = -forward * distance;
+            camera.position = target - forward * distance;
             camera.rotation = Quaternion.Euler(CameraPitch, 0f, 0f);
         }
 
@@ -322,31 +342,40 @@ namespace ColosseumDuel.EditorTools
             arena.Palette = palette;
             // Assigned below, once the camera exists - world-space labels billboard towards it.
 
-            // floor: a Unity cylinder is radius 0.5 and height 2
+            float rz = r * GameConstants.ArenaElongation;
+
+            // floor: a Unity cylinder is radius 0.5 and height 2, squashed here onto the ellipse
             var floor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             floor.name = "ArenaFloor";
             floor.transform.SetParent(arenaGo.transform, false);
-            floor.transform.localScale = new Vector3(r * 2f, 0.25f, r * 2f);
+            floor.transform.localScale = new Vector3(r * 2f, 0.25f, rz * 2f);
             floor.transform.localPosition = new Vector3(0f, -0.25f, 0f);
             floor.GetComponent<Renderer>().sharedMaterial = sandMat;
             // Nothing raycasts the floor - input projects onto a mathematical plane - and a collider
             // left in the scene would drag the whole physics module into the build.
             UnityEngine.Object.DestroyImmediate(floor.GetComponent<Collider>());
 
-            // wall: a ring of thin boxes, cheap and good enough for grey-box
+            // wall: blocks laid along the ellipse. Their spacing is stepped by arc length rather
+            // than by angle - equal angles bunch up at the ends of an elongated oval and leave gaps
+            // along its flanks.
             var wallRoot = new GameObject("ArenaWall");
             wallRoot.transform.SetParent(arenaGo.transform, false);
-            const int segments = 48;
-            float segmentWidth = 2f * Mathf.PI * r / segments * 1.08f; // slight overlap, no gaps
+            const int segments = 72;
             for (int i = 0; i < segments; i++)
             {
-                float angle = i / (float)segments * Mathf.PI * 2f;
+                float t = i / (float)segments * Mathf.PI * 2f;
+                var position = new Vector3(Mathf.Cos(t) * r, 0.5f, Mathf.Sin(t) * rz);
+
+                // Tangent of the ellipse at this angle, so each block lies flat along the wall.
+                var tangent = new Vector3(-Mathf.Sin(t) * r, 0f, Mathf.Cos(t) * rz);
+                float segmentLength = tangent.magnitude * (Mathf.PI * 2f / segments) * 1.12f;
+
                 var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 block.name = $"Segment_{i:00}";
                 block.transform.SetParent(wallRoot.transform, false);
-                block.transform.localPosition = new Vector3(Mathf.Cos(angle) * r, 0.5f, Mathf.Sin(angle) * r);
-                block.transform.localRotation = Quaternion.Euler(0f, -angle * Mathf.Rad2Deg, 0f);
-                block.transform.localScale = new Vector3(0.4f, 1.2f, segmentWidth);
+                block.transform.localPosition = position;
+                block.transform.localRotation = Quaternion.LookRotation(tangent.normalized, Vector3.up);
+                block.transform.localScale = new Vector3(0.4f, 1.2f, segmentLength);
                 block.GetComponent<Renderer>().sharedMaterial = wallMat;
                 UnityEngine.Object.DestroyImmediate(block.GetComponent<Collider>());
             }

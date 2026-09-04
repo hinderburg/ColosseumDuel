@@ -54,10 +54,16 @@ namespace ColosseumDuel.Core
 
         private Vector2 RandomItemPos()
         {
-            // uniform-ish random point within the arena, kept away from the exact center/wall
-            float r = Mathf.Sqrt((float)_rng.NextDouble()) * (GameConstants.ArenaRadius - GameConstants.ItemRadius * 2f);
+            // Uniform-ish point inside the arena, kept clear of the wall. Drawn on a unit circle and
+            // then stretched onto the ellipse, so the same code works whatever shape the arena is.
+            float r = Mathf.Sqrt((float)_rng.NextDouble());
             float a = (float)(_rng.NextDouble() * Math.PI * 2.0);
-            return new Vector2(Mathf.Cos(a) * r, Mathf.Sin(a) * r);
+            var onUnitCircle = new Vector2(Mathf.Cos(a) * r, Mathf.Sin(a) * r);
+
+            float margin = GameConstants.ItemRadius * 2f;
+            return new Vector2(
+                onUnitCircle.x * (ArenaShape.RadiusX - margin),
+                onUnitCircle.y * (ArenaShape.RadiusY - margin));
         }
 
         public ArenaItem TryPickup(GladiatorInstance g)

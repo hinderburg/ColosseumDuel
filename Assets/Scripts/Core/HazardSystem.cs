@@ -44,7 +44,9 @@ namespace ColosseumDuel.Core
 
         public static bool IsInActiveHazard(Vector2 pos, int cycle)
         {
-            float r = pos.magnitude / GameConstants.ArenaRadius;
+            // Fraction of the way to the wall, measured on the ellipse - so a ring is a ring, not
+            // a circle sitting inside an oval.
+            float r = ArenaShape.NormalizedDistance(pos);
             foreach (var stage in Schedule)
             {
                 if (cycle < stage.ActivateCycle) continue;

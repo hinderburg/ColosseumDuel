@@ -17,6 +17,14 @@ namespace ColosseumDuel.Core
         // (3D models/camera) needs to convert virtual -> world units. Keep that conversion in
         // one place (see ArenaView / a VirtualToWorld scale constant) rather than scattering it.
         public const float ArenaRadius = 300f;
+
+        /// <summary>
+        /// How much longer the arena is along Y than across X. The camera looks down the Y axis, so
+        /// this is the axis that runs up the screen - stretching it is what lets the arena fill a
+        /// 9:16 frame instead of leaving a band of empty space above and below.
+        /// See ArenaShape for the geometry everything else goes through.
+        /// </summary>
+        public const float ArenaElongation = 1.55f;
         public const float GladiatorRadius = 16f;
         public const float ItemRadius = 12f;
 

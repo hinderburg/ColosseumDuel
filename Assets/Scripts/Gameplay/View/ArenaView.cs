@@ -27,6 +27,13 @@ namespace ColosseumDuel.Gameplay.View
 
         public float VirtualToWorld => WorldArenaRadius / GameConstants.ArenaRadius;
 
+        /// <summary>World semi-axis across the screen.</summary>
+        public float WorldRadiusX => WorldArenaRadius;
+
+        /// <summary>World semi-axis up the screen - the long one. The elongation already lives in
+        /// the simulation's coordinates, so the virtual-to-world scale stays uniform.</summary>
+        public float WorldRadiusZ => WorldArenaRadius * GameConstants.ArenaElongation;
+
         public Vector3 ToWorld(Vector2 virtualPos, float height = 0f)
             => new Vector3(virtualPos.x * VirtualToWorld, height, virtualPos.y * VirtualToWorld);
 
@@ -56,12 +63,14 @@ namespace ColosseumDuel.Gameplay.View
                 var go = new GameObject($"Ring_{stage.InnerFraction:0.00}-{stage.OuterFraction:0.00}");
                 go.transform.SetParent(root.transform, false);
 
-                // A stage reaching the centre is a disc, not a ring; a tiny inner radius keeps the
-                // same triangle-strip mesh working for both without a special case.
-                float inner = Mathf.Max(stage.InnerFraction * WorldArenaRadius, 0.001f);
-                float outer = stage.OuterFraction * WorldArenaRadius;
+                // Built as a unit ring and stretched onto the arena's ellipse, so a stage at 0.75 is
+                // the same fraction of the way to the wall in every direction - matching how
+                // HazardSystem actually measures it.
+                float inner = Mathf.Max(stage.InnerFraction, 0.001f);
+                float outer = stage.OuterFraction;
 
                 go.AddComponent<MeshFilter>().sharedMesh = ViewPrimitives.CreateAnnulus(inner, outer);
+                go.transform.localScale = new Vector3(WorldRadiusX, 1f, WorldRadiusZ);
                 var renderer = go.AddComponent<MeshRenderer>();
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 renderer.receiveShadows = false;

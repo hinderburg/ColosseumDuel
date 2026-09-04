@@ -164,16 +164,11 @@ namespace ColosseumDuel.Core
             Vector2 vel = aimDirection.normalized * (g.EffectiveSpeed() * GameConstants.SpeedScale * Mathf.Clamp01(power));
             float t = 0f;
             points.Add(pos);
-            float maxCenterDist = GameConstants.ArenaRadius - GameConstants.GladiatorRadius;
             while (t < GameConstants.ActionTime)
             {
                 pos += vel * stepSeconds;
-                if (pos.magnitude > maxCenterDist)
-                {
-                    Vector2 normal = pos.normalized;
-                    pos = normal * maxCenterDist;
-                    vel -= 2f * Vector2.Dot(vel, normal) * normal;
-                }
+                // Same bounce the action phase will run, so the preview stays a promise.
+                ArenaShape.Bounce(ref pos, ref vel, GameConstants.GladiatorRadius);
                 points.Add(pos);
                 t += stepSeconds;
             }
@@ -321,16 +316,8 @@ namespace ColosseumDuel.Core
         {
             if (g == null || !g.Alive) return;
 
-            float maxCenterDist = GameConstants.ArenaRadius - GameConstants.GladiatorRadius;
             g.Pos += g.Vel * dt;
-
-            // wall bounce
-            if (g.Pos.magnitude > maxCenterDist)
-            {
-                Vector2 normal = g.Pos.normalized;
-                g.Pos = normal * maxCenterDist;
-                g.Vel -= 2f * Vector2.Dot(g.Vel, normal) * normal;
-            }
+            ArenaShape.Bounce(ref g.Pos, ref g.Vel, GameConstants.GladiatorRadius);
             if (g.Vel.sqrMagnitude > 0.0001f) g.Facing = g.Vel.normalized;
 
             // hazard damage - continuous DOT while standing in an active danger ring

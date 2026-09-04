@@ -112,7 +112,7 @@ namespace ColosseumDuel.Tests
             {
                 items.SpawnInitial();
                 foreach (var item in items.Items)
-                    Assert.Less(item.Pos.magnitude, GameConstants.ArenaRadius,
+                    Assert.Less(ArenaShape.NormalizedDistance(item.Pos), 1f,
                         "an item spawned outside the wall would be unreachable");
             }
         }
