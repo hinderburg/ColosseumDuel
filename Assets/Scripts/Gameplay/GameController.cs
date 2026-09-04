@@ -15,6 +15,7 @@ namespace ColosseumDuel.Gameplay
     {
         [Header("Scene references")]
         public ArenaView Arena;
+        public CameraShake Shake;
 
         [Header("Squad setup (defaults to the 3 starting gladiators for both sides)")]
         public bool AutoStartOnPlay = true;
@@ -54,6 +55,9 @@ namespace ColosseumDuel.Gameplay
 
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
+            Manager.Damaged += OnDamaged;
+            Manager.Impact += OnImpact;
+            Manager.AbilityFired += OnAbilityFired;
 
             if (AutoStartOnPlay) RestartMatch();
 
@@ -114,6 +118,34 @@ namespace ColosseumDuel.Gameplay
         {
             PhaseChanged?.Invoke(state);
         }
+
+        // ------------------------------------------------------------------
+        // one-shot effects, driven by Core's events
+        // ------------------------------------------------------------------
+
+        /// <summary>Colour of an ability burst. Warm, matching the rage meter it spends.</summary>
+        private static readonly Color AbilityBurstColor = new Color(1f, 0.75f, 0.25f);
+
+        private void OnDamaged(PlayerSide side, float amount)
+        {
+            if (amount <= 0f) return;
+            ViewFor(side).PlayHit();
+        }
+
+        private void OnImpact(Vector2 virtualPosition)
+        {
+            // A head-on collision is the hardest beat in a cycle, so it gets the full shake; the
+            // glancing damage of a pass-by only rings the gladiators.
+            if (Shake != null) Shake.Shake();
+        }
+
+        private void OnAbilityFired(PlayerSide side)
+        {
+            ViewFor(side).PlayAbility(AbilityBurstColor);
+        }
+
+        private GladiatorView ViewFor(PlayerSide side)
+            => side == PlayerSide.P1 ? _playerView : _botView;
 
         // ------------------------------------------------------------------
         // called by the input layer

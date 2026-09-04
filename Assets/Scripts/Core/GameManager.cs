@@ -18,6 +18,20 @@ namespace ColosseumDuel.Core
         public MatchState State { get; } = new MatchState();
         public event Action<MatchState> PhaseChanged;
 
+        // One-shot events for the presentation layer. The views poll MatchState every frame, which
+        // works for anything continuous (positions, HP, buffs) but cannot see a moment: a hit that
+        // lands and resolves inside one frame leaves no trace in the state to poll. These report
+        // those moments without Core knowing that anything is watching.
+
+        /// <summary>A gladiator took combat damage. Carries the side that was hit and the amount.</summary>
+        public event Action<PlayerSide, float> Damaged;
+
+        /// <summary>A head-on collision resolved, at this point in virtual space.</summary>
+        public event Action<Vector2> Impact;
+
+        /// <summary>A side's ability just fired.</summary>
+        public event Action<PlayerSide> AbilityFired;
+
         private readonly System.Random _rng;
 
         public GameManager(System.Random rng = null)
@@ -237,19 +251,22 @@ namespace ColosseumDuel.Core
             State.WasNear = false;
             State.CollisionEndTimer = null;
 
-            ApplyPlannedAction(State.P1.Active, State.Bot.Active);
-            ApplyPlannedAction(State.Bot.Active, State.P1.Active);
+            ApplyPlannedAction(PlayerSide.P1, State.P1.Active, State.Bot.Active);
+            ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
 
             SetPhase(MatchPhase.Action);
         }
 
-        private void ApplyPlannedAction(GladiatorInstance g, GladiatorInstance opponent)
+        private void ApplyPlannedAction(PlayerSide side, GladiatorInstance g, GladiatorInstance opponent)
         {
             if (g == null || !g.Alive) return;
 
             // Ability is a supplementary effect - it does NOT consume the whole turn.
             if (g.AbilityArmed && g.CanActivateAbility)
+            {
                 g.ActivateAbility();
+                AbilityFired?.Invoke(side);
+            }
 
             if (g.PlannedAction == ActionType.Move)
             {
@@ -335,6 +352,8 @@ namespace ColosseumDuel.Core
             a.Vel = Vector2.zero;
             b.Vel = Vector2.zero;
 
+            Impact?.Invoke((a.Pos + b.Pos) * 0.5f);
+
             // Both land every attack they still have this cycle - Mongoose (Hilius) gets two.
             // Weapons are single-use, so a second swing is always unarmed.
             ExchangeBlows(a, b, isCollision: true);
@@ -361,7 +380,9 @@ namespace ColosseumDuel.Core
         /// exchange is simultaneous - a lethal hit does not rob the dying fighter of their return
         /// blow - but a fighter who died there does not get to throw any follow-up attacks.
         /// </summary>
-        private static void ExchangeBlows(GladiatorInstance a, GladiatorInstance b, bool isCollision)
+        /// <param name="a">Always the player's active gladiator.</param>
+        /// <param name="b">Always the bot's.</param>
+        private void ExchangeBlows(GladiatorInstance a, GladiatorInstance b, bool isCollision)
         {
             for (int exchange = 0; a.AttacksRemainingThisCycle > 0 || b.AttacksRemainingThisCycle > 0; exchange++)
             {
@@ -371,8 +392,19 @@ namespace ColosseumDuel.Core
                 if (a.AttacksRemainingThisCycle > 0) a.AttacksRemainingThisCycle--;
                 if (b.AttacksRemainingThisCycle > 0) b.AttacksRemainingThisCycle--;
 
-                if (aSwings) CombatResolver.DealDamage(a, b, isCollision);
-                if (bSwings) CombatResolver.DealDamage(b, a, isCollision);
+                // Deal first, announce second. Folding the call into Damaged?.Invoke(...) would put
+                // it inside a null-conditional, and with no subscriber the argument is never
+                // evaluated - so nobody watching would mean nobody taking damage.
+                if (aSwings)
+                {
+                    float dealt = CombatResolver.DealDamage(a, b, isCollision);
+                    Damaged?.Invoke(PlayerSide.Bot, dealt);
+                }
+                if (bSwings)
+                {
+                    float dealt = CombatResolver.DealDamage(b, a, isCollision);
+                    Damaged?.Invoke(PlayerSide.P1, dealt);
+                }
             }
         }
 

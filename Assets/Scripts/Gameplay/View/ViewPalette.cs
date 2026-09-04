@@ -37,6 +37,13 @@ namespace ColosseumDuel.Gameplay.View
         public Material Trajectory;
 
         /// <summary>
+        /// Transparent unlit material for the expanding impact/ability rings. Shared, with per-ring
+        /// alpha driven through a MaterialPropertyBlock.
+        /// </summary>
+        [Header("Effects")]
+        public Material Burst;
+
+        /// <summary>
         /// Font for every HUD label. Must be a real asset, not Unity's built-in font: the built-in
         /// one carries no Cyrillic glyphs, so in a WebGL build (where there are no OS fonts to fall
         /// back on) every Russian caption renders as nothing at all.

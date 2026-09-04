@@ -16,8 +16,19 @@ namespace ColosseumDuel.Gameplay.View
         private const float BarHeight = 0.14f;
         private const float BarGap = 0.05f;
 
+        /// <summary>Seconds a hit reaction lasts.</summary>
+        private const float HitPunchTime = 0.22f;
+
         private ArenaView _arena;
         private Transform _model;
+        private Transform _burst;
+        private MeshRenderer _burstRenderer;
+        private MaterialPropertyBlock _burstProperties;
+        private float _hitPunchLeft;
+        private float _burstLeft;
+        private float _burstDuration;
+        private float _burstMaxRadius;
+        private Color _burstColor;
         private Transform _hpFill;
         private Transform _rageFill;
         private Transform _weaponMarker;
@@ -81,6 +92,21 @@ namespace ColosseumDuel.Gameplay.View
             bars.transform.SetParent(root.transform, false);
             bars.transform.localPosition = new Vector3(0f, 0.05f, radius * 2.6f);
 
+            // An expanding ring for one-shot moments (a hit landing, an ability firing). Kept as a
+            // single reusable object rather than spawned per event - at two gladiators there is
+            // never more than one in flight, and nothing has to be allocated mid-match.
+            var burst = new GameObject("Burst");
+            burst.transform.SetParent(root.transform, false);
+            burst.transform.localPosition = new Vector3(0f, 0.08f, 0f);
+            burst.AddComponent<MeshFilter>().sharedMesh = ViewPrimitives.CreateAnnulus(0.62f, 1f, 48); // thick enough to read at a glance
+            view._burstRenderer = burst.AddComponent<MeshRenderer>();
+            view._burstRenderer.sharedMaterial = palette.Burst;
+            view._burstRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            view._burstRenderer.receiveShadows = false;
+            view._burstRenderer.enabled = false;
+            view._burst = burst.transform;
+            view._burstProperties = new MaterialPropertyBlock();
+
             view._hpFill = MakeBar(palette, "Hp", bars.transform, palette.BarBackground, palette.BarHp, 0f);
             view._rageFill = MakeBar(palette, "Rage", bars.transform, palette.BarBackground, palette.BarRage,
                 -(BarHeight + BarGap));
@@ -123,6 +149,27 @@ namespace ColosseumDuel.Gameplay.View
             return pivot.transform;
         }
 
+        /// <summary>A blow just landed on this gladiator: squash the model and ring the impact.</summary>
+        public void PlayHit()
+        {
+            _hitPunchLeft = HitPunchTime;
+            StartBurst(_arena.ScaleLength(GameConstants.GladiatorRadius) * 2.6f, 0.30f, Color.white);
+        }
+
+        /// <summary>This gladiator's ability just fired.</summary>
+        public void PlayAbility(Color color)
+        {
+            StartBurst(_arena.ScaleLength(GameConstants.GladiatorRadius) * 6.5f, 0.55f, color);
+        }
+
+        private void StartBurst(float maxRadius, float duration, Color color)
+        {
+            _burstMaxRadius = maxRadius;
+            _burstDuration = duration;
+            _burstLeft = duration;
+            _burstColor = color;
+        }
+
         /// <summary>Pushes one frame of simulation state onto the visuals. Safe to call with null.</summary>
         public void Sync(GladiatorInstance g)
         {
@@ -136,6 +183,8 @@ namespace ColosseumDuel.Gameplay.View
             if (forward.sqrMagnitude > 0.0001f)
                 _model.localRotation = Quaternion.LookRotation(forward, Vector3.up);
 
+            AdvanceEffects(Time.deltaTime);
+
             SetFill(_hpFill, g.Def.MaxHp > 0f ? g.Hp / g.Def.MaxHp : 0f);
             SetFill(_rageFill, g.Rage / GameConstants.RageMax);
 
@@ -143,6 +192,47 @@ namespace ColosseumDuel.Gameplay.View
             SetActive(_shieldMarker, g.HasShield);
             SetActive(_abilityMarker, g.Buff.IsActive);
         }
+
+        private void AdvanceEffects(float dt)
+        {
+            // Hit reaction: a quick squash-and-recover on the model only, so the bars above the head
+            // stay put and readable while it plays.
+            if (_hitPunchLeft > 0f)
+            {
+                _hitPunchLeft = Mathf.Max(0f, _hitPunchLeft - dt);
+                float t = _hitPunchLeft / HitPunchTime;          // 1 at impact, 0 when recovered
+                float punch = Mathf.Sin(t * Mathf.PI) * 0.28f;   // in and back out
+                _model.localScale = new Vector3(1f + punch, 1f - punch * 0.6f, 1f + punch);
+            }
+            else if (_model.localScale != Vector3.one)
+            {
+                _model.localScale = Vector3.one;
+            }
+
+            if (_burstLeft <= 0f)
+            {
+                if (_burstRenderer.enabled) _burstRenderer.enabled = false;
+                return;
+            }
+
+            _burstLeft = Mathf.Max(0f, _burstLeft - dt);
+            float progress = 1f - _burstLeft / _burstDuration; // 0 -> 1 over the burst
+
+            _burstRenderer.enabled = true;
+            float radius = Mathf.Lerp(_burstMaxRadius * 0.25f, _burstMaxRadius, progress);
+            _burst.localScale = new Vector3(radius, 1f, radius);
+
+            // Per-instance alpha through a property block: the burst material is a shared asset, and
+            // tinting it directly would fade both gladiators' rings at once.
+            var color = _burstColor;
+            // Hold the alpha up early and drop it late: a linear fade over sand spends most of its
+            // life too faint to notice, which made the effect read as if it were not firing at all.
+            color.a = Mathf.Pow(1f - progress, 0.55f);
+            _burstProperties.SetColor(BaseColorId, color);
+            _burstRenderer.SetPropertyBlock(_burstProperties);
+        }
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         private static void SetFill(Transform pivot, float t)
         {

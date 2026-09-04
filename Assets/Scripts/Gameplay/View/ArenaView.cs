@@ -34,12 +34,15 @@ namespace ColosseumDuel.Gameplay.View
         public float ScaleLength(float virtualLength) => virtualLength * VirtualToWorld;
 
         private readonly List<Renderer> _hazardRings = new List<Renderer>();
+        private MaterialPropertyBlock _ringProperties;
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         public void BuildHazardRings()
         {
             foreach (var ring in _hazardRings)
                 if (ring != null) Destroy(ring.gameObject);
             _hazardRings.Clear();
+            _ringProperties = new MaterialPropertyBlock();
 
             var root = new GameObject("HazardRings");
             root.transform.SetParent(transform, false);
@@ -85,8 +88,23 @@ namespace ColosseumDuel.Gameplay.View
                 bool warned = telegraphing && stage.ActivateCycle == upcoming.Value.ActivateCycle;
 
                 renderer.enabled = active || warned;
-                if (renderer.enabled)
-                    renderer.sharedMaterial = active ? Palette.HazardActive : Palette.HazardTelegraph;
+                if (!renderer.enabled) continue;
+
+                var material = active ? Palette.HazardActive : Palette.HazardTelegraph;
+                renderer.sharedMaterial = material;
+
+                // Flat paint reads as decoration; a slow flicker reads as fire, which is what the
+                // design asks for and what makes the ring feel dangerous rather than decorative.
+                // Each ring gets its own phase so they do not breathe in lockstep, and the warning
+                // ring pulses faster and harder to say "this one is not burning yet, but will be".
+                float speed = active ? 2.4f : 5.5f;
+                float depth = active ? 0.14f : 0.30f;
+                float pulse = 1f + Mathf.Sin(Time.time * speed + i * 1.7f) * depth;
+
+                var color = material.color * pulse;
+                color.a = material.color.a;
+                _ringProperties.SetColor(BaseColorId, color);
+                renderer.SetPropertyBlock(_ringProperties);
             }
         }
     }

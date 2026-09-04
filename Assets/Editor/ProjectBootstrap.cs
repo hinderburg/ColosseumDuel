@@ -34,6 +34,7 @@ namespace ColosseumDuel.EditorTools
         private const string UrpRendererPath = SettingsDir + "/UniversalRP_Renderer.asset";
         private const string PalettePath = SettingsDir + "/ViewPalette.asset";
         private const string HudFontPath = "Assets/Fonts/Inter-Regular.ttf";
+        private const string TexturesDir = "Assets/Textures";
 
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
@@ -223,6 +224,7 @@ namespace ColosseumDuel.EditorTools
             palette.BarRage = Unlit("BarRage", new Color(0.95f, 0.65f, 0.15f));
 
             palette.Trajectory = Unlit("Trajectory", new Color(0.98f, 0.95f, 0.55f));
+            palette.Burst = TransparentUnlit("Burst", Color.white);
 
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with
             // its licence). Unity's built-in font has no Cyrillic glyphs, so it draws nothing at all
@@ -266,6 +268,10 @@ namespace ColosseumDuel.EditorTools
 
             var sandMat = Lit("Sand", new Color(0.76f, 0.66f, 0.44f));
             var wallMat = Lit("Wall", new Color(0.32f, 0.29f, 0.27f));
+            // The floor gets its texture once across the whole disc - no repeat, so no seams and no
+            // tiling pattern to notice. The wall is 48 separate blocks, so that one does repeat.
+            ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
+            ApplyTexture(wallMat, ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white), new Vector2(2f, 1f));
 
             // --- arena root: owns the virtual->world conversion and the hazard ring visuals ---
             var arenaGo = new GameObject("Arena");
@@ -332,6 +338,8 @@ namespace ColosseumDuel.EditorTools
 
             var focus = cameraGo.AddComponent<PlanningFocusCamera>();
             focus.Controller = controller;
+
+            controller.Shake = cameraGo.AddComponent<CameraShake>();
 
             BuildHud(controller, input);
 
@@ -453,6 +461,19 @@ namespace ColosseumDuel.EditorTools
         // helpers
         // ------------------------------------------------------------------
 
+        /// <summary>
+        /// Assigns a tiling base map. The material keeps its own colour, which the texture is
+        /// generated white so as to multiply into rather than replace.
+        /// </summary>
+        private static void ApplyTexture(Material material, Texture2D texture, Vector2 tiling)
+        {
+            if (material == null || texture == null) return;
+            material.mainTexture = texture;
+            material.mainTextureScale = tiling;
+            material.SetFloat("_Smoothness", 0.05f); // sand and stone are not shiny
+            EditorUtility.SetDirty(material);
+        }
+
         private static Mesh BuiltinMesh(string name)
         {
             var mesh = Resources.GetBuiltinResource<Mesh>(name);
@@ -465,6 +486,26 @@ namespace ColosseumDuel.EditorTools
 
         private static Material Unlit(string name, Color color)
             => EnsureMaterial(name, color, "Universal Render Pipeline/Unlit", "Unlit/Color");
+
+        /// <summary>
+        /// URP does not expose a "make this transparent" API - the surface type is a set of shader
+        /// properties plus a keyword plus a render queue, and getting one of them wrong leaves the
+        /// material silently opaque. This is the full incantation.
+        /// </summary>
+        private static Material TransparentUnlit(string name, Color color)
+        {
+            var mat = Unlit(name, color);
+            mat.SetFloat("_Surface", 1f); // 0 opaque, 1 transparent
+            mat.SetFloat("_Blend", 0f);   // alpha blend
+            mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            mat.SetFloat("_ZWrite", 0f);
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
 
         private static Material EnsureMaterial(string name, Color color, string shaderName, string fallbackShaderName)
         {

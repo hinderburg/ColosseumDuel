@@ -68,6 +68,36 @@ namespace ColosseumDuel.Tests
             canvas.renderMode = originalMode;
         }
 
+        /// <summary>Captures the moment an ability fires, so the burst effect can be eyeballed.</summary>
+        [UnityTest]
+        public IEnumerator AbilityBurstRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+            controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
+
+            var canvas = Object.FindFirstObjectByType<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = Camera.main;
+            canvas.planeDistance = 1f;
+
+            controller.Manager.State.P1.Active.Rage = GameConstants.RageMax;
+            controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, useAbility: true);
+            controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+
+            // Late enough in the expansion that the ring has cleared the gladiator's own body -
+            // early on it is smaller than he is and hides behind him.
+            yield return RunSeconds(GameConstants.PlanningTime + 0.16f);
+
+            yield return Capture(SuffixPath("-burst"));
+        }
+
         private static IEnumerator Capture(string outputPath)
         {
             var camera = Camera.main;
