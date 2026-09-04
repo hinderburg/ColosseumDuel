@@ -74,3 +74,19 @@ crashlytics-build.properties
 /*-results.xml
 /test-results.xml
 
+
+# Asset Store packages: imported manually, never committed.
+# Two independent reasons - this repository is public and redistributing paid asset sources
+# breaks their licence, and together they weigh about a gigabyte. A compiled build is fine:
+# it carries only the content actually used, as part of the game.
+# See PROJECT_CONTEXT.md for the list to import.
+/Assets/Epic Toon FX/
+/Assets/Epic Toon FX.meta
+/Assets/DoubleL/
+/Assets/DoubleL.meta
+/Assets/LoafbrrAssets/
+/Assets/LoafbrrAssets.meta
+/Assets/Low Poly Trim Sheet Asset Collection/
+/Assets/Low Poly Trim Sheet Asset Collection.meta
+/Assets/Matthew Guz/
+/Assets/Matthew Guz.meta
