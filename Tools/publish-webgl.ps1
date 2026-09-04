@@ -49,8 +49,12 @@ if ($branchExistsRemotely) {
 
 try {
     Push-Location $worktree
-    # Clear whatever the previous publish left, keeping .git itself.
-    git rm -rqf . 2>&1 | Out-Null
+
+    # The worktree was added with --no-checkout, so both it and the index start empty. Staging the
+    # fresh build with `git add -A` therefore produces a tree containing exactly this build - files
+    # from the previous publish that are gone now are recorded as deletions against the parent
+    # commit. Trying to `git rm` first fails outright, because there is nothing in the index to
+    # remove.
     Get-ChildItem -Force | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
 
     Copy-Item -Path (Join-Path $buildPath "*") -Destination $worktree -Recurse -Force
