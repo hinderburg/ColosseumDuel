@@ -1,0 +1,16 @@
+{
+    "name": "ColosseumDuel.Gameplay",
+    "rootNamespace": "ColosseumDuel.Gameplay",
+    "references": [
+        "ColosseumDuel.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

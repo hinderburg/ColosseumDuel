@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f59907e4ed9d34f4b9104bad35aeda67, type: 3}
+  m_Name: ViewPalette
+  m_EditorClassIdentifier: ColosseumDuel.Gameplay::ColosseumDuel.Gameplay.View.ViewPalette
+  Body: {fileID: 2100000, guid: 7d19019dc6d882b449868c9c9cbfab76, type: 2}
+  PlayerHelmet: {fileID: 2100000, guid: 49c1337288debe0419395a116a5c760e, type: 2}
+  BotHelmet: {fileID: 2100000, guid: f5104bc60a55f234380bbe44b33116d2, type: 2}
+  Weapon: {fileID: 2100000, guid: ee6fe21f7b83ac649be759c22471908c, type: 2}
+  Shield: {fileID: 2100000, guid: 3f17c2f6488ac964ebbea7e33b0dc45c, type: 2}
+  RandomItem: {fileID: 2100000, guid: c6135911b12f30e41823cbf25c89e575, type: 2}
+  HazardActive: {fileID: 2100000, guid: 0f0fe0bd4cc7d914fa9af4eaad6a8e4e, type: 2}
+  HazardTelegraph: {fileID: 2100000, guid: e11ddcdf0607980408c9251e42383b22, type: 2}
+  BarBackground: {fileID: 2100000, guid: f0e2555ddd7aead4c81526eb2c95d8b1, type: 2}
+  BarHp: {fileID: 2100000, guid: 0ff837530b7206e418094f87c279e5d7, type: 2}
+  BarRage: {fileID: 2100000, guid: 969767cabbb9fd840b7ec7d01f5af92f, type: 2}
+  Trajectory: {fileID: 2100000, guid: 0904c02e5cb8f324a851dd407171ddc0, type: 2}
+  HudFont: {fileID: 12800000, guid: d3fb6687adc8e6148adead412fb389b7, type: 3}
+  Cube: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  Sphere: {fileID: 10200, guid: 0000000000000000e000000000000000, type: 0}
+  Capsule: {fileID: 10205, guid: 0000000000000000e000000000000000, type: 0}
+  Cylinder: {fileID: 10203, guid: 0000000000000000e000000000000000, type: 0}
+  Quad: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}

@@ -1,0 +1,29 @@
+# Normalise line endings for text, and keep Unity's YAML and binary assets out of any
+# conversion - a mangled .unity or .asset file is not a diff you can read or fix by hand.
+* text=auto
+
+*.cs        text diff=csharp
+*.md        text
+*.json      text
+*.yml       text
+*.asmdef    text
+*.gitignore text
+
+# PowerShell on Windows is happier with CRLF.
+*.ps1 text eol=crlf
+
+# Unity serialised assets: text, but never touched by filters or diffed as prose.
+*.unity     -text merge=unityyamlmerge diff
+*.asset     -text merge=unityyamlmerge diff
+*.prefab    -text merge=unityyamlmerge diff
+*.mat       -text merge=unityyamlmerge diff
+*.meta      -text merge=unityyamlmerge diff
+
+# Binary assets.
+*.ttf  binary
+*.otf  binary
+*.png  binary
+*.jpg  binary
+*.wav  binary
+*.mp3  binary
+*.fbx  binary
