@@ -339,6 +339,29 @@ namespace ColosseumDuel.EditorTools
             palette.Cylinder = BuiltinMesh("Cylinder.fbx");
             palette.Quad = BuiltinMesh("Quad.fbx");
 
+            // Figures last, and deliberately so: the helmet is built from a palette mesh, so the
+            // meshes above have to be assigned before this runs. Placing it earlier worked only
+            // because a previously built palette still held the mesh - a clean clone would have
+            // produced helmets with no mesh at all and said nothing about it.
+            palette.ArchetypeBodies = new Material[GladiatorDef.All.Count];
+            for (int i = 0; i < GladiatorDef.All.Count; i++)
+            {
+                var def = GladiatorDef.All[i];
+                palette.ArchetypeBodies[i] = Lit($"Body{def.Id}", palette.ArchetypeColor(def.Id));
+            }
+
+            if (GladiatorPrefabs.EnsureAll(palette.Sphere))
+            {
+                palette.GladiatorFigures = new GameObject[GladiatorDef.All.Count];
+                for (int i = 0; i < GladiatorDef.All.Count; i++)
+                    palette.GladiatorFigures[i] =
+                        AssetDatabase.LoadAssetAtPath<GameObject>(GladiatorPrefabs.PathFor(GladiatorDef.All[i].Id));
+            }
+            else
+            {
+                palette.GladiatorFigures = null;
+            }
+
             EditorUtility.SetDirty(palette);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Colosseum] View palette rebuilt at {PalettePath}.");

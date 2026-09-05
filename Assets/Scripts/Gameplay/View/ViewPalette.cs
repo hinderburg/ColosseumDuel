@@ -82,6 +82,44 @@ namespace ColosseumDuel.Gameplay.View
         public GameObject BloodHit;
 
         /// <summary>
+        /// One figure per archetype, indexed by GladiatorId. Built from the imported humanoid; a
+        /// clean clone without the model pack gets nulls and falls back to primitive bodies.
+        /// </summary>
+        [Header("Gladiator figures")]
+        public GameObject[] GladiatorFigures;
+
+        /// <summary>One opaque body material per archetype, indexed by GladiatorId.</summary>
+        public Material[] ArchetypeBodies;
+
+        public Material BodyMaterialFor(ColosseumDuel.Core.GladiatorId id)
+        {
+            int index = (int)id;
+            return ArchetypeBodies != null && index >= 0 && index < ArchetypeBodies.Length
+                ? ArchetypeBodies[index]
+                : null;
+        }
+
+        public GameObject FigureFor(ColosseumDuel.Core.GladiatorId id)
+        {
+            int index = (int)id;
+            return GladiatorFigures != null && index >= 0 && index < GladiatorFigures.Length
+                ? GladiatorFigures[index]
+                : null;
+        }
+
+        /// <summary>Body tint that identifies the archetype, regardless of which side owns it.</summary>
+        public Color ArchetypeColor(ColosseumDuel.Core.GladiatorId id)
+        {
+            switch (id)
+            {
+                case ColosseumDuel.Core.GladiatorId.Brutius: return new Color(0.85f, 0.62f, 0.30f);
+                case ColosseumDuel.Core.GladiatorId.Barbarius: return new Color(0.62f, 0.40f, 0.80f);
+                case ColosseumDuel.Core.GladiatorId.Hilius: return new Color(0.40f, 0.78f, 0.48f);
+                default: return Color.white;
+            }
+        }
+
+        /// <summary>
         /// Unity's built-in primitive meshes, referenced as assets rather than fetched at runtime.
         ///
         /// GameObject.CreatePrimitive would be the obvious way to build these views, but it always

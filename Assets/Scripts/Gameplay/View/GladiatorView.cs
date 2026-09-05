@@ -35,6 +35,10 @@ namespace ColosseumDuel.Gameplay.View
         private Transform _weaponMarker;
         private Transform _shieldMarker;
         private Transform _abilityMarker;
+        private ViewPalette _palette;
+        private GameObject[] _figures;
+        private Renderer[] _figureRenderers;
+        private GladiatorId? _shownFigure;
 
         public static GladiatorView Create(string name, Transform parent, ArenaView arena,
             Material bodyMaterial, Material helmetMaterial)
@@ -57,19 +61,7 @@ namespace ColosseumDuel.Gameplay.View
             model.transform.SetParent(root.transform, false);
             view._model = model.transform;
 
-            var body = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Capsule), "Body", model.transform, bodyMaterial);
-            body.transform.localScale = new Vector3(radius * 2f, bodyHeight * 0.5f, radius * 2f);
-            body.transform.localPosition = new Vector3(0f, bodyHeight * 0.5f, 0f);
-
-            var helmet = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Sphere), "Helmet", model.transform, helmetMaterial);
-            helmet.transform.localScale = Vector3.one * (radius * 1.5f);
-            helmet.transform.localPosition = new Vector3(0f, bodyHeight * 0.92f, 0f);
-
-            // A small wedge on the front - without it a capsule gives no clue which way it faces,
-            // which matters because defending turns the gladiator towards the opponent.
-            var nose = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Cube), "FacingMarker", model.transform, helmetMaterial);
-            nose.transform.localScale = new Vector3(radius * 0.5f, radius * 0.35f, radius * 0.9f);
-            nose.transform.localPosition = new Vector3(0f, bodyHeight * 0.92f, radius * 1.0f);
+            view.BuildFigures(model.transform, palette, helmetMaterial, radius, bodyHeight);
 
             // Carried items, shown as small tags beside the head.
             view._weaponMarker = MakeMarker(palette, "WeaponMarker", model.transform, palette.Weapon,
@@ -118,6 +110,93 @@ namespace ColosseumDuel.Gameplay.View
 
             root.SetActive(false);
             return view;
+        }
+
+        /// <summary>
+        /// Builds one figure per archetype and keeps them all, showing whichever is on the arena.
+        ///
+        /// All three up front rather than instantiating on each pick: a side swaps gladiator every
+        /// round, and building a skinned hierarchy mid-match would hitch exactly at the moment the
+        /// player is watching the reveal. Three idle skinned meshes cost nothing while disabled.
+        /// </summary>
+        private void BuildFigures(Transform parent, ViewPalette palette, Material helmetMaterial,
+            float radius, float bodyHeight)
+        {
+            _palette = palette;
+            _figures = new GameObject[GladiatorDef.All.Count];
+            _figureRenderers = new Renderer[GladiatorDef.All.Count];
+
+            for (int i = 0; i < GladiatorDef.All.Count; i++)
+            {
+                var def = GladiatorDef.All[i];
+                var prefab = palette != null ? palette.FigureFor(def.Id) : null;
+
+                var figure = prefab != null
+                    ? Instantiate(prefab, parent)
+                    : BuildPrimitiveFigure(palette, parent, helmetMaterial, radius, bodyHeight);
+
+                figure.name = $"Figure_{def.Id}";
+                figure.SetActive(false);
+
+                // Replace the imported materials outright rather than tinting them. Tinting left
+                // three figures that cast shadows and drew nothing: whatever the model ships with
+                // does not survive being recoloured, and chasing that is not worth it when the
+                // archetype colour is the whole point. A flat opaque material per archetype also
+                // matches how the rest of the arena is drawn.
+                var renderer = figure.GetComponentInChildren<Renderer>(true);
+                var body = palette != null ? palette.BodyMaterialFor(def.Id) : null;
+                if (renderer != null && body != null)
+                {
+                    var slots = new Material[renderer.sharedMaterials.Length];
+                    for (int slot = 0; slot < slots.Length; slot++) slots[slot] = body;
+                    renderer.sharedMaterials = slots;
+                }
+                _figureRenderers[i] = renderer;
+
+                // The helmet carries the owning side's colour, so the same archetype on opposite
+                // sides is still tellable apart at a glance.
+                var helmet = figure.transform.Find("Helmet");
+                if (helmet != null)
+                {
+                    var helmetRenderer = helmet.GetComponent<Renderer>();
+                    if (helmetRenderer != null) helmetRenderer.sharedMaterial = helmetMaterial;
+                }
+
+                _figures[i] = figure;
+            }
+        }
+
+        /// <summary>Stand-in used when the model pack is not imported: the old capsule and sphere.</summary>
+        private static GameObject BuildPrimitiveFigure(ViewPalette palette, Transform parent,
+            Material helmetMaterial, float radius, float bodyHeight)
+        {
+            var figure = new GameObject("PrimitiveFigure");
+            figure.transform.SetParent(parent, false);
+
+            var body = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Capsule), "Body",
+                figure.transform, palette.PlayerBody);
+            body.transform.localScale = new Vector3(radius * 2f, bodyHeight * 0.5f, radius * 2f);
+            body.transform.localPosition = new Vector3(0f, bodyHeight * 0.5f, 0f);
+
+            var helmet = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Sphere), "Helmet",
+                figure.transform, helmetMaterial);
+            helmet.transform.localScale = Vector3.one * (radius * 1.5f);
+            helmet.transform.localPosition = new Vector3(0f, bodyHeight * 0.92f, 0f);
+
+            return figure;
+        }
+
+        /// <summary>Shows the figure for whoever is currently fighting.</summary>
+        private void ShowFigureFor(GladiatorId id)
+        {
+            if (_figures == null || _shownFigure == id) return;
+            _shownFigure = id;
+
+            for (int i = 0; i < _figures.Length; i++)
+            {
+                bool isThisOne = GladiatorDef.All[i].Id == id;
+                if (_figures[i].activeSelf != isThisOne) _figures[i].SetActive(isThisOne);
+            }
         }
 
         private static GameObject MakeMarker(ViewPalette palette, string name, Transform parent, Material material,
@@ -183,6 +262,7 @@ namespace ColosseumDuel.Gameplay.View
             if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
             if (!visible) return;
 
+            ShowFigureFor(g.Def.Id);
             transform.localPosition = _arena.ToWorld(g.Pos);
 
             var forward = new Vector3(g.Facing.x, 0f, g.Facing.y);
