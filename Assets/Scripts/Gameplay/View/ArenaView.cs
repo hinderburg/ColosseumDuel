@@ -121,6 +121,87 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
+        [Tooltip("How many flames make up the ring marking the edge of the danger zone.")]
+        public int HazardFireCount = 22;
+
+        private readonly List<Transform> _hazardFlames = new List<Transform>();
+        private float _flameRingFraction = -1f;
+
+        /// <summary>
+        /// Builds the ring of flames that marks where safe ground ends.
+        ///
+        /// A boundary rather than a filled area: covering the whole danger zone in particles is a
+        /// lot of overdraw for something the player reads as one line - the line they must not
+        /// cross. The flat red ring already shows the area; this shows its edge.
+        /// </summary>
+        public void BuildHazardFire()
+        {
+            if (Palette == null || Palette.HazardFire == null) return;
+
+            var root = new GameObject("HazardFire");
+            root.transform.SetParent(transform, false);
+
+            for (int i = 0; i < HazardFireCount; i++)
+            {
+                var flame = Instantiate(Palette.HazardFire, root.transform);
+                flame.name = $"Flame_{i:00}";
+                flame.SetActive(false);
+
+                foreach (var particles in flame.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = particles.main;
+                    main.useUnscaledTime = false; // must drag with the planning slowdown like the torches
+                }
+
+                _hazardFlames.Add(flame.transform);
+            }
+        }
+
+        /// <summary>
+        /// Moves the flame ring onto the current edge of safety, or hides it while the arena is safe.
+        /// </summary>
+        private void SyncHazardFire(MatchState state)
+        {
+            if (_hazardFlames.Count == 0) return;
+
+            // The innermost active stage's inner edge is the boundary; as stages light up, the ring
+            // closes in on the middle.
+            float boundary = float.MaxValue;
+            foreach (var stage in HazardSystem.Schedule)
+                if (state.Cycle >= stage.ActivateCycle)
+                    boundary = Mathf.Min(boundary, stage.InnerFraction);
+
+            bool burning = boundary < float.MaxValue;
+            if (!burning)
+            {
+                if (_flameRingFraction >= 0f)
+                {
+                    foreach (var flame in _hazardFlames) flame.gameObject.SetActive(false);
+                    _flameRingFraction = -1f;
+                }
+                return;
+            }
+
+            // Only reposition when the boundary actually moves - otherwise this rewrites two dozen
+            // transforms every frame for no visible change.
+            if (Mathf.Approximately(boundary, _flameRingFraction)) return;
+            _flameRingFraction = boundary;
+
+            // A collapsed boundary means the whole floor burns; keep the flames visible by leaving
+            // them at a small radius rather than stacking them all on the centre point.
+            float fraction = Mathf.Max(boundary, 0.12f);
+
+            for (int i = 0; i < _hazardFlames.Count; i++)
+            {
+                float t = i / (float)_hazardFlames.Count * Mathf.PI * 2f;
+                _hazardFlames[i].localPosition = new Vector3(
+                    Mathf.Cos(t) * WorldRadiusX * fraction,
+                    HazardRingHeight,
+                    Mathf.Sin(t) * WorldRadiusZ * fraction);
+                _hazardFlames[i].gameObject.SetActive(true);
+            }
+        }
+
         /// <summary>
         /// Shows the rings that are dealing damage right now, and - during Planning only - the one
         /// that will light up next cycle. The design calls for that stage to be telegraphed a cycle
@@ -128,6 +209,8 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public void Sync(MatchState state)
         {
+            SyncHazardFire(state);
+
             if (_hazardRings.Count == 0 || Palette == null) return;
 
             var upcoming = HazardSystem.UpcomingStage(state.Cycle);

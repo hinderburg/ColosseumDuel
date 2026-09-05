@@ -84,6 +84,7 @@ namespace ColosseumDuel.Gameplay
         {
             Arena.BuildHazardRings();
             Arena.BuildTorches();
+            Arena.BuildHazardFire();
 
             var viewRoot = new GameObject("Views").transform;
             viewRoot.SetParent(transform, false);

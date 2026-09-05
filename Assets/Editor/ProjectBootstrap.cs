@@ -40,6 +40,8 @@ namespace ColosseumDuel.EditorTools
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch Intense/CartoonFireTorchIntenseYellow.prefab";
         private const string TorchPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch/CartoonFireTorchRed.prefab";
+        private const string HazardFirePrefabPath =
+            "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Field/FireFieldRed.prefab";
 
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
@@ -314,6 +316,10 @@ namespace ColosseumDuel.EditorTools
             palette.Torch = AssetDatabase.LoadAssetAtPath<GameObject>(TorchPrefabPath);
             if (palette.Torch == null)
                 Debug.LogWarning($"[Colosseum] Torch prefab not found at {TorchPrefabPath} - the wall will be unlit.");
+
+            palette.HazardFire = AssetDatabase.LoadAssetAtPath<GameObject>(HazardFirePrefabPath);
+            if (palette.HazardFire == null)
+                Debug.LogWarning($"[Colosseum] Hazard flame not found at {HazardFirePrefabPath} - danger zones will be flat colour.");
 
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)

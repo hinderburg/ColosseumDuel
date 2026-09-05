@@ -127,6 +127,48 @@ namespace ColosseumDuel.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator FireMarksTheEdgeOfTheDangerZoneAndClosesInWithIt()
+        {
+            var flameRoot = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "HazardFire");
+            if (flameRoot == null)
+            {
+                Assert.Ignore("No hazard flame prefab - Epic Toon FX is not imported here.");
+                yield break;
+            }
+
+            var flames = flameRoot.Cast<Transform>().ToList();
+            Assert.AreEqual(_controller.Arena.HazardFireCount, flames.Count);
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+            Assert.IsTrue(flames.All(f => !f.gameObject.activeSelf),
+                "nothing is burning while the whole arena is still safe");
+
+            // Cycle 8: stages at 0.75-1.00 and 0.50-0.75 are alight, so safety ends at 0.50.
+            _controller.Manager.State.Cycle = 8;
+            yield return null;
+
+            Assert.IsTrue(flames.All(f => f.gameObject.activeSelf), "the boundary should be alight");
+            foreach (var flame in flames)
+                Assert.AreEqual(0.5f, NormalisedRadius(flame.localPosition), 0.02f,
+                    $"{flame.name} is not on the edge of the danger zone");
+
+            // A later stage moves the edge further in.
+            _controller.Manager.State.Cycle = 9;
+            yield return null;
+
+            foreach (var flame in flames)
+                Assert.AreEqual(0.25f, NormalisedRadius(flame.localPosition), 0.02f,
+                    "the ring of fire should close in as the arena shrinks");
+        }
+
+        /// <summary>Distance from the centre in wall units, measured on the arena's ellipse.</summary>
+        private float NormalisedRadius(Vector3 localPosition)
+            => new Vector2(localPosition.x / _controller.Arena.WorldRadiusX,
+                           localPosition.z / _controller.Arena.WorldRadiusZ).magnitude;
+
         /// <summary>Unity's front-face normal for a triangle (v0, v1, v2) is cross(v1-v0, v2-v0).</summary>
         private static Vector3 FrontFaceNormal(Mesh mesh)
         {
