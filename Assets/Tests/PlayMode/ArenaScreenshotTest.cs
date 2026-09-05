@@ -75,6 +75,40 @@ namespace ColosseumDuel.Tests
             canvas.renderMode = originalMode;
         }
 
+        /// <summary>
+        /// The other control, so both are in the capture set: the marker on the tapped point and the
+        /// dashed run to it are the only feedback tapping gives, and they are worth an eye.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TapControlRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            input.Scheme = ControlScheme.Tap;
+
+            controller.SubmitPlayerPick(GladiatorId.Hilius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
+
+            var canvas = Object.FindFirstObjectByType<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = Camera.main;
+            canvas.planeDistance = 1f;
+
+            // Half a dash up the arena, so the dashes reach the ring rather than stopping short.
+            var player = controller.Manager.State.P1.Active;
+            var target = player.Pos + new Vector2(0f, player.DashReach() * 0.5f);
+            input.TapTo(controller.Arena.ArenaCamera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
+            yield return null;
+
+            yield return Capture(SuffixPath("-tap"));
+        }
+
         /// <summary>Captures the moment an ability fires, so the burst effect can be eyeballed.</summary>
         [UnityTest]
         public IEnumerator AbilityBurstRendersAFrame()

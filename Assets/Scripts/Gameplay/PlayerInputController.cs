@@ -65,6 +65,7 @@ namespace ColosseumDuel.Gameplay
         private const float DashPeriod = 0.55f;
 
         private LineRenderer _trajectory;
+        private GameObject _tapMarker;
         private LineRenderer _pullLine;
         private readonly List<Vector3> _worldPoints = new List<Vector3>();
 
@@ -99,6 +100,37 @@ namespace ColosseumDuel.Gameplay
             // different things: what you are doing now, and what will happen when you let go.
             _pullLine = CreateLine("PullLine", palette != null ? palette.PullLine : null,
                 TrajectoryWidth * 0.65f);
+
+            BuildTapMarker(palette);
+        }
+
+        /// <summary>
+        /// The ring that marks a tapped destination.
+        ///
+        /// A ring rather than a filled disc: it sits on the sand where the gladiator is about to
+        /// arrive, and a solid spot there would be hidden under him the moment he did.
+        /// </summary>
+        private void BuildTapMarker(ViewPalette palette)
+        {
+            if (palette == null) return;
+
+            float radius = Controller.Arena.ScaleLength(GameConstants.GladiatorRadius);
+
+            // Parented to the arena, not to this component. This lives on the camera, and a ring
+            // hung off the camera inherits its 66-degree pitch - the annulus lies in the XZ plane,
+            // so tilted with the camera it is seen edge-on and disappears. The lines get away with
+            // it only because they set their own world rotation.
+            _tapMarker = new GameObject("TapMarker");
+            _tapMarker.transform.SetParent(Controller.Arena.transform, false);
+            _tapMarker.AddComponent<MeshFilter>().sharedMesh =
+                ViewPrimitives.CreateAnnulus(radius * 0.72f, radius, 40);
+
+            var renderer = _tapMarker.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = palette.PullLine; // the same solid white the pull is drawn in
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            _tapMarker.SetActive(false);
         }
 
         private LineRenderer CreateLine(string name, Material material, float width)
@@ -140,6 +172,11 @@ namespace ColosseumDuel.Gameplay
                 // into a match where nothing has been chosen at all.
                 DefendArmed = false;
                 AbilityArmed = false;
+
+                // The tap feedback belongs to the phase that produced it. Left up, the ring and the
+                // dashes would still be sitting there while the gladiators ran, describing an order
+                // that had already been carried out.
+                ClearTapOrder();
                 return;
             }
 
@@ -255,9 +292,15 @@ namespace ColosseumDuel.Gameplay
             DefendArmed = false;
             CancelDrag();
 
+            var aim = toTarget / distance;
             bool ability = AbilityArmed;
-            Controller.SubmitPlayerMove(toTarget / distance, power, ability);
+            Controller.SubmitPlayerMove(aim, power, ability);
             AbilityArmed = false;
+
+            // Drawn after submitting, so what is shown is the order that actually went in rather
+            // than the one about to. It stays up for the rest of the phase - the whole point is
+            // being able to look at the decision you have already made.
+            ShowTapOrder(g, target, aim, power);
             return true;
         }
 
@@ -419,6 +462,47 @@ namespace ColosseumDuel.Gameplay
             _pullLine.SetPosition(0, Controller.Arena.ToWorld(g.Pos, 0.07f));
             _pullLine.SetPosition(1, Controller.Arena.ToWorld(g.Pos - clamped, 0.07f));
             _pullLine.enabled = true;
+        }
+
+        /// <summary>
+        /// Marks where the player tapped and draws the run they just ordered.
+        ///
+        /// Tapping had no feedback at all: the order went in and nothing on screen acknowledged it
+        /// until the gladiators started moving, so there was no way to tell a registered tap from a
+        /// missed one, and no way to check the aim before committing to it.
+        ///
+        /// The ring sits on the tapped point and the dashes show the actual run, which is the same
+        /// preview the pull draws - so when the tap is further than one dash carries, the line stops
+        /// short of the ring and says exactly that.
+        /// </summary>
+        private void ShowTapOrder(GladiatorInstance g, Vector2 target, Vector2 aim, float power)
+        {
+            if (Controller.Arena == null) return;
+
+            if (_tapMarker != null)
+            {
+                _tapMarker.transform.position = Controller.Arena.ToWorld(target, 0.05f);
+                _tapMarker.SetActive(true);
+            }
+
+            if (_trajectory == null) return;
+
+            var points = GameManager.ComputeTrajectoryPreview(g, aim, power);
+            _worldPoints.Clear();
+            foreach (var p in points)
+                _worldPoints.Add(Controller.Arena.ToWorld(p, 0.06f));
+
+            _trajectory.positionCount = _worldPoints.Count;
+            for (int i = 0; i < _worldPoints.Count; i++)
+                _trajectory.SetPosition(i, _worldPoints[i]);
+            _trajectory.enabled = true;
+        }
+
+        /// <summary>Clears the tap feedback. The order stands; only its picture goes.</summary>
+        private void ClearTapOrder()
+        {
+            if (_tapMarker != null && _tapMarker.activeSelf) _tapMarker.SetActive(false);
+            Hide(_trajectory);
         }
 
         private void DrawTrajectory(GladiatorInstance g)

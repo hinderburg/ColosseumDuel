@@ -313,6 +313,43 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(1f, Player.PlannedPower, 0.001f, "out of range means flat out");
         }
 
+        [UnityTest]
+        public IEnumerator ATapLeavesAMarkerAndADottedRunBehindIt()
+        {
+            _input.Scheme = ControlScheme.Tap;
+            Player.Pos = Vector2.zero;
+
+            var marker = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "TapMarker");
+            var dashes = _input.GetComponentsInChildren<LineRenderer>(true)
+                .First(l => l.name == "TrajectoryPreview");
+
+            Assert.IsNotNull(marker, "no tap marker was built");
+            Assert.IsFalse(marker.gameObject.activeSelf, "nothing tapped yet");
+            Assert.IsFalse(dashes.enabled);
+
+            var target = new Vector2(0f, Player.DashReach() * 0.6f);
+            Assert.IsTrue(_input.TapTo(
+                _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target))));
+
+            // Tapping used to acknowledge nothing at all: the order went in and the screen stayed
+            // exactly as it was, so a registered tap and a missed one looked identical.
+            Assert.IsTrue(marker.gameObject.activeSelf, "the tapped point is not marked");
+            Assert.AreEqual(_controller.Arena.ToWorld(target).x, marker.position.x, 0.1f);
+            Assert.AreEqual(_controller.Arena.ToWorld(target).z, marker.position.z, 0.1f);
+
+            Assert.IsTrue(dashes.enabled, "the run to the tap is not drawn");
+            Assert.Greater(dashes.positionCount, 1);
+
+            // And it belongs to this planning phase only - left up, it would still be describing an
+            // order while that order was being carried out.
+            yield return RunSeconds(GameConstants.PlanningTime + 0.3f);
+
+            Assert.AreEqual(MatchPhase.Action, _controller.Manager.State.Phase);
+            Assert.IsFalse(marker.gameObject.activeSelf, "the marker outlived its phase");
+            Assert.IsFalse(dashes.enabled);
+        }
+
         [Test]
         public void TappingOnHimselfIsNotAMove()
         {
