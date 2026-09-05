@@ -127,7 +127,7 @@ namespace ColosseumDuel.Gameplay.Hud
             _abilityButton = _actionButtons.Ability;
             _defendButton = _actionButtons.Defend;
             _abilityButton.onClick.AddListener(() => Input?.ToggleAbility());
-            _defendButton.onClick.AddListener(() => Input?.SubmitDefend());
+            _defendButton.onClick.AddListener(() => Input?.ToggleDefend());
 
             _hint = HudFactory.CreateLabel("Hint", root,
                 "Потяни от гладиатора и отпусти — рывок",
@@ -238,7 +238,9 @@ namespace ColosseumDuel.Gameplay.Hud
 
             _actionButtons.Sync(g, state.Phase,
                 Controller != null && Controller.Arena != null ? Controller.Arena.ArenaCamera : null,
-                Input != null && Input.AbilityArmed);
+                Input != null && Input.AbilityArmed,
+                Input != null && Input.DefendArmed,
+                Mathf.Max(0f, GameConstants.PlanningTime - state.PhaseTimer));
 
             _defendButton.interactable = canAct;
             _hint.enabled = canAct;
@@ -248,9 +250,10 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             switch (state.Phase)
             {
+                // No countdown here any more - it lives above the gladiator, next to the two buttons
+                // it is timing. Two clocks showing the same number is one more than anyone reads.
                 case MatchPhase.Planning:
-                    float left = Mathf.Max(0f, GameConstants.PlanningTime - state.PhaseTimer);
-                    _phaseLabel.text = $"Раунд {state.Round} · цикл {state.Cycle} · планирование {left:0.0}";
+                    _phaseLabel.text = $"Раунд {state.Round} · цикл {state.Cycle} · планирование";
                     break;
                 case MatchPhase.Action:
                     _phaseLabel.text = $"Раунд {state.Round} · цикл {state.Cycle} · действие";

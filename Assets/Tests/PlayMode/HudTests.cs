@@ -121,6 +121,88 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator TheDefendButtonLatchesAndCanBeTakenBack()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            var defend = FindButton("Defend");
+            var background = (Image)defend.targetGraphic;
+
+            Color idle = background.color;
+            Assert.IsFalse(input.DefendArmed);
+
+            defend.onClick.Invoke();
+            yield return null;
+
+            // The whole point of the change: pressing it has to leave a mark. It used to file the
+            // plan and look exactly as it had a moment earlier, so there was no telling a chosen
+            // guard from a phase nobody had touched.
+            Assert.IsTrue(input.DefendArmed);
+            Assert.AreEqual(ActionType.Defend, State.P1.Active.PlannedAction);
+            Assert.AreNotEqual(idle, background.color, "a pressed guard looks the same as an unpressed one");
+            Assert.IsTrue(Find("DefendGlow").GetComponent<Image>().enabled);
+
+            defend.onClick.Invoke();
+            yield return null;
+
+            Assert.IsFalse(input.DefendArmed);
+            Assert.AreEqual(ActionType.None, State.P1.Active.PlannedAction,
+                "taking the guard back should leave the player undecided again");
+            Assert.AreEqual(idle, background.color);
+        }
+
+        [UnityTest]
+        public IEnumerator PullingBackReleasesTheGuard()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            FindButton("Defend").onClick.Invoke();
+            yield return null;
+            Assert.IsTrue(input.DefendArmed);
+
+            // Guard and move are the two halves of one either-or, so starting a pull has to let the
+            // button go - otherwise it sits lit while the gladiator charges.
+            input.TryBeginDrag(State.P1.Active.Pos);
+            yield return null;
+
+            Assert.IsFalse(input.DefendArmed, "the guard stayed lit through a pull-back");
+            input.CancelDrag();
+        }
+
+        [UnityTest]
+        public IEnumerator TheDecisionTimerCountsDownAboveTheGladiator()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var timer = Find("DecisionTimer").GetComponent<Text>();
+            var defend = FindButton("Defend").GetComponent<RectTransform>();
+            var ability = FindButton("Ability").GetComponent<RectTransform>();
+
+            Assert.IsTrue(float.TryParse(timer.text.Replace(',', '.'),
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float first),
+                $"the timer should read as a number, not '{timer.text}'");
+
+            // Above both buttons, on the gladiator's own column - the reason it moved off the status
+            // line at the top of the screen, where timing a decision meant looking away from it.
+            var rect = timer.rectTransform;
+            Assert.Greater(rect.anchoredPosition.y, defend.anchoredPosition.y, "the timer is not above the guard");
+            Assert.Greater(rect.anchoredPosition.y, ability.anchoredPosition.y, "the timer is not above the ability");
+
+            yield return RunSeconds(0.6f);
+
+            Assert.IsTrue(float.TryParse(timer.text.Replace(',', '.'),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out float later));
+            Assert.Less(later, first, "the timer is not counting down");
+        }
+
+        [UnityTest]
         public IEnumerator TheAbilityButtonUnlocksOnlyWhenTheRageMeterIsFull()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);

@@ -24,7 +24,19 @@ namespace ColosseumDuel.Gameplay.Hud
         private static readonly Vector2 DefendOffset = new Vector2(-62f, 54f);
         private static readonly Vector2 AbilityOffset = new Vector2(62f, 54f);
 
+        /// <summary>
+        /// The countdown sits above the pair, on the gladiator's own column.
+        ///
+        /// Not in the status line at the top of the screen, where it used to be: during planning the
+        /// player is looking at their gladiator and the two buttons beside him, and a clock in the
+        /// far corner is read by looking away from the decision it is timing.
+        /// </summary>
+        private static readonly Vector2 TimerOffset = new Vector2(0f, 104f);
+
         private const float ButtonSize = 74f;
+
+        /// <summary>Background of a button nobody has pressed.</summary>
+        private static readonly Color Idle = new Color(0.10f, 0.10f, 0.13f, 0.92f);
 
         /// <summary>How visible the ability button is while the rage meter is still filling.</summary>
         private const float NotReadyAlpha = 0.42f;
@@ -43,6 +55,10 @@ namespace ColosseumDuel.Gameplay.Hud
         private Canvas _canvas;
         private Text _abilityLabel;
         private Image _abilityBackground;
+        private Image _defendBackground;
+        private Image _defendGlow;
+        private Text _timer;
+        private RectTransform _timerRect;
 
         public static ActionButtonsView Create(Transform canvas, ViewPalette palette, ArenaView arena)
         {
@@ -54,6 +70,16 @@ namespace ColosseumDuel.Gameplay.Hud
 
             view.Defend = view.BuildRound(root, "Defend", palette, "Щит", HudFactory.PlayerColor,
                 out view._defendRect, out view._defendGroup);
+            view._defendBackground = (Image)view.Defend.targetGraphic;
+
+            // The guard gets the same halo the ability has. Pressing it used to file the plan and
+            // leave nothing behind, so there was no way to tell a guard from a phase where nothing
+            // had been touched at all.
+            view._defendGlow = HudFactory.CreatePanel("DefendGlow", view._defendRect, HudFactory.PlayerColor);
+            view._defendGlow.sprite = palette != null ? palette.Disc : null;
+            view._defendGlow.raycastTarget = false;
+            view._defendGlow.transform.SetAsFirstSibling();
+            HudFactory.Stretch(view._defendGlow.rectTransform, -14f);
 
             view.Ability = view.BuildRound(root, "Ability", palette, "", HudFactory.RageColor,
                 out view._abilityRect, out view._abilityGroup);
@@ -77,6 +103,18 @@ namespace ColosseumDuel.Gameplay.Hud
             view._abilityGlow.raycastTarget = false;
             view._abilityGlow.transform.SetAsFirstSibling();
             HudFactory.Stretch(view._abilityGlow.rectTransform, -14f);
+
+            view._timer = HudFactory.CreateLabel("DecisionTimer", root, "", 30);
+            view._timerRect = view._timer.rectTransform;
+            view._timerRect.anchorMin = view._timerRect.anchorMax = new Vector2(0.5f, 0.5f);
+            view._timerRect.pivot = new Vector2(0.5f, 0.5f);
+            view._timerRect.sizeDelta = new Vector2(200f, 40f);
+
+            // The countdown floats over the arena rather than over a panel, and the arena is bright
+            // sand. White numerals on it are legible right up until they are not.
+            var outline = view._timer.gameObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            outline.effectDistance = new Vector2(2f, -2f);
 
             if (palette != null && palette.AbilityReadyFire != null)
             {
@@ -119,7 +157,8 @@ namespace ColosseumDuel.Gameplay.Hud
         /// Places and updates both buttons. <paramref name="gladiator"/> is null whenever the player
         /// has nobody on the arena, which hides the pair.
         /// </summary>
-        public void Sync(GladiatorInstance gladiator, MatchPhase phase, Camera camera, bool abilityArmed)
+        public void Sync(GladiatorInstance gladiator, MatchPhase phase, Camera camera,
+                         bool abilityArmed, bool defendArmed, float secondsLeft)
         {
             bool visible = phase == MatchPhase.Planning && gladiator != null && gladiator.Alive
                            && camera != null && _arena != null;
@@ -146,6 +185,15 @@ namespace ColosseumDuel.Gameplay.Hud
 
             _defendRect.anchoredPosition = anchorLocal + DefendOffset;
             _abilityRect.anchoredPosition = anchorLocal + AbilityOffset;
+            _timerRect.anchoredPosition = anchorLocal + TimerOffset;
+
+            // One decimal, because the last second is the one that matters and a whole-number
+            // countdown spends a third of its life showing "1".
+            _timer.text = secondsLeft.ToString("0.0");
+
+            // Red once there is under a second left. The clock is beside the decision now, so it can
+            // afford to say something rather than just count.
+            _timer.color = secondsLeft <= 1f ? new Color(1f, 0.45f, 0.35f) : Color.white;
 
             // The ability differs per gladiator, so name it rather than saying "special" - the
             // names are short enough to fit and tell the player what the button will actually do.
@@ -162,15 +210,22 @@ namespace ColosseumDuel.Gameplay.Hud
             // A slow pulse while ready, so a charged ability catches the eye during planning.
             // Armed is a different state from ready, and the player has to be able to tell which
             // they are looking at: ready means "you may", armed means "you already chose to".
-            _abilityBackground.color = ready && abilityArmed
-                ? HudFactory.RageColor
-                : new Color(0.10f, 0.10f, 0.13f, 0.92f);
+            _abilityBackground.color = ready && abilityArmed ? HudFactory.RageColor : Idle;
 
             float pulse = ready ? 0.55f + 0.45f * Mathf.Sin(Time.time * 4f) : 0f;
             var glow = HudFactory.RageColor;
             glow.a = pulse * (abilityArmed ? 0.9f : 0.55f);
             _abilityGlow.color = glow;
             _abilityGlow.enabled = ready;
+
+            // The guard reads the same way: filled background plus a steady halo once chosen. Steady
+            // rather than pulsing, because the pulse on the ability means "available, go on" and
+            // this one means "chosen, done" - two things that should not share an animation.
+            _defendBackground.color = defendArmed ? HudFactory.PlayerColor : Idle;
+            var defendGlow = HudFactory.PlayerColor;
+            defendGlow.a = 0.75f;
+            _defendGlow.color = defendGlow;
+            _defendGlow.enabled = defendArmed;
 
             if (_readyFire != null)
             {

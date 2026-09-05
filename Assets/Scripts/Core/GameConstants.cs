@@ -8,7 +8,15 @@ namespace ColosseumDuel.Core
     {
         // --- phase timing (seconds) ---
         public const float PlanningTime = 3.0f;
-        public const float ActionTime = 2.0f; // reduced from the original 4.0s per design iteration
+        // How long the gladiators actually move. Cut from 4.0 to 2.0 and then to 1.0 across design
+        // passes - a short burst reads as a charge, a long one as a jog.
+        //
+        // It sets how far a dash carries, and so how many cycles it takes two fighters to meet:
+        // halving it halves the distance covered per phase. At 1.0 the slowest pair charging head-on
+        // covers 150 units against the 512 between them, so first contact is three or four cycles
+        // out; the fastest pair does it in two. SpawnDistanceFraction is the other end of that
+        // trade if the approach starts to drag.
+        public const float ActionTime = 1.0f;
         public const float RevealTime = 1.0f;   // picks stay on screen this long before the round's first Planning
         public const float RoundEndTime = 1.0f; // pause after a death so the knockout reads on screen
 

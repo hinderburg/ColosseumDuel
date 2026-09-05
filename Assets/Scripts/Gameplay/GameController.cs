@@ -190,6 +190,17 @@ namespace ColosseumDuel.Gameplay
             Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, useAbility);
         }
 
+        /// <summary>
+        /// Takes back whatever the player had chosen this phase, leaving them undecided again.
+        ///
+        /// Undecided is not the same as defending, even though a phase that runs out while nobody
+        /// has decided falls back to a guard - the difference is what the buttons show.
+        /// </summary>
+        public void ClearPlayerPlan()
+        {
+            Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.None, Vector2.zero, 0f, false);
+        }
+
         public void SubmitPlayerPick(GladiatorId id)
         {
             Manager?.SubmitPick(PlayerSide.P1, id);

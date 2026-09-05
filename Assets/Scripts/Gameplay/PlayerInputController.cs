@@ -30,6 +30,9 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Armed by the ability toggle; consumed by the next submitted action.</summary>
         public bool AbilityArmed { get; private set; }
 
+        /// <summary>Whether the guard is currently chosen. Reset when the phase ends or a drag starts.</summary>
+        public bool DefendArmed { get; private set; }
+
         public bool IsDragging { get; private set; }
 
         /// <summary>0..1 pull strength of the drag in progress. Zero when not dragging.</summary>
@@ -113,6 +116,10 @@ namespace ColosseumDuel.Gameplay
             if (Controller.Manager.State.Phase != MatchPhase.Planning)
             {
                 if (IsDragging) CancelDrag();
+
+                // The guard is a decision about one planning phase. Left standing, it would come up
+                // already pressed at the start of the next one, showing a choice nobody made.
+                DefendArmed = false;
                 return;
             }
 
@@ -157,7 +164,7 @@ namespace ColosseumDuel.Gameplay
 
             if (state.Phase != MatchPhase.Planning) return;
             if (Input.GetKeyDown(KeyCode.Q)) ToggleAbility();
-            if (Input.GetKeyDown(KeyCode.Space)) SubmitDefend();
+            if (Input.GetKeyDown(KeyCode.Space)) ToggleDefend();
         }
 
         // ------------------------------------------------------------------
@@ -170,6 +177,10 @@ namespace ColosseumDuel.Gameplay
             var g = PlayerGladiator();
             if (g == null) return false;
             if (Vector2.Distance(virtualPoint, g.Pos) > GrabRadiusVirtual) return false;
+
+            // Pulling back is choosing to move, which is the other half of the same either-or. The
+            // guard has to let go here, or the button would sit lit while the gladiator charges.
+            DefendArmed = false;
 
             IsDragging = true;
             UpdateDrag(virtualPoint);
@@ -223,12 +234,32 @@ namespace ColosseumDuel.Gameplay
             AbilityArmed = !AbilityArmed && g.CanActivateAbility;
         }
 
-        public void SubmitDefend()
+        /// <summary>
+        /// Toggles the guard, the same way the ability button toggles.
+        ///
+        /// It used to commit the plan and leave no trace: the button flashed, the plan was filed,
+        /// and nothing on screen said which of the two choices had been made. A guard held for a
+        /// whole planning phase is a decision the player needs to see they made - and be able to
+        /// take back, which pressing again now does.
+        ///
+        /// Turning it off files ActionType.None, which is the same "nothing chosen" state the phase
+        /// starts in; a player who leaves it there still ends up defending, because that is what an
+        /// unmade decision falls back to.
+        /// </summary>
+        public void ToggleDefend()
         {
             if (PlayerGladiator() == null) return;
-            CancelDrag();
-            Controller.SubmitPlayerDefend(AbilityArmed);
-            AbilityArmed = false;
+
+            DefendArmed = !DefendArmed;
+            if (DefendArmed)
+            {
+                CancelDrag();
+                Controller.SubmitPlayerDefend(AbilityArmed);
+            }
+            else
+            {
+                Controller.ClearPlayerPlan();
+            }
         }
 
         // ------------------------------------------------------------------
