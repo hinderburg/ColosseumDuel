@@ -110,6 +110,22 @@ namespace ColosseumDuel.Gameplay.View
         public Material WallStone;
 
         /// <summary>
+        /// The sword and shield models, used both for the pickups lying on the sand and for the gear
+        /// a gladiator is carrying. One model each: a two-handed weapon is the same sword at a
+        /// larger scale, which is what makes the two read as the same object at a glance.
+        /// Null in a clean clone, where ItemView falls back to primitives.
+        /// </summary>
+        [Header("Gear")]
+        public GameObject SwordModel;
+        public GameObject ShieldModel;
+
+        /// <summary>
+        /// Screen-edge tint for the planning phase, transparent in the middle. Generated, so it is
+        /// always present.
+        /// </summary>
+        public Sprite Vignette;
+
+        /// <summary>
         /// One figure per archetype, indexed by GladiatorId. Built from the imported humanoid; a
         /// clean clone without the model pack gets nulls and falls back to primitive bodies.
         /// </summary>

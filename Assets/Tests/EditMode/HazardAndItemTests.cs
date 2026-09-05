@@ -74,6 +74,12 @@ namespace ColosseumDuel.Tests
 
             for (int i = 0; i < 30; i++)
             {
+                // Empty-handed each time round. This test is about the slot invariant, and a
+                // gladiator who happened to be holding a two-hander would rightly decline the
+                // shield - a rule of its own, covered separately.
+                g.Weapon = WeaponType.None;
+                g.HasShield = false;
+
                 var target = items.Items[i % items.Items.Count];
                 g.Pos = target.Pos;
                 var picked = items.TryPickup(g);
@@ -115,6 +121,47 @@ namespace ColosseumDuel.Tests
                     Assert.Less(ArenaShape.NormalizedDistance(item.Pos), 1f,
                         "an item spawned outside the wall would be unreachable");
             }
+        }
+
+        [Test]
+        public void ATwoHandedWeaponAndAShieldCannotBeCarriedTogether()
+        {
+            var g = new GladiatorInstance(GladiatorDef.Brutius);
+            var shield = new ArenaItem { Kind = ItemKind.Shield };
+            var oneHanded = new ArenaItem { Kind = ItemKind.Weapon, WeaponType = WeaponType.OneHanded };
+            var twoHanded = new ArenaItem { Kind = ItemKind.Weapon, WeaponType = WeaponType.TwoHanded };
+
+            Assert.IsTrue(ItemSystem.CanCarry(g, shield), "empty-handed, he can take anything");
+            Assert.IsTrue(ItemSystem.CanCarry(g, twoHanded));
+
+            g.Weapon = WeaponType.TwoHanded;
+            Assert.IsFalse(ItemSystem.CanCarry(g, shield), "both hands are on the haft");
+            Assert.IsTrue(ItemSystem.CanCarry(g, oneHanded), "swapping weapons is still fine");
+
+            g.Weapon = WeaponType.None;
+            g.HasShield = true;
+            Assert.IsFalse(ItemSystem.CanCarry(g, twoHanded), "the same impossible pair, arrived at backwards");
+            Assert.IsTrue(ItemSystem.CanCarry(g, oneHanded), "sword and board is the whole point");
+        }
+
+        [Test]
+        public void AnItemHeCannotCarryIsLeftOnTheSand()
+        {
+            // Not merely "not equipped": TryPickup has to decline it, or ApplyPickup would consume
+            // the shield and respawn it elsewhere for nothing, and the player would watch a pickup
+            // vanish with no effect and no explanation.
+            var items = new ItemSystem(new System.Random(7));
+            items.SpawnInitial();
+
+            var shield = items.Items.Find(i => i.Kind == ItemKind.Shield);
+            var g = new GladiatorInstance(GladiatorDef.Brutius)
+            {
+                Weapon = WeaponType.TwoHanded,
+                Pos = shield.Pos,
+            };
+
+            Assert.AreNotSame(shield, items.TryPickup(g), "a two-hander should walk straight over a shield");
+            CollectionAssert.Contains(items.Items, shield, "and it should still be lying there");
         }
 
         private static int CountOf(ItemSystem items, ItemKind kind)

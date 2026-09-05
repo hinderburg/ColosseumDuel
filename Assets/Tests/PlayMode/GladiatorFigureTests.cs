@@ -138,6 +138,55 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(animator.GetBool(AnimatorParams.Dead), "the animator was not told he fell");
         }
 
+        [UnityTest]
+        public IEnumerator CarriedGearGoesIntoTheRightHands()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var weapon = FindIn("Player", "HeldWeapon");
+            var shield = FindIn("Player", "HeldShield");
+            if (weapon == null || shield == null)
+            {
+                Assert.Ignore("No gear models - the DoubleL pack is not imported here.");
+                yield break;
+            }
+
+            Assert.IsFalse(weapon.gameObject.activeSelf, "he is carrying nothing yet");
+            Assert.IsFalse(shield.gameObject.activeSelf);
+
+            var animator = FindIn("Player", $"Figure_{GladiatorId.Brutius}")
+                .GetComponentInChildren<Animator>(true);
+            Assert.AreSame(animator.GetBoneTransform(HumanBodyBones.RightHand), weapon.parent,
+                "the weapon belongs in the right hand");
+            Assert.AreSame(animator.GetBoneTransform(HumanBodyBones.LeftHand), shield.parent,
+                "the shield belongs in the left");
+
+            var g = _controller.Manager.State.P1.Active;
+            g.Weapon = WeaponType.OneHanded;
+            g.HasShield = true;
+            yield return null;
+
+            Assert.IsTrue(weapon.gameObject.activeSelf);
+            Assert.IsTrue(shield.gameObject.activeSelf);
+            float oneHandedLength = weapon.localScale.y;
+
+            g.Weapon = WeaponType.TwoHanded;
+            yield return null;
+
+            // The difference between the two weapons is size and nothing else - it is the same model
+            // - so if the scale does not change there is no way to tell them apart on screen.
+            Assert.Greater(weapon.localScale.y, oneHandedLength,
+                "a two-hander should be visibly bigger than a one-hander");
+
+            g.Weapon = WeaponType.None;
+            g.HasShield = false;
+            yield return null;
+
+            Assert.IsFalse(weapon.gameObject.activeSelf, "a broken weapon should leave his hand");
+            Assert.IsFalse(shield.gameObject.activeSelf);
+        }
+
         private static IEnumerator RunUntil(System.Func<bool> done, float maxSeconds)
         {
             float t = 0f;

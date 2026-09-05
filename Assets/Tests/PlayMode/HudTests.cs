@@ -163,6 +163,29 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator TheScreenEdgesTintWhilePlanningAndClearWhileActing()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.4f);
+
+            var vignette = Find("PlanningVignette").GetComponent<Image>();
+            Assert.IsNotNull(vignette.sprite, "no vignette sprite - run the bootstrap");
+            Assert.AreEqual(MatchPhase.Planning, State.Phase);
+            Assert.IsTrue(vignette.enabled && vignette.color.a > 0.05f,
+                "planning should be visible at the edges of the screen");
+
+            // It must not be raycastable: it covers the whole screen, and the phase it marks is the
+            // one the player spends dragging on exactly that surface.
+            Assert.IsFalse(vignette.raycastTarget, "the vignette would swallow every drag");
+
+            yield return RunSeconds(GameConstants.PlanningTime + 0.5f);
+
+            Assert.AreEqual(MatchPhase.Action, State.Phase);
+            Assert.IsTrue(!vignette.enabled || vignette.color.a < 0.05f,
+                "the tint should be gone once the gladiators are moving");
+        }
+
+        [UnityTest]
         public IEnumerator TheDefendButtonLatchesAndCanBeTakenBack()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);

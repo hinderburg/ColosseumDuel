@@ -93,7 +93,10 @@ namespace ColosseumDuel.Core
         public const int ItemCountOnArena = 3; // always exactly 1 weapon + 1 shield + 1 random
 
         // --- arena hazard (shrinking rings) ---
-        public const float HazardDamageFraction = 0.15f; // 15% of max HP per tick in an active danger ring
+        // Share of max HP the danger zone burns through over one action phase. Doubled in a balance
+        // pass: at 15% the fire was a nuisance to be walked through, which is the opposite of what a
+        // closing arena is for.
+        public const float HazardDamageFraction = 0.30f;
         public const int HazardSafeCycles = 6;            // arena is fully safe for the first 6 full cycles
 
         // --- squads ---

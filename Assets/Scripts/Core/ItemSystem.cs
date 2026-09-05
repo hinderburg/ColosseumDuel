@@ -70,10 +70,29 @@ namespace ColosseumDuel.Core
         {
             foreach (var item in Items)
             {
-                if (Vector2.Distance(g.Pos, item.Pos) <= GameConstants.PickupDistance)
-                    return item;
+                if (Vector2.Distance(g.Pos, item.Pos) > GameConstants.PickupDistance) continue;
+                if (!CanCarry(g, item)) continue;
+                return item;
             }
             return null;
+        }
+
+        /// <summary>
+        /// A two-handed weapon and a shield cannot be held at once - both hands are on the haft.
+        ///
+        /// Checked here rather than in ApplyPickup so that an item he cannot take is simply not
+        /// picked up: it stays on the sand for him to come back to once his trident has broken,
+        /// instead of being consumed and respawned somewhere else for nothing.
+        ///
+        /// It blocks in both directions. The rule was asked for as "a two-hander blocks the shield",
+        /// but the other order produces the same impossible pair, and refusing the weapon leaves the
+        /// shield the player already earned rather than quietly destroying it.
+        /// </summary>
+        public static bool CanCarry(GladiatorInstance g, ArenaItem item)
+        {
+            if (item.Kind == ItemKind.Shield) return g.Weapon != WeaponType.TwoHanded;
+            if (item.WeaponType == WeaponType.TwoHanded) return !g.HasShield;
+            return true;
         }
 
         // NOTE: the original spec leaves the "random" 3rd slot loosely defined - it is currently

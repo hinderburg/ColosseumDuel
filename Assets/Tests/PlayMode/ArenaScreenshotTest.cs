@@ -58,6 +58,13 @@ namespace ColosseumDuel.Tests
             // Hold a full-power pull aimed at the far wall, so the captured frame shows the
             // trajectory preview including its bounce.
             var player = controller.Manager.State.P1.Active;
+
+            // Armed, so the frame also shows the carried gear in his hands - the sword and the
+            // shield are only visible when someone is actually holding them, and a capture of an
+            // unarmed fighter says nothing about whether they attach where they should.
+            player.Weapon = WeaponType.OneHanded;
+            player.HasShield = true;
+            controller.Manager.State.Bot.Active.Weapon = WeaponType.TwoHanded;
             var aim = new Vector2(-0.707f, 0.707f);
             input.TryBeginDrag(player.Pos);
             input.UpdateDrag(player.Pos - aim * GameConstants.MaxDragVirtual);

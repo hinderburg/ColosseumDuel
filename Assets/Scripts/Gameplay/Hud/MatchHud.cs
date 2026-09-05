@@ -35,6 +35,8 @@ namespace ColosseumDuel.Gameplay.Hud
         private Text _overlayTitle;
         private Text _overlaySubtitle;
         private RectTransform _pickRow;
+        private Image _planningVignette;
+        private float _vignetteStrength;
         private Button _restartButton;
 
         private bool _built;
@@ -65,6 +67,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             var root = (RectTransform)transform;
 
+            BuildPlanningVignette(root);
             BuildTopBar(root);
             BuildBottomBar(root);
             BuildOverlay(root);
@@ -142,6 +145,53 @@ namespace ColosseumDuel.Gameplay.Hud
             _hint.rectTransform.sizeDelta = new Vector2(_hint.rectTransform.sizeDelta.x, 20f);
             // Clear of both the squad corner and the action buttons, which sit at the same height.
             _hint.rectTransform.anchoredPosition = new Vector2(0f, 190f);
+        }
+
+        /// <summary>
+        /// A cold tint creeping in from the edges of the screen while the player is planning.
+        ///
+        /// The world already runs at a third speed during planning, but on a still arena the only
+        /// thing that showed it was the torches guttering - a detail at the far edge of the frame.
+        /// This says the same thing in peripheral vision, which is where a change of tempo is
+        /// actually felt.
+        ///
+        /// Built first so it sits behind every other HUD element, and non-interactive, so it cannot
+        /// swallow the drag that the phase exists for.
+        /// </summary>
+        private void BuildPlanningVignette(RectTransform root)
+        {
+            var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
+
+            _planningVignette = HudFactory.CreatePanel("PlanningVignette", root, Color.clear);
+            _planningVignette.sprite = palette != null ? palette.Vignette : null;
+            _planningVignette.raycastTarget = false;
+            _planningVignette.transform.SetAsFirstSibling();
+            HudFactory.Stretch(_planningVignette.rectTransform);
+        }
+
+        /// <summary>Colour of the planning tint: cold and blue, against an arena of warm sand.</summary>
+        private static readonly Color PlanningTint = new Color(0.32f, 0.55f, 0.95f);
+
+        private void SyncPlanningVignette(MatchState state)
+        {
+            if (_planningVignette == null) return;
+
+            // Eased in and out rather than switched, because the phase change itself is what the
+            // effect is reporting - a hard cut would land on the frame before the eye has anything
+            // to attach it to.
+            bool planning = state.Phase == MatchPhase.Planning;
+            float target = planning ? 1f : 0f;
+            _vignetteStrength = Mathf.MoveTowards(_vignetteStrength, target, Time.unscaledDeltaTime * 3.5f);
+
+            _planningVignette.enabled = _vignetteStrength > 0.001f && _planningVignette.sprite != null;
+            if (!_planningVignette.enabled) return;
+
+            // A slow breath while it is up, at the speed the world is running rather than real time,
+            // so it drags in step with everything else the slowdown touches.
+            float pulse = 0.78f + 0.22f * Mathf.Sin(Time.time * 2.2f);
+            var tint = PlanningTint;
+            tint.a = _vignetteStrength * 0.85f * pulse;
+            _planningVignette.color = tint;
         }
 
         private void BuildOverlay(RectTransform root)
@@ -248,6 +298,7 @@ namespace ColosseumDuel.Gameplay.Hud
             SyncRoster(state);
             SyncActions(state);
             SyncPhaseLabel(state);
+            SyncPlanningVignette(state);
             SyncOverlay(state);
         }
 

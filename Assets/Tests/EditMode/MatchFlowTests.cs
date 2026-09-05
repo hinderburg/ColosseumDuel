@@ -188,6 +188,63 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void MongooseLandsTwoHitsThroughAWholeCycle()
+        {
+            // The existing Mongoose test drives CombatResolver directly, which proves the arithmetic
+            // and nothing about the path a match actually takes: arming during planning, the ability
+            // firing at the top of the action phase after BeginCycle has already set the attack
+            // budget, and ExchangeBlows spending it. This runs that path.
+            var m = NewMatch();
+            m.SubmitPick(PlayerSide.P1, GladiatorId.Hilius);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var hilius = m.State.P1.Active;
+            var victim = m.State.Bot.Active;
+            hilius.Rage = GameConstants.RageMax;
+
+            // Nose to nose, so the collision resolves on the first substep and neither has room to
+            // pick anything up on the way in.
+            hilius.Pos = new Vector2(0f, -GameConstants.CollideDistance * 0.4f);
+            victim.Pos = new Vector2(0f, GameConstants.CollideDistance * 0.4f);
+            float victimHp = victim.Hp;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.up, 1f, useAbility: true);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+
+            Assert.IsTrue(hilius.Buff.IsActive, "the ability did not fire");
+            Assert.AreEqual(AbilityKey.Mongoose, hilius.Buff.Key);
+            Assert.AreEqual(2, hilius.AttacksPerCycle);
+
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            // Two swings against a guard: base damage twice, both mitigated by the same 0.7.
+            float expected = GladiatorDef.Hilius.Damage * GameConstants.DefendDamageMult * 2f;
+            Assert.AreEqual(victimHp - expected, victim.Hp, Tol,
+                $"Mongoose should have landed two hits, not {(victimHp - victim.Hp) / (GladiatorDef.Hilius.Damage * GameConstants.DefendDamageMult):0.0}");
+        }
+
+        [Test]
+        public void MongooseKeepsBothAttacksOnTheFollowingCycleAndDropsBackAfter()
+        {
+            // The buff runs two cycles, and the attack budget is derived after the buff is aged - so
+            // the cycle it expires on must drop back to one. Off by one either way and the ability
+            // silently lasts one cycle too few or too many.
+            var hilius = new GladiatorInstance(GladiatorDef.Hilius);
+            hilius.BeginCycle();
+            hilius.Rage = GameConstants.RageMax;
+            hilius.ActivateAbility();
+
+            Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the cycle it was used in");
+
+            hilius.BeginCycle();
+            Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the second cycle of the buff");
+
+            hilius.BeginCycle();
+            Assert.AreEqual(1, hilius.AttacksRemainingThisCycle, "the buff has expired by now");
+        }
+
+        [Test]
         public void DashCarriesTheSameGround()
         {
             // The reach of one dash is Speed * SpeedScale * ActionTime, and the two constants have

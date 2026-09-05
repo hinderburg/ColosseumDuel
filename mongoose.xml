@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Passed" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0,0765177">
+  <test-suite type="TestSuite" id="1000" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="58" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.076518" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1067" name="ColosseumDuel.Tests.EditMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.EditMode.dll" runstate="Runnable" testcasecount="58" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.065193" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="20404" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1068" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="58" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.064014" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1069" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="58" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.063191" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1023" name="EffectEventTests" fullname="ColosseumDuel.Tests.EffectEventTests" classname="ColosseumDuel.Tests.EffectEventTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.047379" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1029" name="MongooseReportsTwoHitsInOneCollision" fullname="ColosseumDuel.Tests.EffectEventTests.MongooseReportsTwoHitsInOneCollision" methodname="MongooseReportsTwoHitsInOneCollision" classname="ColosseumDuel.Tests.EffectEventTests" runstate="Runnable" seed="1807600211" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.029879" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1044" name="MatchFlowTests" fullname="ColosseumDuel.Tests.MatchFlowTests" classname="ColosseumDuel.Tests.MatchFlowTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.010109" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1052" name="MongooseKeepsBothAttacksOnTheFollowingCycleAndDropsBackAfter" fullname="ColosseumDuel.Tests.MatchFlowTests.MongooseKeepsBothAttacksOnTheFollowingCycleAndDropsBackAfter" methodname="MongooseKeepsBothAttacksOnTheFollowingCycleAndDropsBackAfter" classname="ColosseumDuel.Tests.MatchFlowTests" runstate="Runnable" seed="296176064" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.000425" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1051" name="MongooseLandsTwoHitsThroughAWholeCycle" fullname="ColosseumDuel.Tests.MatchFlowTests.MongooseLandsTwoHitsThroughAWholeCycle" methodname="MongooseLandsTwoHitsThroughAWholeCycle" classname="ColosseumDuel.Tests.MatchFlowTests" runstate="Runnable" seed="1683749272" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.006185" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1055" name="MongooseTurnsOneCollisionIntoTwoHits" fullname="ColosseumDuel.Tests.MatchFlowTests.MongooseTurnsOneCollisionIntoTwoHits" methodname="MongooseTurnsOneCollisionIntoTwoHits" classname="ColosseumDuel.Tests.MatchFlowTests" runstate="Runnable" seed="667443464" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.000379" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1059" name="RageAndAbilityTests" fullname="ColosseumDuel.Tests.RageAndAbilityTests" classname="ColosseumDuel.Tests.RageAndAbilityTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.002610" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1066" name="MongooseBuff_Gives2AttacksPerCycle_ForTwoCycles" fullname="ColosseumDuel.Tests.RageAndAbilityTests.MongooseBuff_Gives2AttacksPerCycle_ForTwoCycles" methodname="MongooseBuff_Gives2AttacksPerCycle_ForTwoCycles" classname="ColosseumDuel.Tests.RageAndAbilityTests" runstate="Runnable" seed="1611483548" result="Passed" start-time="2026-09-05 14:47:55Z" end-time="2026-09-05 14:47:55Z" duration="0.000749" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/avshu/AppData/LocalLow/ColosseumDuel/Colosseum Duel\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

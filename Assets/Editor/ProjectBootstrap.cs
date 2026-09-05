@@ -45,6 +45,10 @@ namespace ColosseumDuel.EditorTools
         private const string BloodPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
 
+        // Gear models, from the same pack the gladiator model comes from.
+        private const string SwordModelPath = "Assets/DoubleL/Model/SM_Wep_Sword_03.fbx";
+        private const string ShieldModelPath = "Assets/DoubleL/Model/SM_Wep_Shield_01.fbx";
+
         // Modular stone kit (LoafbrrAssets/ModularArena), used to dress the arena.
         private const string ArenaKitDir = "Assets/LoafbrrAssets/ModularArena/Prefabs";
         private const string WallBlockPath = ArenaKitDir + "/wall/Wall_A_1x1.prefab";
@@ -363,6 +367,14 @@ namespace ColosseumDuel.EditorTools
             ApplyTexture(palette.WallStone,
                          ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
                          new Vector2(2f, 1f));
+
+            palette.SwordModel = AssetDatabase.LoadAssetAtPath<GameObject>(SwordModelPath);
+            palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(ShieldModelPath);
+            if (palette.SwordModel == null)
+                Debug.LogWarning($"[Colosseum] Gear models not found at {SwordModelPath} - pickups " +
+                                 "will be primitives and nobody will carry anything visible.");
+
+            palette.Vignette = ProceduralTextures.EnsureVignette(TexturesDir + "/Vignette.png");
 
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)

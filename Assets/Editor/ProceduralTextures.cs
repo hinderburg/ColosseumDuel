@@ -92,6 +92,60 @@ namespace ColosseumDuel.EditorTools
         }
 
         /// <summary>
+        /// A vignette: clear through the middle, opaque towards the edges.
+        ///
+        /// White, so the UI can tint it to whatever the moment calls for, and built with a soft
+        /// falloff rather than a hard ring - a visible edge on a full-screen overlay reads as a
+        /// rendering fault, not as an effect.
+        /// </summary>
+        public static Sprite EnsureVignette(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            const int size = 256;
+            var pixels = new Color32[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Distance from the centre in each axis separately, then combined - a plain
+                    // radial falloff on a portrait screen leaves the corners dark and the long edges
+                    // untouched, which reads as a circle drawn on the screen rather than as a frame.
+                    float dx = Mathf.Abs(x / (size - 1f) * 2f - 1f);
+                    float dy = Mathf.Abs(y / (size - 1f) * 2f - 1f);
+                    float edge = Mathf.Max(dx, dy);
+
+                    // Nothing at all across the middle half, then easing in towards the border.
+                    float t = Mathf.InverseLerp(0.45f, 1f, edge);
+                    byte alpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(t * t) * 255f);
+                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp; // or the gradient tiles back in at the seams
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        /// <summary>
         /// One icon per archetype, drawn as a silhouette and left white so the UI can tint it with
         /// the archetype's own colour - the same colour the gladiator's body carries on the arena,
         /// so the card and the fighter are recognisably the same character.
