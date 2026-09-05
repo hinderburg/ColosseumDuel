@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay;
@@ -118,6 +119,47 @@ namespace ColosseumDuel.Tests
             yield return RunSeconds(GameConstants.PlanningTime + 0.1f);
             Assert.AreEqual(MatchPhase.Action, State.Phase);
             Assert.IsFalse(defend.interactable, "the action phase is not the time to change your mind");
+        }
+
+        [Test]
+        public void EveryArchetypeHasItsOwnIcon()
+        {
+            var palette = _controller.Arena.Palette;
+
+            var seen = new List<Sprite>();
+            foreach (var def in GladiatorDef.All)
+            {
+                var icon = palette.IconFor(def.Id);
+                Assert.IsNotNull(icon, $"{def.Name} has no icon - run the bootstrap");
+
+                // Unique, not just present: the whole job of these is to tell three cards apart, and
+                // one sprite reused for all three does that no better than no sprite at all.
+                CollectionAssert.DoesNotContain(seen, icon, $"{def.Name} shares an icon with another archetype");
+                seen.Add(icon);
+            }
+        }
+
+        [Test]
+        public void ThePickCardsCarryTheIconAndSpellOutTheAbility()
+        {
+            foreach (var def in GladiatorDef.All)
+            {
+                var card = Find($"Pick_{def.Name}");
+                Assert.IsNotNull(card, $"no pick card for {def.Name}");
+
+                var icon = card.GetComponentsInChildren<Image>(true)
+                    .FirstOrDefault(i => i.name == $"Icon_{def.Id}");
+                Assert.IsNotNull(icon, $"{def.Name}'s card has no icon");
+                Assert.AreSame(_controller.Arena.Palette.IconFor(def.Id), icon.sprite);
+
+                // The name alone says nothing: "Мангуст" tells a first-time player neither what it
+                // does nor how long it lasts, and that is the whole basis of the choice being made.
+                var ability = card.GetComponentsInChildren<Text>(true)
+                    .FirstOrDefault(t => t.name == $"Ability_{def.Id}");
+                Assert.IsNotNull(ability, $"{def.Name}'s card has no ability line");
+                StringAssert.Contains(def.AbilityName, ability.text);
+                StringAssert.Contains(def.AbilityDescription, ability.text);
+            }
         }
 
         [UnityTest]

@@ -251,7 +251,9 @@ namespace ColosseumDuel.Tests
         [Test]
         public void MongooseTurnsOneCollisionIntoTwoHits()
         {
-            // Hilius: 7 damage, ability Mongoose. Unarmed, undefended, two swings = 14.
+            // Mongoose lets Hilius swing twice in one cycle, so an unarmed, undefended exchange
+            // lands twice his base damage. Expressed against the stat rather than as a number, so a
+            // balance pass on the damage table does not break a test about the ability.
             var attacker = new GladiatorInstance(GladiatorDef.Hilius);
             attacker.BeginCycle();
             attacker.Rage = 1f;
@@ -266,7 +268,8 @@ namespace ColosseumDuel.Tests
                 CombatResolver.DealDamage(attacker, victim, isCollision: true);
             }
 
-            Assert.AreEqual(GladiatorDef.Brutius.MaxHp - 14f, victim.Hp, Tol);
+            Assert.AreEqual(GladiatorDef.Brutius.MaxHp - GladiatorDef.Hilius.Damage * 2f, victim.Hp, Tol,
+                "two swings should land two full hits");
         }
 
         [Test]

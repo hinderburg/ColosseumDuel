@@ -1,3 +1,4 @@
+using ColosseumDuel.Core;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -91,6 +92,104 @@ namespace ColosseumDuel.EditorTools
         }
 
         /// <summary>
+        /// One icon per archetype, drawn as a silhouette and left white so the UI can tint it with
+        /// the archetype's own colour - the same colour the gladiator's body carries on the arena,
+        /// so the card and the fighter are recognisably the same character.
+        ///
+        /// Silhouettes rather than detailed art: these are read at 36 pixels on a roster card, where
+        /// anything with interior detail turns to mush. Each shape says what the archetype is for -
+        /// a shield for the one who soaks damage, an axe for the one who deals it, a double chevron
+        /// for the one who outruns both.
+        ///
+        /// Like every generator here it keeps whatever is already on disk, so redrawing the art
+        /// means deleting the PNG first and running the bootstrap again.
+        /// </summary>
+        public static Sprite EnsureArchetypeIcon(string path, GladiatorId id)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            return WriteBitmapSprite(path, IconRows(id));
+        }
+
+        private static string[] IconRows(GladiatorId id)
+        {
+            switch (id)
+            {
+                // Brutius: 200 HP and the slowest of the three - a tower shield.
+                case GladiatorId.Brutius:
+                    return new[]
+                    {
+                        "................",
+                        "..############..",
+                        ".##############.",
+                        "################",
+                        "################",
+                        "################",
+                        "################",
+                        "################",
+                        ".##############.",
+                        ".##############.",
+                        "..############..",
+                        "...##########...",
+                        "....########....",
+                        "......####......",
+                        ".......##.......",
+                        "................",
+                    };
+
+                // Barbarius: the hardest hitter - a maul.
+                //
+                // One solid mass, like the other two. An axe was tried twice and failed both times
+                // for the same reason: at the size these are actually read, a shape with an interior
+                // gap between blade and haft collapses into a smudge with a stick next to it.
+                // Everything here has to survive being about forty pixels across.
+                case GladiatorId.Barbarius:
+                    return new[]
+                    {
+                        "................",
+                        "................",
+                        "...##########...",
+                        "..############..",
+                        "..############..",
+                        "..############..",
+                        "...##########...",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "................",
+                        "................",
+                    };
+
+                // Hilius: twice the speed of Brutius, and two attacks a cycle - a double chevron.
+                default:
+                    return new[]
+                    {
+                        "................",
+                        "................",
+                        ".##.....##......",
+                        "..##.....##.....",
+                        "...##.....##....",
+                        "....##.....##...",
+                        ".....##.....##..",
+                        "......##.....##.",
+                        "......##.....##.",
+                        ".....##.....##..",
+                        "....##.....##...",
+                        "...##.....##....",
+                        "..##.....##.....",
+                        ".##.....##......",
+                        "................",
+                        "................",
+                    };
+            }
+        }
+
+        /// <summary>
         /// The "this gladiator is out" marker, as a sprite.
         ///
         /// Drawn from a bitmap rather than taken from a font glyph: Inter has no skull character, and
@@ -121,6 +220,24 @@ namespace ColosseumDuel.EditorTools
                 "....########....",
                 "................",
             };
+
+            return WriteBitmapSprite(path, rows);
+        }
+
+        /// <summary>
+        /// Turns a square block of '#' and '.' into a white sprite with a transparent background.
+        ///
+        /// The row check is not ceremony: these are hand-drawn in a string array, and a row one
+        /// character short does not throw on its own - it silently shifts every pixel after it,
+        /// producing a sheared icon that looks like a bad drawing rather than a typo.
+        /// </summary>
+        private static Sprite WriteBitmapSprite(string path, string[] rows)
+        {
+            foreach (var row in rows)
+                if (row.Length != rows.Length)
+                    throw new System.ArgumentException(
+                        $"{path}: the art is {rows.Length} rows but one of them is {row.Length} " +
+                        $"characters ('{row}'). Every row must be as long as the block is tall.");
 
             const int scale = 4;
             int size = rows.Length * scale;

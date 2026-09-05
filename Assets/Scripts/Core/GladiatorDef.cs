@@ -40,17 +40,17 @@ namespace ColosseumDuel.Core
         }
 
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Брутиус", maxHp: 200f, damage: 10f, speed: 10f,
+            GladiatorId.Brutius, "Брутиус", maxHp: 200f, damage: 20f, speed: 10f,
             ability: AbilityKey.Spirit, abilityName: "Дух",
             abilityDescription: "+50% скорости на 2 цикла");
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Барбариус", maxHp: 100f, damage: 13f, speed: 15f,
+            GladiatorId.Barbarius, "Барбариус", maxHp: 100f, damage: 26f, speed: 15f,
             ability: AbilityKey.Fury, abilityName: "Ярость",
             abilityDescription: "-25% получаемого урона на 2 цикла");
 
         public static readonly GladiatorDef Hilius = new GladiatorDef(
-            GladiatorId.Hilius, "Хилиус", maxHp: 150f, damage: 7f, speed: 20f,
+            GladiatorId.Hilius, "Хилиус", maxHp: 150f, damage: 14f, speed: 20f,
             ability: AbilityKey.Mongoose, abilityName: "Мангуст",
             abilityDescription: "2 атаки за цикл на 2 цикла");
 

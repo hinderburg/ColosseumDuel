@@ -23,6 +23,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private readonly List<RosterEntryView> _botIcons = new List<RosterEntryView>();
         private readonly List<Button> _pickButtons = new List<Button>();
         private readonly List<Text> _pickButtonLabels = new List<Text>();
+        private readonly List<Text> _pickAbilityLabels = new List<Text>();
 
         private Text _phaseLabel;
         private Text _hint;
@@ -76,9 +77,8 @@ namespace ColosseumDuel.Gameplay.Hud
         /// </summary>
         private void BuildTopBar(RectTransform root)
         {
-            var skull = Controller != null && Controller.Arena != null && Controller.Arena.Palette != null
-                ? Controller.Arena.Palette.Skull
-                : null;
+            var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
+            var skull = palette != null ? palette.Skull : null;
 
             var botCorner = HudFactory.CreateRect("BotSquad", root);
             botCorner.anchorMin = new Vector2(1f, 1f);
@@ -99,8 +99,8 @@ namespace ColosseumDuel.Gameplay.Hud
 
             for (int i = 0; i < GameConstants.SquadSize; i++)
             {
-                _botIcons.Add(RosterEntryView.Create($"Bot_{i}", botCorner, HudFactory.BotColor, skull));
-                _playerIcons.Add(RosterEntryView.Create($"P1_{i}", playerCorner, HudFactory.PlayerColor, skull));
+                _botIcons.Add(RosterEntryView.Create($"Bot_{i}", botCorner, HudFactory.BotColor, skull, palette));
+                _playerIcons.Add(RosterEntryView.Create($"P1_{i}", playerCorner, HudFactory.PlayerColor, skull, palette));
             }
 
             // Below the opponent's corner, not beside it: at this width a phase line long enough to
@@ -179,14 +179,50 @@ namespace ColosseumDuel.Gameplay.Hud
             pickLayout.childControlWidth = false;
             pickLayout.childControlHeight = false;
 
+            var iconPalette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
+
             foreach (var def in GladiatorDef.All)
             {
                 var id = def.Id;
                 var button = HudFactory.CreateButton($"Pick_{def.Name}", _pickRow, def.Name, 20);
-                button.GetComponent<RectTransform>().sizeDelta = new Vector2(380f, 72f);
+                button.GetComponent<RectTransform>().sizeDelta = new Vector2(380f, 96f);
                 button.onClick.AddListener(() => Controller?.SubmitPlayerPick(id));
+
+                // The same icon the roster card carries, so the choice made here is recognisable in
+                // the corner for the rest of the match without re-reading a name.
+                var icon = HudFactory.CreatePanel($"Icon_{def.Id}", button.transform,
+                    iconPalette != null ? iconPalette.ArchetypeColor(def.Id) : Color.white);
+                icon.sprite = iconPalette != null ? iconPalette.IconFor(def.Id) : null;
+                icon.preserveAspect = true;
+                icon.raycastTarget = false;
+                icon.enabled = icon.sprite != null;
+                var iconRect = icon.rectTransform;
+                iconRect.anchorMin = new Vector2(0f, 0.5f);
+                iconRect.anchorMax = new Vector2(0f, 0.5f);
+                iconRect.pivot = new Vector2(0f, 0.5f);
+                iconRect.sizeDelta = new Vector2(56f, 56f);
+                iconRect.anchoredPosition = new Vector2(14f, 0f);
+
+                // The stat line leaves room for the icon on the left rather than centring across it.
+                var label = button.GetComponentInChildren<Text>();
+                label.alignment = TextAnchor.UpperLeft;
+                label.rectTransform.offsetMin = new Vector2(84f, 0f);
+                label.rectTransform.offsetMax = new Vector2(-14f, -10f);
+
+                // The ability on its own line, in its own colour: what it does is the whole basis of
+                // the choice, and it was previously reduced to a bare name at the end of the stats -
+                // "Мангуст" tells a first-time player nothing at all.
+                var ability = HudFactory.CreateLabel($"Ability_{def.Id}", button.transform,
+                    $"{def.AbilityName}: {def.AbilityDescription}", 14, TextAnchor.LowerLeft,
+                    HudFactory.RageColor);
+                ability.rectTransform.anchorMin = Vector2.zero;
+                ability.rectTransform.anchorMax = Vector2.one;
+                ability.rectTransform.offsetMin = new Vector2(84f, 10f);
+                ability.rectTransform.offsetMax = new Vector2(-14f, 0f);
+
                 _pickButtons.Add(button);
-                _pickButtonLabels.Add(button.GetComponentInChildren<Text>());
+                _pickButtonLabels.Add(label);
+                _pickAbilityLabels.Add(ability);
             }
 
             _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Ещё раз", 24);
@@ -296,9 +332,15 @@ namespace ColosseumDuel.Gameplay.Hud
                     var instance = state.P1.Roster.Find(x => x.Def.Id == def.Id);
                     bool alive = instance != null && instance.Alive;
                     _pickButtons[i].interactable = alive;
+                    // Damage and speed alongside HP: with the ability spelled out on its own line
+                    // below, the stat line is the only place the actual trade between the three is
+                    // visible, and "200 HP" alone does not say that Brutius is also the slowest.
                     _pickButtonLabels[i].text = alive
-                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {def.AbilityName}"
+                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} урон · {Mathf.RoundToInt(def.Speed)} скор."
                         : $"{def.Name}\nвыбыл";
+                    _pickAbilityLabels[i].text = alive
+                        ? $"{def.AbilityName}: {def.AbilityDescription}"
+                        : "";
                 }
                 return;
             }

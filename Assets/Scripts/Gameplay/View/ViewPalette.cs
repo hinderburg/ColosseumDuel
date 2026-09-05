@@ -66,6 +66,21 @@ namespace ColosseumDuel.Gameplay.View
         public Sprite Ring;
 
         /// <summary>
+        /// One silhouette per archetype, indexed by GladiatorId. Left white so the UI can tint each
+        /// with its archetype colour - the same one the body carries on the arena, so the card and
+        /// the fighter read as the same character.
+        /// </summary>
+        public Sprite[] ArchetypeIcons;
+
+        public Sprite IconFor(ColosseumDuel.Core.GladiatorId id)
+        {
+            int index = (int)id;
+            return ArchetypeIcons != null && index >= 0 && index < ArchetypeIcons.Length
+                ? ArchetypeIcons[index]
+                : null;
+        }
+
+        /// <summary>
         /// Flame played beside the gladiator while the ability is charged and ready.
         /// Comes from an Asset Store pack that is not in the repository, so a clean clone will find
         /// this null - everything else has to keep working without it.

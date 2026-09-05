@@ -64,12 +64,13 @@ namespace ColosseumDuel.Tests
         [Test]
         public void DamageIsReportedAgainstTheSideThatTookIt()
         {
-            // Brutius deals 10; the bot is the one being hit, so the event must name the bot.
+            // The bot is the one being hit, so the event must name the bot - and the amount it
+            // reports has to be the amount actually applied, which is the whole point of the test.
             var attacker = new GladiatorInstance(GladiatorDef.Brutius);
             var victim = new GladiatorInstance(GladiatorDef.Brutius);
             float dealt = CombatResolver.DealDamage(attacker, victim, isCollision: true);
 
-            Assert.AreEqual(10f, dealt, 0.001f);
+            Assert.AreEqual(GladiatorDef.Brutius.Damage, dealt, 0.001f);
             Assert.AreEqual(GladiatorDef.Brutius.MaxHp - dealt, victim.Hp, 0.001f,
                 "the amount reported must be the amount actually applied");
         }

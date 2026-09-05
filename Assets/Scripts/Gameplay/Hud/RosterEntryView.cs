@@ -1,4 +1,5 @@
 using ColosseumDuel.Core;
+using ColosseumDuel.Gameplay.View;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,6 +19,8 @@ namespace ColosseumDuel.Gameplay.Hud
         public const float Height = 96f;
 
         private Image _tile;
+        private Image _icon;
+        private ViewPalette _palette;
         private Image _frame;
         private Image _skull;
         private Image _hpFill;
@@ -26,7 +29,8 @@ namespace ColosseumDuel.Gameplay.Hud
         private Text _level;
         private Color _sideColor;
 
-        public static RosterEntryView Create(string name, Transform parent, Color sideColor, Sprite skullSprite)
+        public static RosterEntryView Create(string name, Transform parent, Color sideColor,
+            Sprite skullSprite, ViewPalette palette)
         {
             var tile = HudFactory.CreatePanel(name, parent, HudFactory.PanelColor);
             var rect = tile.rectTransform;
@@ -36,8 +40,10 @@ namespace ColosseumDuel.Gameplay.Hud
             view._tile = tile;
             view._sideColor = sideColor;
 
-            // Portrait area: a flat block in the side's colour, standing in for the character art
-            // that will arrive with the humanoid models.
+            // Portrait area: a block in the side's colour carrying the archetype's own icon. The
+            // side colour answers "whose is this" and the icon answers "which one" - the two
+            // questions a glance at a corner is actually asking, and neither is readable from a
+            // name in 14-point text at the edge of the screen.
             var portrait = HudFactory.CreatePanel("Portrait", rect, sideColor);
             var portraitRect = portrait.rectTransform;
             portraitRect.anchorMin = new Vector2(0f, 1f);
@@ -47,6 +53,13 @@ namespace ColosseumDuel.Gameplay.Hud
             portraitRect.offsetMax = new Vector2(-6f, 0f);
             portraitRect.sizeDelta = new Vector2(portraitRect.sizeDelta.x, 44f);
             portraitRect.anchoredPosition = new Vector2(0f, -6f);
+
+            var icon = HudFactory.CreatePanel("Icon", portraitRect, Color.white);
+            icon.preserveAspect = true;
+            icon.raycastTarget = false;
+            HudFactory.Stretch(icon.rectTransform, -5f);
+            view._icon = icon;
+            view._palette = palette;
 
             // Frame marking the gladiator currently fighting. A separate outline object rather than
             // a colour change on the tile, so "on the arena" and "still alive" stay independent.
@@ -107,6 +120,15 @@ namespace ColosseumDuel.Gameplay.Hud
             _tile.color = alive ? HudFactory.PanelColor : HudFactory.DeadColor;
             _frame.gameObject.SetActive(isActive && alive);
             _skull.gameObject.SetActive(!alive);
+
+            // The archetype colour, dimmed once he is out - the same tint his body wears on the
+            // arena, so a card and a fighter are matched by colour rather than by reading a name.
+            if (_icon != null)
+            {
+                _icon.sprite = _palette != null ? _palette.IconFor(g.Def.Id) : null;
+                _icon.enabled = _icon.sprite != null && alive;
+                if (_palette != null) _icon.color = _palette.ArchetypeColor(g.Def.Id);
+            }
 
             HudFactory.SetFill(_hpFill, g.Def.MaxHp > 0f ? g.Hp / g.Def.MaxHp : 0f);
             HudFactory.SetFill(_rageFill, g.Rage / GameConstants.RageMax);
