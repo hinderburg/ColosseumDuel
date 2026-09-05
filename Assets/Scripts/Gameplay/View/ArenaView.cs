@@ -202,6 +202,64 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
+        [Tooltip("How many blood bursts can overlap before the oldest is reused.")]
+        public int BloodPoolSize = 6;
+
+        private readonly List<GameObject> _bloodPool = new List<GameObject>();
+        private int _nextBlood;
+
+        /// <summary>
+        /// Pre-instantiates the blood bursts.
+        ///
+        /// A pool rather than instantiate-and-destroy per hit: with Mongoose landing twice a cycle
+        /// and both sides trading blows simultaneously, spawning would allocate several particle
+        /// hierarchies a second during a fight - exactly when the frame budget matters most.
+        /// </summary>
+        public void BuildBloodPool()
+        {
+            if (Palette == null || Palette.BloodHit == null) return;
+
+            var root = new GameObject("BloodBursts");
+            root.transform.SetParent(transform, false);
+
+            for (int i = 0; i < BloodPoolSize; i++)
+            {
+                var burst = Instantiate(Palette.BloodHit, root.transform);
+                burst.name = $"Blood_{i:00}";
+                burst.SetActive(false);
+
+                foreach (var particles in burst.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = particles.main;
+                    main.useUnscaledTime = false;
+                    main.playOnAwake = false;
+                }
+
+                _bloodPool.Add(burst);
+            }
+        }
+
+        /// <summary>Plays a blood burst where a blow landed.</summary>
+        public void PlayBlood(Vector2 virtualPosition)
+        {
+            if (_bloodPool.Count == 0) return;
+
+            var burst = _bloodPool[_nextBlood];
+            _nextBlood = (_nextBlood + 1) % _bloodPool.Count;
+
+            // Chest height, not the floor - a burst at the feet reads as dust, not as a hit.
+            burst.transform.localPosition = ToWorld(virtualPosition, ScaleLength(GameConstants.GladiatorRadius) * 1.3f);
+
+            // Restart rather than merely enable: a pooled system that already ran is sitting at the
+            // end of its lifetime and would show nothing at all on reuse.
+            burst.SetActive(true);
+            foreach (var particles in burst.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                particles.Clear(true);
+                particles.Play(true);
+            }
+        }
+
         /// <summary>
         /// Shows the rings that are dealing damage right now, and - during Planning only - the one
         /// that will light up next cycle. The design calls for that stage to be telegraphed a cycle

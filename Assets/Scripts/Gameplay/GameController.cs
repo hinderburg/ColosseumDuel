@@ -85,6 +85,7 @@ namespace ColosseumDuel.Gameplay
             Arena.BuildHazardRings();
             Arena.BuildTorches();
             Arena.BuildHazardFire();
+            Arena.BuildBloodPool();
 
             var viewRoot = new GameObject("Views").transform;
             viewRoot.SetParent(transform, false);
@@ -155,6 +156,11 @@ namespace ColosseumDuel.Gameplay
         {
             if (amount <= 0f) return;
             ViewFor(side).PlayHit();
+
+            // Blood is spawned at the arena rather than parented to the gladiator: a burst that
+            // follows a body still sprinting away reads as a trail, not as a blow landing.
+            var victim = Manager.State.Get(side).Active;
+            if (victim != null) Arena.PlayBlood(victim.Pos);
         }
 
 

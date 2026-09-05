@@ -34,6 +34,7 @@ MonoBehaviour:
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   HazardFire: {fileID: 107076, guid: 1048366b48a8cc3429168da2a8224d7d, type: 3}
+  BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}
   Cube: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   Sphere: {fileID: 10200, guid: 0000000000000000e000000000000000, type: 0}
   Capsule: {fileID: 10205, guid: 0000000000000000e000000000000000, type: 0}

@@ -42,6 +42,8 @@ namespace ColosseumDuel.EditorTools
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch/CartoonFireTorchRed.prefab";
         private const string HazardFirePrefabPath =
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Field/FireFieldRed.prefab";
+        private const string BloodPrefabPath =
+            "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
 
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
@@ -320,6 +322,10 @@ namespace ColosseumDuel.EditorTools
             palette.HazardFire = AssetDatabase.LoadAssetAtPath<GameObject>(HazardFirePrefabPath);
             if (palette.HazardFire == null)
                 Debug.LogWarning($"[Colosseum] Hazard flame not found at {HazardFirePrefabPath} - danger zones will be flat colour.");
+
+            palette.BloodHit = AssetDatabase.LoadAssetAtPath<GameObject>(BloodPrefabPath);
+            if (palette.BloodHit == null)
+                Debug.LogWarning($"[Colosseum] Blood effect not found at {BloodPrefabPath} - hits will land without one.");
 
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)

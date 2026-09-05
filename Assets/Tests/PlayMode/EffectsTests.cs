@@ -112,6 +112,41 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator ABlowLandingSpillsBloodWhereItLanded()
+        {
+            var pool = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "BloodBursts");
+            if (pool == null)
+            {
+                Assert.Ignore("No blood prefab - Epic Toon FX is not imported here.");
+                yield break;
+            }
+
+            var bursts = pool.Cast<Transform>().ToList();
+            Assert.AreEqual(_controller.Arena.BloodPoolSize, bursts.Count,
+                "the bursts are pooled, not spawned per hit");
+            Assert.IsTrue(bursts.All(b => !b.gameObject.activeSelf), "nothing has been hit yet");
+
+            var victim = State.P1.Active;
+            yield return ForceCollision();
+            yield return RunUntil(() => bursts.Any(b => b.gameObject.activeSelf), 5f);
+
+            var played = bursts.First(b => b.gameObject.activeSelf);
+            var expected = _controller.Arena.ToWorld(victim.Pos);
+
+            // Horizontal position only: the burst sits at chest height, not on the floor.
+            Assert.Less(Vector2.Distance(
+                    new Vector2(played.position.x, played.position.z),
+                    new Vector2(expected.x, expected.z)),
+                2f, "the blood should appear where the blow landed");
+
+            // Enabled is not the same as playing: a pooled system reused at the end of its
+            // lifetime would sit there emitting nothing.
+            var particles = played.GetComponentInChildren<ParticleSystem>(true);
+            Assert.IsTrue(particles.isPlaying, "the reused burst has to be restarted, not just switched on");
+        }
+
+        [UnityTest]
         public IEnumerator AnAbilityDrawsAnExpandingBurstThatFadesOut()
         {
             var burst = Find("Player").Find("Burst").GetComponent<MeshRenderer>();

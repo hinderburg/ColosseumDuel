@@ -78,6 +78,9 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Ground flame marking the edge of the danger zone. Same caveat.</summary>
         public GameObject HazardFire;
 
+        /// <summary>Burst played on a gladiator taking a hit. Same caveat.</summary>
+        public GameObject BloodHit;
+
         /// <summary>
         /// Unity's built-in primitive meshes, referenced as assets rather than fetched at runtime.
         ///
