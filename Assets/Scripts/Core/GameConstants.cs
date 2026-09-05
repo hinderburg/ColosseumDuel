@@ -51,7 +51,14 @@ namespace ColosseumDuel.Core
         // need one. The fastest still meets inside a single phase. Lower this if the wait shows.
         public const float SpawnDistanceFraction = 0.45f;
 
-        public const float SpeedScale = 7.5f;
+        // Virtual units per second per point of a gladiator's Speed stat.
+        //
+        // Paired with ActionTime, and the pair is what matters: how far a dash carries is
+        // Speed * SpeedScale * ActionTime, so halving the phase halves the reach unless this
+        // doubles to match. It did, when the action phase went from 2.0s to 1.0s - the dash covers
+        // the same ground as before and covers it twice as fast, which is the point of the shorter
+        // phase. Change one of the two and the reach moves; DashCarriesTheSameGround pins it.
+        public const float SpeedScale = 15f;
         public const float MaxDragVirtual = 90f; // max pull-back distance for the slingshot move
 
         // How far apart a direct collision leaves the two fighters, measured centre to centre.

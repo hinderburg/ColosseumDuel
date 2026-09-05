@@ -188,6 +188,38 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void DashCarriesTheSameGround()
+        {
+            // The reach of one dash is Speed * SpeedScale * ActionTime, and the two constants have
+            // been moved in opposite directions on purpose: the action phase was halved to 1.0s so
+            // the charge reads as a burst, and the speed doubled so it still crosses the same
+            // ground. Changing either alone silently shortens or lengthens every move in the game,
+            // which is why the expected distance is spelled out here rather than derived from them.
+            const float expected = 150f; // Brutius: speed 10, at full power, over one action phase
+
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            // Out of each other's way, and aimed across the short axis so the run has room and
+            // meets no wall: a bounce would measure the arena rather than the dash.
+            p1.Pos = new Vector2(-expected * 0.5f, 0f);
+            bot.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.9f);
+            var start = p1.Pos;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            float travelled = Vector2.Distance(start, p1.Pos);
+            Assert.AreEqual(expected, travelled, expected * 0.05f,
+                $"a full-power dash covered {travelled:0} units where it should cover {expected:0}");
+        }
+
+        [Test]
         public void ACollisionAgainstTheWallDoesNotThrowAnyoneThroughIt()
         {
             // The knockback is applied straight to both positions, and a collision at the wall
