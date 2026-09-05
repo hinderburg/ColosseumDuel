@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:24Z" duration="14,4459016">
+  <test-suite type="TestSuite" id="1092" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="75" result="Passed" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:24Z" duration="14.445902" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1087" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="75" result="Passed" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:24Z" duration="14.434214" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="42972" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1088" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="75" result="Passed" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:24Z" duration="14.433210" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1089" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="75" result="Passed" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:24Z" duration="14.432548" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="AbilityFlowTests" fullname="ColosseumDuel.Tests.AbilityFlowTests" classname="ColosseumDuel.Tests.AbilityFlowTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:24Z" duration="14.429034" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1003" name="ArmingAfterTheMoveAlsoFires" fullname="ColosseumDuel.Tests.AbilityFlowTests.ArmingAfterTheMoveAlsoFires" methodname="ArmingAfterTheMoveAlsoFires" classname="ColosseumDuel.Tests.AbilityFlowTests" runstate="Runnable" seed="272303050" result="Passed" start-time="2026-09-05 16:25:10Z" end-time="2026-09-05 16:25:15Z" duration="4.968156" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1002" name="ArmingBeforeTheMoveFires" fullname="ColosseumDuel.Tests.AbilityFlowTests.ArmingBeforeTheMoveFires" methodname="ArmingBeforeTheMoveFires" classname="ColosseumDuel.Tests.AbilityFlowTests" runstate="Runnable" seed="421067793" result="Passed" start-time="2026-09-05 16:25:15Z" end-time="2026-09-05 16:25:19Z" duration="4.723645" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1004" name="ArmingWithNoMoveAtAllStillFires" fullname="ColosseumDuel.Tests.AbilityFlowTests.ArmingWithNoMoveAtAllStillFires" methodname="ArmingWithNoMoveAtAllStillFires" classname="ColosseumDuel.Tests.AbilityFlowTests" runstate="Runnable" seed="1503842548" result="Passed" start-time="2026-09-05 16:25:19Z" end-time="2026-09-05 16:25:24Z" duration="4.719598" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/avshu/AppData/LocalLow/ColosseumDuel/Colosseum Duel\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

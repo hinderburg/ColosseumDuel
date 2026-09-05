@@ -44,7 +44,10 @@ namespace ColosseumDuel.Gameplay
         [Tooltip("Pulls shorter than this fraction of the maximum are treated as a mis-click, not a move.")]
         public float MinPowerToSubmit = 0.05f;
 
-        /// <summary>Armed by the ability toggle; consumed by the next submitted action.</summary>
+        /// <summary>
+        /// Mirrors what the simulation has filed, so the button can show it. The decision itself
+        /// lives in the plan, not here.
+        /// </summary>
         public bool AbilityArmed { get; private set; }
 
         /// <summary>Whether the guard is currently chosen. Reset when the phase ends or a drag starts.</summary>
@@ -293,9 +296,7 @@ namespace ColosseumDuel.Gameplay
             CancelDrag();
 
             var aim = toTarget / distance;
-            bool ability = AbilityArmed;
-            Controller.SubmitPlayerMove(aim, power, ability);
-            AbilityArmed = false;
+            Controller.SubmitPlayerMove(aim, power);
 
             // Drawn after submitting, so what is shown is the order that actually went in rather
             // than the one about to. It stays up for the rest of the phase - the whole point is
@@ -370,13 +371,13 @@ namespace ColosseumDuel.Gameplay
 
             float power = CurrentPower;
             Vector2 aim = CurrentAim;
-            bool ability = AbilityArmed;
             ClearDrag();
 
             if (power <= MinPowerToSubmit || aim == Vector2.zero) return false;
 
-            Controller.SubmitPlayerMove(aim, power, ability);
-            AbilityArmed = false; // consumed by the action it was armed for
+            // The armed ability is not touched here. It is its own decision, already filed, and
+            // ordering a move - or changing it three times before the phase ends - leaves it alone.
+            Controller.SubmitPlayerMove(aim, power);
             return true;
         }
 
@@ -385,10 +386,12 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Wired to the HUD's ability toggle; also on Q until the HUD exists.</summary>
         public void ToggleAbility()
         {
-            var g = PlayerGladiator();
-            if (g == null) return;
-            // Arming an ability that cannot fire would silently do nothing on submit.
-            AbilityArmed = !AbilityArmed && g.CanActivateAbility;
+            if (PlayerGladiator() == null) return;
+
+            // Filed with the simulation immediately, not held here until a move is submitted. Held,
+            // it was lost by anyone who armed it after ordering their move, or who armed it and
+            // then chose not to move at all.
+            AbilityArmed = Controller.SubmitPlayerAbility(!AbilityArmed);
         }
 
         /// <summary>
@@ -411,7 +414,7 @@ namespace ColosseumDuel.Gameplay
             if (DefendArmed)
             {
                 CancelDrag();
-                Controller.SubmitPlayerDefend(AbilityArmed);
+                Controller.SubmitPlayerDefend();
             }
             else
             {

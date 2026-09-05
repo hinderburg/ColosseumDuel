@@ -180,15 +180,22 @@ namespace ColosseumDuel.Gameplay
         // ------------------------------------------------------------------
 
         /// <summary>Call from the drag-input handler once the player releases the pull-back.</summary>
-        public void SubmitPlayerMove(Vector2 aimDirection, float power, bool useAbility)
+        // Movement and the ability are filed separately: the ability supplements whatever the turn
+        // turns out to be, so ordering a move must not disturb it and vice versa.
+
+        public void SubmitPlayerMove(Vector2 aimDirection, float power)
         {
-            Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, aimDirection, power, useAbility);
+            Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, aimDirection, power);
         }
 
-        public void SubmitPlayerDefend(bool useAbility)
+        public void SubmitPlayerDefend()
         {
-            Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, useAbility);
+            Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f);
         }
+
+        /// <summary>Arms or disarms the ability. Returns false if it could not fire anyway.</summary>
+        public bool SubmitPlayerAbility(bool armed)
+            => Manager != null && Manager.SubmitAbility(PlayerSide.P1, armed);
 
         /// <summary>
         /// Takes back whatever the player had chosen this phase, leaving them undecided again.

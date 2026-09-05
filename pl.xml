@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Passed" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:12Z" duration="15,5613783">
+  <test-suite type="TestSuite" id="1093" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="76" result="Passed" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:12Z" duration="15.561378" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1088" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="76" result="Passed" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:12Z" duration="15.548860" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="47120" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1089" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="76" result="Passed" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:12Z" duration="15.546990" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1090" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="76" result="Passed" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:12Z" duration="15.545478" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1062" name="PlanningSlowMotionTests" fullname="ColosseumDuel.Tests.PlanningSlowMotionTests" classname="ColosseumDuel.Tests.PlanningSlowMotionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:12Z" duration="15.541941" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1064" name="PlanningLastsItsThreeSecondsInRealTime" fullname="ColosseumDuel.Tests.PlanningSlowMotionTests.PlanningLastsItsThreeSecondsInRealTime" methodname="PlanningLastsItsThreeSecondsInRealTime" classname="ColosseumDuel.Tests.PlanningSlowMotionTests" runstate="Runnable" seed="764695777" result="Passed" start-time="2026-09-05 16:33:56Z" end-time="2026-09-05 16:34:01Z" duration="4.586894" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1066" name="TheSlowdownDoesNotStretchThePlanningPhaseItself" fullname="ColosseumDuel.Tests.PlanningSlowMotionTests.TheSlowdownDoesNotStretchThePlanningPhaseItself" methodname="TheSlowdownDoesNotStretchThePlanningPhaseItself" classname="ColosseumDuel.Tests.PlanningSlowMotionTests" runstate="Runnable" seed="1992991635" result="Passed" start-time="2026-09-05 16:34:01Z" end-time="2026-09-05 16:34:05Z" duration="4.339697" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1065" name="TimeRunsSlowWhilePlanningAndNormalWhileActing" fullname="ColosseumDuel.Tests.PlanningSlowMotionTests.TimeRunsSlowWhilePlanningAndNormalWhileActing" methodname="TimeRunsSlowWhilePlanningAndNormalWhileActing" classname="ColosseumDuel.Tests.PlanningSlowMotionTests" runstate="Runnable" seed="1417694218" result="Passed" start-time="2026-09-05 16:34:05Z" end-time="2026-09-05 16:34:10Z" duration="4.733870" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1067" name="TimeScaleIsRestoredWhenTheSceneGoesAway" fullname="ColosseumDuel.Tests.PlanningSlowMotionTests.TimeScaleIsRestoredWhenTheSceneGoesAway" methodname="TimeScaleIsRestoredWhenTheSceneGoesAway" classname="ColosseumDuel.Tests.PlanningSlowMotionTests" runstate="Runnable" seed="570109501" result="Passed" start-time="2026-09-05 16:34:10Z" end-time="2026-09-05 16:34:12Z" duration="1.531196" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1063" name="TorchesRingTheWall" fullname="ColosseumDuel.Tests.PlanningSlowMotionTests.TorchesRingTheWall" methodname="TorchesRingTheWall" classname="ColosseumDuel.Tests.PlanningSlowMotionTests" runstate="Runnable" seed="447723235" result="Passed" start-time="2026-09-05 16:34:12Z" end-time="2026-09-05 16:34:12Z" duration="0.333197" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/avshu/AppData/LocalLow/ColosseumDuel/Colosseum Duel\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

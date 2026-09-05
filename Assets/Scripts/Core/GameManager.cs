@@ -157,7 +157,16 @@ namespace ColosseumDuel.Core
             SetPhase(MatchPhase.Planning);
         }
 
-        public bool SubmitPlanningAction(PlayerSide side, ActionType action, Vector2 aimDirection, float power, bool useAbility)
+        /// <summary>
+        /// Files what the gladiator will do this cycle, leaving any armed ability alone.
+        ///
+        /// The two are separate on purpose. They used to arrive together, which quietly made the
+        /// order of the player's button presses matter: arm then move worked, move then arm lost the
+        /// ability, and arming without moving lost it too - the auto-filled guard came in with the
+        /// flag cleared. The ability is a supplement to a turn, so it is filed as its own decision
+        /// and survives however many times the move is changed before the phase ends.
+        /// </summary>
+        public bool SubmitPlanningAction(PlayerSide side, ActionType action, Vector2 aimDirection, float power)
         {
             if (State.Phase != MatchPhase.Planning) return false;
             var g = State.Get(side).Active;
@@ -166,8 +175,35 @@ namespace ColosseumDuel.Core
             g.PlannedAction = action;
             g.PlannedAimDirection = aimDirection.sqrMagnitude > 0.0001f ? aimDirection.normalized : Vector2.zero;
             g.PlannedPower = Mathf.Clamp01(power);
-            g.AbilityArmed = useAbility && g.CanActivateAbility;
             return true;
+        }
+
+        /// <summary>Files both at once, for callers that decide them together - the bot, and tests.</summary>
+        public bool SubmitPlanningAction(PlayerSide side, ActionType action, Vector2 aimDirection, float power, bool useAbility)
+        {
+            if (!SubmitPlanningAction(side, action, aimDirection, power)) return false;
+            SubmitAbility(side, useAbility);
+            return true;
+        }
+
+        /// <summary>
+        /// Arms or disarms the ability for this cycle, on its own.
+        ///
+        /// Refuses to arm one that could not fire, so a lit button always means something will
+        /// happen - arming a half-charged meter would just do nothing when the phase resolved.
+        ///
+        /// Returns the state it ended up in, not whether the request was honoured. A caller
+        /// mirroring this into a button needs to know what is armed; told only "yes, done" it would
+        /// light the button back up on the very press meant to turn it off.
+        /// </summary>
+        public bool SubmitAbility(PlayerSide side, bool armed)
+        {
+            if (State.Phase != MatchPhase.Planning) return false;
+            var g = State.Get(side).Active;
+            if (g == null || !g.Alive) return false;
+
+            g.AbilityArmed = armed && g.CanActivateAbility;
+            return g.AbilityArmed;
         }
 
         /// <summary>Simulates the full bounced trajectory for a prospective Move, for UI preview
@@ -249,10 +285,12 @@ namespace ColosseumDuel.Core
                 var decision = BotAI.Decide(bot, State.P1.Active, State.Items, _rng);
                 SubmitPlanningAction(PlayerSide.Bot, decision.Action, decision.AimDirection, decision.Power, decision.UseAbility);
             }
-            // if the human player didn't submit anything in time, default to Defend
+            // If the human player didn't submit a move in time, default to Defend - but only the
+            // move. Passing the ability flag here too was what threw away an ability armed by a
+            // player who then chose not to move at all.
             var p1 = State.P1.Active;
             if (p1 != null && p1.Alive && p1.PlannedAction == ActionType.None)
-                SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+                SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f);
         }
 
         private void BeginActionPhase()

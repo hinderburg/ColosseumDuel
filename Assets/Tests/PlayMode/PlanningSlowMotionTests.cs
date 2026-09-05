@@ -66,6 +66,26 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator PlanningLastsItsThreeSecondsInRealTime()
+        {
+            // The phase is timed on unscaled time while the world runs at a third speed, which is
+            // exactly the sort of pairing that quietly turns three seconds into ten. Measured on the
+            // wall clock, because that is the only unit the player experiences it in.
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
+            Assert.AreEqual(MatchPhase.Planning, State.Phase);
+
+            float started = Time.realtimeSinceStartup;
+            while (State.Phase == MatchPhase.Planning && Time.realtimeSinceStartup - started < 10f)
+                yield return null;
+
+            float elapsed = Time.realtimeSinceStartup - started;
+            Assert.AreEqual(3f, GameConstants.PlanningTime, 0.001f, "the phase is meant to be three seconds");
+            Assert.AreEqual(GameConstants.PlanningTime, elapsed, 0.35f,
+                $"planning took {elapsed:0.00}s of real time");
+        }
+
+        [UnityTest]
         public IEnumerator TimeRunsSlowWhilePlanningAndNormalWhileActing()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);

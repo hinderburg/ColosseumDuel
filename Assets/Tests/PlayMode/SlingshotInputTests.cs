@@ -111,17 +111,25 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(_input.AbilityArmed);
         }
 
-        [Test]
-        public void ArmingTheAbilityIsConsumedByTheActionItWasArmedFor()
+        [UnityTest]
+        public IEnumerator ArmingTheAbilitySurvivesOrderingAMove_ButNotThePhase()
         {
             Player.Rage = GameConstants.RageMax;
             _input.ToggleAbility();
+            Assert.IsTrue(Player.AbilityArmed, "arming should reach the plan on its own");
 
             _input.TryBeginDrag(Player.Pos);
             _input.ReleaseDrag(Player.Pos + new Vector2(-GameConstants.MaxDragVirtual, 0f));
 
-            Assert.IsTrue(Player.AbilityArmed, "the plan should carry the ability");
-            Assert.IsFalse(_input.AbilityArmed, "but the toggle must not stay armed for the next cycle");
+            // This used to clear the toggle: the ability was only carried as an argument to the move
+            // submission, so it was consumed by it. That made it an alternative to moving rather
+            // than a supplement to it, and made the order of the two presses matter.
+            Assert.IsTrue(Player.AbilityArmed, "the move must not have swallowed the ability");
+            Assert.IsTrue(_input.AbilityArmed, "and the button must still show it armed");
+
+            yield return RunSeconds(GameConstants.PlanningTime + 0.2f);
+
+            Assert.IsFalse(_input.AbilityArmed, "it is a decision about one cycle, not a standing order");
         }
 
         [UnityTest]

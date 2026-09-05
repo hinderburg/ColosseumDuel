@@ -187,7 +187,7 @@ namespace ColosseumDuel.Tests
             var playerView = FindView("Player");
             Vector3 before = playerView.position;
 
-            _controller.SubmitPlayerMove(Vector2.up, 1f, useAbility: false);
+            _controller.SubmitPlayerMove(Vector2.up, 1f);
             yield return RunSeconds(GameConstants.PlanningTime + GameConstants.ActionTime * 0.5f);
 
             Assert.Greater(Vector3.Distance(playerView.position, before), 0.1f,
