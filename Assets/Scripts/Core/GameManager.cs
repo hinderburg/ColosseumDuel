@@ -111,15 +111,24 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Puts both actives on opposite sides of the arena, facing each other. Runs at the start of
+        /// Puts both actives at opposite ends of the arena, facing each other. Runs at the start of
         /// every round, for a freshly picked gladiator and a surviving one alike: the round winner
         /// keeps HP and carried items (per the design doc) but not last round's leftover position.
+        ///
+        /// Down the long axis, and always the same way round: the player's fighter at the near end
+        /// of the arena and the opponent's at the far end, matching where each side's roster sits on
+        /// screen.
+        ///
+        /// The distance between them is still measured against the short semi-axis, not the long
+        /// one. It is not a geometric figure but a pacing one - it is tuned against how far a dash
+        /// carries in one action phase, and scaling it to the long axis would double the gap and
+        /// leave the slowest gladiator spending five cycles closing it before a blow could land.
         /// </summary>
         private void PlaceFightersForRound()
         {
             float d = GameConstants.ArenaRadius * GameConstants.SpawnDistanceFraction;
-            Place(State.P1.Active, new Vector2(-d, 0f), Vector2.right);
-            Place(State.Bot.Active, new Vector2(d, 0f), Vector2.left);
+            Place(State.P1.Active, new Vector2(0f, -d), Vector2.up);
+            Place(State.Bot.Active, new Vector2(0f, d), Vector2.down);
         }
 
         private static void Place(GladiatorInstance g, Vector2 pos, Vector2 facing)

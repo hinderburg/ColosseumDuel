@@ -75,7 +75,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void FightersStartOnOppositeSidesOfTheArena_FacingEachOther()
+        public void FightersStartAtOppositeEndsOfTheArena_FacingEachOther()
         {
             // Regression: Pos was never initialised, so both fighters spawned on top of each other
             // in the centre and every round began with an instant collision.
@@ -83,14 +83,21 @@ namespace ColosseumDuel.Tests
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
 
+            // Down the long axis, and always the same way round - the player's fighter at the near
+            // end, where the player's own roster sits on screen, and the opponent's at the far end.
+            // The distance is still measured against the short semi-axis: it is tuned to what one
+            // dash covers in an action phase, not to the shape of the arena.
             float expected = GameConstants.ArenaRadius * GameConstants.SpawnDistanceFraction;
-            Assert.AreEqual(-expected, p1.Pos.x, Tol);
-            Assert.AreEqual(expected, bot.Pos.x, Tol);
+            Assert.AreEqual(-expected, p1.Pos.y, Tol, "the player's fighter starts at the near end");
+            Assert.AreEqual(expected, bot.Pos.y, Tol, "the opponent's starts at the far end");
+            Assert.AreEqual(0f, p1.Pos.x, Tol);
+            Assert.AreEqual(0f, bot.Pos.x, Tol);
+
             Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), GameConstants.PassByDistance,
                 "they must start well out of weapon range");
 
-            Assert.AreEqual(1f, p1.Facing.x, Tol, "P1 looks towards the bot");
-            Assert.AreEqual(-1f, bot.Facing.x, Tol, "the bot looks back");
+            Assert.AreEqual(1f, p1.Facing.y, Tol, "P1 looks towards the bot");
+            Assert.AreEqual(-1f, bot.Facing.y, Tol, "the bot looks back");
         }
 
         [Test]
