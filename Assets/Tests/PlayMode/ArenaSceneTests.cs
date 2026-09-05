@@ -178,7 +178,7 @@ namespace ColosseumDuel.Tests
             while (t < seconds)
             {
                 yield return null;
-                t += Time.deltaTime;
+                t += Time.unscaledDeltaTime;
             }
         }
     }

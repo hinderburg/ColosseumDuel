@@ -38,6 +38,8 @@ namespace ColosseumDuel.EditorTools
         private const string TexturesDir = "Assets/Textures";
         private const string AbilityFirePrefabPath =
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch Intense/CartoonFireTorchIntenseYellow.prefab";
+        private const string TorchPrefabPath =
+            "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch/CartoonFireTorchRed.prefab";
 
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
@@ -308,6 +310,10 @@ namespace ColosseumDuel.EditorTools
             if (palette.AbilityReadyFire == null)
                 Debug.LogWarning($"[Colosseum] Effect prefab not found at {AbilityFirePrefabPath} - " +
                                  "the ability-ready flame will be skipped. Import Epic Toon FX to get it.");
+
+            palette.Torch = AssetDatabase.LoadAssetAtPath<GameObject>(TorchPrefabPath);
+            if (palette.Torch == null)
+                Debug.LogWarning($"[Colosseum] Torch prefab not found at {TorchPrefabPath} - the wall will be unlit.");
 
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)

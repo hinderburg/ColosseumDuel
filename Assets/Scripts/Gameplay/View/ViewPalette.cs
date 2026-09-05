@@ -72,6 +72,9 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public GameObject AbilityReadyFire;
 
+        /// <summary>Flame set along the arena wall. Same caveat: absent in a clean clone.</summary>
+        public GameObject Torch;
+
         /// <summary>
         /// Unity's built-in primitive meshes, referenced as assets rather than fetched at runtime.
         ///

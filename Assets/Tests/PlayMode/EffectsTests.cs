@@ -102,7 +102,7 @@ namespace ColosseumDuel.Tests
             while (elapsed < GameConstants.PlanningTime + GameConstants.ActionTime)
             {
                 yield return null;
-                elapsed += Time.deltaTime;
+                elapsed += Time.unscaledDeltaTime;
                 maxScale = Mathf.Max(maxScale, model.localScale.x);
             }
             Assert.Greater(maxScale, 1.05f, "the hit reaction should be visible on the model");
@@ -153,13 +153,13 @@ namespace ColosseumDuel.Tests
         private static IEnumerator RunSeconds(float seconds)
         {
             float t = 0f;
-            while (t < seconds) { yield return null; t += Time.deltaTime; }
+            while (t < seconds) { yield return null; t += Time.unscaledDeltaTime; }
         }
 
         private static IEnumerator RunUntil(System.Func<bool> done, float maxSeconds)
         {
             float t = 0f;
-            while (!done() && t < maxSeconds) { yield return null; t += Time.deltaTime; }
+            while (!done() && t < maxSeconds) { yield return null; t += Time.unscaledDeltaTime; }
             Assert.IsTrue(done(), $"condition not reached within {maxSeconds}s");
         }
     }

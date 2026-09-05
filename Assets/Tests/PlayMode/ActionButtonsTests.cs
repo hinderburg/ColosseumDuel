@@ -135,7 +135,7 @@ namespace ColosseumDuel.Tests
         private static IEnumerator RunSeconds(float seconds)
         {
             float t = 0f;
-            while (t < seconds) { yield return null; t += Time.deltaTime; }
+            while (t < seconds) { yield return null; t += Time.unscaledDeltaTime; }
         }
     }
 }

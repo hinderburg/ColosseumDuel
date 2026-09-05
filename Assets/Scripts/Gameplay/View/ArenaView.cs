@@ -79,6 +79,48 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
+        /// <summary>Torches set along the top of the wall.</summary>
+        [Tooltip("How many torches to space around the wall.")]
+        public int TorchCount = 14;
+
+        /// <summary>
+        /// Rings the wall with flames. They are the visible clock of the match: during Planning the
+        /// world runs slow, and a burning torch is the only thing on a still arena that shows it.
+        /// </summary>
+        public void BuildTorches()
+        {
+            if (Palette == null || Palette.Torch == null) return;
+
+            var root = new GameObject("Torches");
+            root.transform.SetParent(transform, false);
+
+            // Wall blocks stand 1.2 tall centred at 0.5, so their top edge is at 1.1.
+            const float wallTop = 1.15f;
+
+            for (int i = 0; i < TorchCount; i++)
+            {
+                float t = i / (float)TorchCount * Mathf.PI * 2f;
+                var position = new Vector3(Mathf.Cos(t) * WorldRadiusX, wallTop, Mathf.Sin(t) * WorldRadiusZ);
+
+                var torch = Instantiate(Palette.Torch, root.transform);
+                torch.name = $"Torch_{i:00}";
+                torch.transform.localPosition = position;
+
+                // Face the flame inwards, towards the fight.
+                var inward = new Vector3(-position.x, 0f, -position.z);
+                if (inward.sqrMagnitude > 0.0001f)
+                    torch.transform.localRotation = Quaternion.LookRotation(inward.normalized, Vector3.up);
+
+                // A particle system set to unscaled time would keep burning at full speed through
+                // the planning slowdown - and these flames are the only thing that shows it.
+                foreach (var particles in torch.GetComponentsInChildren<ParticleSystem>(true))
+                {
+                    var main = particles.main;
+                    main.useUnscaledTime = false;
+                }
+            }
+        }
+
         /// <summary>
         /// Shows the rings that are dealing damage right now, and - during Planning only - the one
         /// that will light up next cycle. The design calls for that stage to be telegraphed a cycle

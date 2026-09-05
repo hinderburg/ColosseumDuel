@@ -249,13 +249,13 @@ namespace ColosseumDuel.Tests
         private static IEnumerator RunSeconds(float seconds)
         {
             float t = 0f;
-            while (t < seconds) { yield return null; t += Time.deltaTime; }
+            while (t < seconds) { yield return null; t += Time.unscaledDeltaTime; }
         }
 
         private static IEnumerator RunUntil(System.Func<bool> done, float maxSeconds)
         {
             float t = 0f;
-            while (!done() && t < maxSeconds) { yield return null; t += Time.deltaTime; }
+            while (!done() && t < maxSeconds) { yield return null; t += Time.unscaledDeltaTime; }
             Assert.IsTrue(done(), $"condition not reached within {maxSeconds}s");
 
             // The HUD redraws in LateUpdate, so on the frame a condition first becomes true it is

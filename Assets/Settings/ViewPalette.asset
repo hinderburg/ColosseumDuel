@@ -32,6 +32,7 @@ MonoBehaviour:
   Disc: {fileID: 21300000, guid: a043bc657b8e0024f9108b981da213cc, type: 3}
   Ring: {fileID: 21300000, guid: ffa3f95862a47d14e8121c75b6ad4c4e, type: 3}
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
+  Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Cube: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   Sphere: {fileID: 10200, guid: 0000000000000000e000000000000000, type: 0}
   Capsule: {fileID: 10205, guid: 0000000000000000e000000000000000, type: 0}

@@ -19,6 +19,11 @@ namespace ColosseumDuel.Gameplay
         [Header("Squad setup (defaults to the 3 starting gladiators for both sides)")]
         public bool AutoStartOnPlay = true;
 
+        [Header("Planning slow motion")]
+        [Tooltip("How fast the world runs while the player is planning. The phase still lasts its " +
+                 "full real-time duration - only the visuals slow down.")]
+        [Range(0.05f, 1f)] public float PlanningTimeScale = 0.3f;
+
         [Tooltip("Leave at 0 for a different match every run; set a value to replay a deterministic one.")]
         public int RandomSeed = 0;
 
@@ -78,6 +83,7 @@ namespace ColosseumDuel.Gameplay
         private void BuildViews()
         {
             Arena.BuildHazardRings();
+            Arena.BuildTorches();
 
             var viewRoot = new GameObject("Views").transform;
             viewRoot.SetParent(transform, false);
@@ -89,11 +95,31 @@ namespace ColosseumDuel.Gameplay
                 _itemViews.Add(ItemView.Create($"Item_{i}", viewRoot, Arena));
         }
 
+
         private void Update()
         {
             if (Manager == null) return;
-            Manager.Tick(Time.deltaTime);
+
+            // The simulation runs on unscaled time on purpose. Planning slows the world down so the
+            // wall torches visibly drag - but the three seconds the player gets to decide are three
+            // real seconds, not ten. Scaling the tick as well would stretch the phase itself.
+            Manager.Tick(Time.unscaledDeltaTime);
+
+            ApplyTimeScale();
             SyncViews();
+        }
+
+        private void ApplyTimeScale()
+        {
+            float target = Manager.State.Phase == MatchPhase.Planning ? PlanningTimeScale : 1f;
+            if (!Mathf.Approximately(Time.timeScale, target)) Time.timeScale = target;
+        }
+
+        private void OnDisable()
+        {
+            // Time.timeScale is global. Leaving it at a third would follow the scene out and slow
+            // down whatever loads next - including the rest of a test run.
+            Time.timeScale = 1f;
         }
 
         private void SyncViews()
