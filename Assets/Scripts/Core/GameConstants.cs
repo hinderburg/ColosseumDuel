@@ -7,7 +7,9 @@ namespace ColosseumDuel.Core
     public static class GameConstants
     {
         // --- phase timing (seconds) ---
-        public const float PlanningTime = 3.0f;
+        // How long the player gets to decide. Cut from 3.0 - the phase is timed on unscaled time
+        // while the world runs at a third speed, so this is two real seconds, not two slowed ones.
+        public const float PlanningTime = 2.0f;
         // How long the gladiators actually move. Cut from 4.0 to 2.0 and then to 1.0 across design
         // passes - a short burst reads as a charge, a long one as a jog.
         //
