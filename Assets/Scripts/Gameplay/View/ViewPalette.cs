@@ -82,6 +82,19 @@ namespace ColosseumDuel.Gameplay.View
         public GameObject BloodHit;
 
         /// <summary>
+        /// Pieces of the modular stone kit the arena is dressed with. All four are null in a clean
+        /// clone, and ArenaView falls back to painted blocks with no gallery.
+        /// </summary>
+        [Header("Arena decor")]
+        public GameObject WallBlock;
+        public GameObject WallPost;
+        public GameObject GallerySlab;
+        public GameObject GalleryRail;
+
+        /// <summary>Stone the fallback wall is painted with, when there is no kit to build it from.</summary>
+        public Material WallStone;
+
+        /// <summary>
         /// One figure per archetype, indexed by GladiatorId. Built from the imported humanoid; a
         /// clean clone without the model pack gets nulls and falls back to primitive bodies.
         /// </summary>

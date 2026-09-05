@@ -97,6 +97,61 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void PiecesLaidRoundTheWallAreEquallySpacedAlongIt()
+        {
+            // Regression guard for the whole decor layout. Stepping the angle evenly instead is the
+            // obvious thing and the wrong one on an oval: the pieces crowd together at the pointed
+            // ends and spread out along the flanks.
+            const int count = 40;
+            float radiusX = 8f;
+            float radiusY = 16f;
+
+            var angles = ArenaShape.EvenlySpacedAngles(count, radiusX, radiusY);
+            Assert.AreEqual(count, angles.Length);
+
+            var gaps = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                var here = Point(angles[i], radiusX, radiusY);
+                var next = Point(angles[(i + 1) % count], radiusX, radiusY);
+                gaps[i] = (next - here).magnitude;
+            }
+
+            float shortest = Mathf.Min(gaps);
+            float longest = Mathf.Max(gaps);
+            Assert.Less(longest / shortest, 1.05f,
+                $"the widest gap between pieces is {longest:0.000} and the tightest {shortest:0.000}");
+        }
+
+        [Test]
+        public void ThePerimeterMatchesTheSpacingWalk()
+        {
+            // A circle is the one case with a closed form, so it is the one case that can be checked
+            // against something other than itself.
+            Assert.AreEqual(2f * Mathf.PI * 5f, ArenaShape.Perimeter(5f, 5f), 0.01f);
+        }
+
+        [Test]
+        public void TheOutwardNormalFollowsTheGradientNotThePosition()
+        {
+            // On the flank of a stretched ellipse the two differ by a wide margin, and a wall block
+            // turned by the wrong one sits visibly askew.
+            float t = 45f * Mathf.Deg2Rad;
+            var normal = ArenaShape.OutwardNormal(t, 8f, 16f);
+            var fromCentre = Point(t, 8f, 16f).normalized;
+
+            Assert.AreEqual(1f, normal.magnitude, 1e-4f);
+            Assert.Less(Vector2.Dot(normal, fromCentre), 0.99f,
+                "on the flank the normal should not coincide with the direction from the centre");
+
+            // Where they do coincide - on the axes - it must be exact.
+            Assert.AreEqual(0f, Vector2.Angle(ArenaShape.OutwardNormal(0f, 8f, 16f), Vector2.right), 0.01f);
+        }
+
+        private static Vector2 Point(float t, float radiusX, float radiusY)
+            => new Vector2(Mathf.Cos(t) * radiusX, Mathf.Sin(t) * radiusY);
+
+        [Test]
         public void TheTrajectoryPreviewStaysInsideTheArenaToo()
         {
             var g = new GladiatorInstance(GladiatorDef.Hilius); // the fastest one

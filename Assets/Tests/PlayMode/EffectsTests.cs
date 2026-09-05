@@ -178,11 +178,32 @@ namespace ColosseumDuel.Tests
             Assert.IsNotNull(floor.GetComponent<Renderer>().sharedMaterial.mainTexture,
                 "the arena floor should be drawn with the generated sand texture");
 
+            // The wall is stone either way: blocks from the modular kit when it is imported, painted
+            // cubes when it is not. Which one is running decides where the texture hangs, so the
+            // assertion is on the surface being textured rather than on one property name - the kit
+            // uses its own shader graph, whose colour map is not the one Unity calls "main".
             var wallSegment = GameObject.Find("Segment_00");
-            Assert.IsNotNull(wallSegment);
-            Assert.IsNotNull(wallSegment.GetComponent<Renderer>().sharedMaterial.mainTexture,
-                "the wall should be drawn with the generated stone texture");
+            Assert.IsNotNull(wallSegment, "the arena has no wall");
+
+            var wallMaterial = wallSegment.GetComponent<Renderer>().sharedMaterial;
+            Assert.IsNotNull(wallMaterial, "the wall segments have no material");
+            Assert.IsTrue(HasColourMap(wallMaterial),
+                $"the wall is drawn with a flat colour ({wallMaterial.shader.name}), which reads as " +
+                "deliberate rather than as a missing texture");
             yield return null;
+        }
+
+        /// <summary>
+        /// Deliberately does not ask for <c>mainTexture</c>: a shader with no property tagged as the
+        /// main one logs an error rather than returning null, and the test runner counts a logged
+        /// error as a failure. The kit's shader graph is exactly that shader.
+        /// </summary>
+        private static bool HasColourMap(Material material)
+        {
+            foreach (var property in new[] { "_BaseMap", "_MainTex", "_ColorTexture" })
+                if (material.HasProperty(property) && material.GetTexture(property) != null) return true;
+
+            return false;
         }
 
         private static IEnumerator RunSeconds(float seconds)

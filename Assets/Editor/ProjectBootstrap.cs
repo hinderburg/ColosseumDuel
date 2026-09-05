@@ -45,8 +45,22 @@ namespace ColosseumDuel.EditorTools
         private const string BloodPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
 
+        // Modular stone kit (LoafbrrAssets/ModularArena), used to dress the arena.
+        private const string ArenaKitDir = "Assets/LoafbrrAssets/ModularArena/Prefabs";
+        private const string WallBlockPath = ArenaKitDir + "/wall/Wall_A_1x1.prefab";
+        private const string WallPostPath = ArenaKitDir + "/wall/Wall_Post_B_2m.prefab";
+        private const string GallerySlabPath = ArenaKitDir + "/floor/Ground_C_1x1.prefab";
+        private const string GalleryRailPath = ArenaKitDir + "/stair/Rail_A_1m.prefab";
+
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
+
+        /// <summary>
+        /// How high the wall stands. Deliberately low - it is a parapet, not a barrier. The camera
+        /// looks down the length of the arena, and a wall tall enough to be realistic would hide the
+        /// far half of the floor along with whoever was fighting on it.
+        /// </summary>
+        private const float WallHeight = 1.2f;
 
         // --- presentation format ---
         // Portrait 9:16. The arena occupies the middle band and the two rosters sit above and below
@@ -327,6 +341,21 @@ namespace ColosseumDuel.EditorTools
             if (palette.BloodHit == null)
                 Debug.LogWarning($"[Colosseum] Blood effect not found at {BloodPrefabPath} - hits will land without one.");
 
+            // The modular stone kit the arena is dressed with. Same story as the effects: absent in
+            // a clean clone, where ArenaView falls back to painted blocks and skips the gallery.
+            palette.WallBlock = AssetDatabase.LoadAssetAtPath<GameObject>(WallBlockPath);
+            palette.WallPost = AssetDatabase.LoadAssetAtPath<GameObject>(WallPostPath);
+            palette.GallerySlab = AssetDatabase.LoadAssetAtPath<GameObject>(GallerySlabPath);
+            palette.GalleryRail = AssetDatabase.LoadAssetAtPath<GameObject>(GalleryRailPath);
+            if (palette.WallBlock == null)
+                Debug.LogWarning($"[Colosseum] Arena kit not found at {WallBlockPath} - " +
+                                 "the wall will be plain blocks. Import LoafbrrAssets/ModularArena to get it.");
+
+            palette.WallStone = Lit("Wall", new Color(0.52f, 0.36f, 0.24f)); // brown stone, per the layout sketch
+            ApplyTexture(palette.WallStone,
+                         ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
+                         new Vector2(2f, 1f));
+
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)
                 Debug.LogWarning($"[Colosseum] HUD font missing at {HudFontPath} - Cyrillic will not render in a build.");
@@ -387,17 +416,17 @@ namespace ColosseumDuel.EditorTools
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             float r = WorldArenaRadius;
 
-            var sandMat = Lit("Sand", new Color(0.76f, 0.66f, 0.44f));
-            var wallMat = Lit("Wall", new Color(0.52f, 0.36f, 0.24f)); // brown stone, per the layout sketch
             // The floor gets its texture once across the whole disc - no repeat, so no seams and no
-            // tiling pattern to notice. The wall is 48 separate blocks, so that one does repeat.
+            // tiling pattern to notice. The wall material lives in the palette, since the wall is
+            // built at runtime.
+            var sandMat = Lit("Sand", new Color(0.76f, 0.66f, 0.44f));
             ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
-            ApplyTexture(wallMat, ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white), new Vector2(2f, 1f));
 
             // --- arena root: owns the virtual->world conversion and the hazard ring visuals ---
             var arenaGo = new GameObject("Arena");
             var arena = arenaGo.AddComponent<ArenaView>();
             arena.WorldArenaRadius = r;
+            arena.WallHeight = WallHeight;
             arena.Palette = palette;
             // Assigned below, once the camera exists - world-space labels billboard towards it.
 
@@ -414,30 +443,10 @@ namespace ColosseumDuel.EditorTools
             // left in the scene would drag the whole physics module into the build.
             UnityEngine.Object.DestroyImmediate(floor.GetComponent<Collider>());
 
-            // wall: blocks laid along the ellipse. Their spacing is stepped by arc length rather
-            // than by angle - equal angles bunch up at the ends of an elongated oval and leave gaps
-            // along its flanks.
-            var wallRoot = new GameObject("ArenaWall");
-            wallRoot.transform.SetParent(arenaGo.transform, false);
-            const int segments = 72;
-            for (int i = 0; i < segments; i++)
-            {
-                float t = i / (float)segments * Mathf.PI * 2f;
-                var position = new Vector3(Mathf.Cos(t) * r, 0.5f, Mathf.Sin(t) * rz);
-
-                // Tangent of the ellipse at this angle, so each block lies flat along the wall.
-                var tangent = new Vector3(-Mathf.Sin(t) * r, 0f, Mathf.Cos(t) * rz);
-                float segmentLength = tangent.magnitude * (Mathf.PI * 2f / segments) * 1.12f;
-
-                var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                block.name = $"Segment_{i:00}";
-                block.transform.SetParent(wallRoot.transform, false);
-                block.transform.localPosition = position;
-                block.transform.localRotation = Quaternion.LookRotation(tangent.normalized, Vector3.up);
-                block.transform.localScale = new Vector3(0.4f, 1.2f, segmentLength);
-                block.GetComponent<Renderer>().sharedMaterial = wallMat;
-                UnityEngine.Object.DestroyImmediate(block.GetComponent<Collider>());
-            }
+            // The wall, the posts and the gallery behind them are built by ArenaView at runtime,
+            // out of the modular stone kit in the palette. Not baked into the scene here: the kit is
+            // a paid pack kept out of the repository, and a scene carrying several hundred prefab
+            // instances that point into it would open in a clean clone as a field of missing objects.
 
             // --- camera: fixed, angled, perspective ---
             // It never moves - no follow, no zoom, no shake - so the arena always sits in exactly
@@ -461,6 +470,18 @@ namespace ColosseumDuel.EditorTools
             light.type = LightType.Directional;
             light.intensity = 1.1f;
             light.shadows = LightShadows.Soft;
+
+            // Ambient, set explicitly rather than left at the default. A scene created empty has no
+            // skybox, so the default ambient is nearly black - and with a single sun that means every
+            // vertical surface in the arena is lit only where the sun grazes it. The wall came out as
+            // a black ring around bright sand and read as an outline rather than as stone.
+            //
+            // A three-band ambient does the work a bounce would: warm light off the sand fills the
+            // inside of the wall, cool light from above keeps the sand itself from going flat.
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = new Color(0.30f, 0.33f, 0.40f);
+            RenderSettings.ambientEquatorColor = new Color(0.36f, 0.31f, 0.25f);
+            RenderSettings.ambientGroundColor = new Color(0.46f, 0.34f, 0.21f);
 
             // --- game logic host ---
             var gameGo = new GameObject("Game");

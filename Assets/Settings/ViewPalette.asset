@@ -35,6 +35,11 @@ MonoBehaviour:
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   HazardFire: {fileID: 107076, guid: 1048366b48a8cc3429168da2a8224d7d, type: 3}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}
+  WallBlock: {fileID: 2189462429148424501, guid: 41ec6068ce141e64bb4966fb380c77b1, type: 3}
+  WallPost: {fileID: 6231477085982915931, guid: 2d025f992500f354d885e93252787688, type: 3}
+  GallerySlab: {fileID: 1506131158205574518, guid: eef496009fed37a4ab7f99fd9defacf2, type: 3}
+  GalleryRail: {fileID: 3071055550126371973, guid: b178953fcd2b0ec44be67c9b6dd8f930, type: 3}
+  WallStone: {fileID: 2100000, guid: fda53a19301cca049b57f93ba5929efd, type: 2}
   GladiatorFigures:
   - {fileID: 2668578167718699114, guid: 9168f9738c480124fadf9ac585529992, type: 3}
   - {fileID: 9187501524033622830, guid: d00863a97b540fc488b4cf29f2356893, type: 3}

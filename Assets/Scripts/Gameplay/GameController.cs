@@ -82,6 +82,7 @@ namespace ColosseumDuel.Gameplay
 
         private void BuildViews()
         {
+            Arena.BuildWall();
             Arena.BuildHazardRings();
             Arena.BuildTorches();
             Arena.BuildHazardFire();
