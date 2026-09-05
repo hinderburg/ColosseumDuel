@@ -1,6 +1,9 @@
+using System.Linq;
 using ColosseumDuel.Core;
+using ColosseumDuel.Gameplay.View;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEngine;
 
 namespace ColosseumDuel.Tests
@@ -30,6 +33,35 @@ namespace ColosseumDuel.Tests
 
             Assert.AreEqual(ModelImporterNormals.Calculate, importer.importNormals,
                 "without calculated normals the gladiators render black under a lit shader");
+        }
+
+        [Test]
+        public void TheAnimatorControllerCarriesEveryParameterTheViewDrives()
+        {
+            // Spelled out rather than read from GladiatorAnimation: the Editor scripts live in the
+            // predefined Assembly-CSharp-Editor, which an assembly-definition test cannot reference.
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(
+                "Assets/Animation/Gladiator.controller");
+            if (controller == null)
+            {
+                Assert.Ignore("The DoubleL animation pack is not imported here.");
+                return;
+            }
+
+            // The one failure mode worth a test here: Animator.SetFloat on a parameter the
+            // controller does not have logs nothing and does nothing, so a typo would leave every
+            // gladiator standing in his idle pose through the whole match with no error anywhere.
+            var names = controller.parameters.Select(p => p.name).ToList();
+            foreach (var expected in new[]
+                     {
+                         AnimatorParams.Speed, AnimatorParams.Defending,
+                         AnimatorParams.Attack, AnimatorParams.Hit, AnimatorParams.Dead,
+                     })
+                CollectionAssert.Contains(names, expected);
+
+            foreach (var state in controller.layers[0].stateMachine.states)
+                Assert.IsNotNull(state.state.motion,
+                    $"the '{state.state.name}' state has no clip, so it plays the bind pose");
         }
 
         [Test]

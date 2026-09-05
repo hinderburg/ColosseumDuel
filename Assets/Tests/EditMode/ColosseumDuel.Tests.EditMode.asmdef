@@ -3,6 +3,7 @@
     "rootNamespace": "ColosseumDuel.Tests",
     "references": [
         "ColosseumDuel.Core",
+        "ColosseumDuel.Gameplay",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

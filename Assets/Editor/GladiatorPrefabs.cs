@@ -45,8 +45,10 @@ namespace ColosseumDuel.EditorTools
             if (!AssetDatabase.IsValidFolder(PrefabDir))
                 AssetDatabase.CreateFolder("Assets", "Prefabs");
 
+            var controller = GladiatorAnimation.EnsureController();
+
             foreach (var def in GladiatorDef.All)
-                Build(def, model, helmetMesh);
+                Build(def, model, helmetMesh, controller);
 
             AssetDatabase.SaveAssets();
             return true;
@@ -70,7 +72,8 @@ namespace ColosseumDuel.EditorTools
             Debug.Log("[Colosseum] Gladiator model re-imported with calculated normals.");
         }
 
-        private static void Build(GladiatorDef def, GameObject model, Mesh helmetMesh)
+        private static void Build(GladiatorDef def, GameObject model, Mesh helmetMesh,
+                                 RuntimeAnimatorController controller)
         {
             var root = new GameObject($"Gladiator_{def.Id}");
             try
@@ -78,6 +81,27 @@ namespace ColosseumDuel.EditorTools
                 var figure = (GameObject)PrefabUtility.InstantiatePrefab(model);
                 figure.name = "Figure";
                 figure.transform.SetParent(root.transform, false);
+
+                // The imported model brings its own Animator with the humanoid avatar; the clips are
+                // humanoid too, so they retarget onto it. Only the controller has to be supplied.
+                //
+                // applyRootMotion stays off: the clips used are the in-place variants, and the
+                // simulation is the one authority on where a gladiator stands.
+                var animator = figure.GetComponentInChildren<Animator>(true);
+                if (animator != null)
+                {
+                    animator.runtimeAnimatorController = controller;
+                    animator.applyRootMotion = false;
+
+                    // Off-screen culling would freeze a gladiator the moment his own bounds left the
+                    // frame - and on an arena this long, the far end is exactly where that happens.
+                    animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                }
+                else if (controller != null)
+                {
+                    Debug.LogWarning($"[Colosseum] {def.Name}'s model has no Animator - " +
+                                     "the controller was built but nothing will play it.");
+                }
 
                 // Scale from the model's own height rather than a hard-coded number, so re-importing
                 // the model at a different scale does not silently change how big a gladiator is.

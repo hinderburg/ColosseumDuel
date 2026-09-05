@@ -158,6 +158,10 @@ namespace ColosseumDuel.Gameplay
             if (amount <= 0f) return;
             ViewFor(side).PlayHit();
 
+            // The event names the victim, so the swing belongs to the other one. Both sides can be
+            // dealt damage in the same exchange, and then both swing - which is exactly right.
+            ViewFor(side == PlayerSide.P1 ? PlayerSide.Bot : PlayerSide.P1).PlaySwing();
+
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             var victim = Manager.State.Get(side).Active;

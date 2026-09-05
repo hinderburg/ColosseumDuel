@@ -38,6 +38,8 @@ namespace ColosseumDuel.Gameplay.View
         private ViewPalette _palette;
         private GameObject[] _figures;
         private Renderer[] _figureRenderers;
+        private Animator[] _figureAnimators;
+        private Animator _animator;
         private GladiatorId? _shownFigure;
 
         public static GladiatorView Create(string name, Transform parent, ArenaView arena,
@@ -125,6 +127,7 @@ namespace ColosseumDuel.Gameplay.View
             _palette = palette;
             _figures = new GameObject[GladiatorDef.All.Count];
             _figureRenderers = new Renderer[GladiatorDef.All.Count];
+            _figureAnimators = new Animator[GladiatorDef.All.Count];
 
             for (int i = 0; i < GladiatorDef.All.Count; i++)
             {
@@ -162,6 +165,8 @@ namespace ColosseumDuel.Gameplay.View
                     if (helmetRenderer != null) helmetRenderer.sharedMaterial = helmetMaterial;
                 }
 
+                _figureAnimators[i] = figure.GetComponentInChildren<Animator>(true);
+
                 _figures[i] = figure;
             }
         }
@@ -196,6 +201,7 @@ namespace ColosseumDuel.Gameplay.View
             {
                 bool isThisOne = GladiatorDef.All[i].Id == id;
                 if (_figures[i].activeSelf != isThisOne) _figures[i].SetActive(isThisOne);
+                if (isThisOne) _animator = _figureAnimators[i];
             }
         }
 
@@ -239,6 +245,17 @@ namespace ColosseumDuel.Gameplay.View
         {
             _hitPunchLeft = HitPunchTime;
             StartBurst(_arena.ScaleLength(GameConstants.GladiatorRadius) * 2.6f, 0.30f, Color.white);
+
+            // The squash stays alongside the recoil animation rather than being replaced by it. The
+            // clip reads at a standstill; at a sprint, with the two fighters crossing in a few
+            // frames, the squash is what actually registers as a hit landing.
+            if (_animator != null) _animator.SetTrigger(AnimatorParams.HitId);
+        }
+
+        /// <summary>This gladiator just dealt a blow.</summary>
+        public void PlaySwing()
+        {
+            if (_animator != null) _animator.SetTrigger(AnimatorParams.AttackId);
         }
 
         /// <summary>This gladiator's ability just fired.</summary>
@@ -258,11 +275,25 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Pushes one frame of simulation state onto the visuals. Safe to call with null.</summary>
         public void Sync(GladiatorInstance g)
         {
-            bool visible = g != null && g.Alive;
+            // A fallen gladiator stays on the sand rather than blinking out of existence. The round
+            // holds for a moment after the killing blow, and that moment is the one the death
+            // animation is for; the next round replaces him with whoever is picked.
+            bool visible = g != null;
             if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
             if (!visible) return;
 
             ShowFigureFor(g.Def.Id);
+            SyncAnimator(g);
+
+            if (!g.Alive)
+            {
+                // Nothing above the head is worth reading on a body: an empty HP bar and the tags
+                // for gear he is no longer carrying only clutter the end of the round.
+                _bars.gameObject.SetActive(false);
+                return;
+            }
+
+            if (!_bars.gameObject.activeSelf) _bars.gameObject.SetActive(true);
             transform.localPosition = _arena.ToWorld(g.Pos);
 
             var forward = new Vector3(g.Facing.x, 0f, g.Facing.y);
@@ -283,6 +314,24 @@ namespace ColosseumDuel.Gameplay.View
             SetActive(_weaponMarker, g.Weapon != WeaponType.None);
             SetActive(_shieldMarker, g.HasShield);
             SetActive(_abilityMarker, g.Buff.IsActive);
+        }
+
+        /// <summary>
+        /// Translates one frame of simulation state into animator parameters.
+        ///
+        /// Speed is converted to world units per second because that is what the run threshold is
+        /// expressed in - the simulation's own units are a different scale entirely, and mixing the
+        /// two would put a walking gladiator into a sprint or leave a sprinting one standing still.
+        /// </summary>
+        private void SyncAnimator(GladiatorInstance g)
+        {
+            if (_animator == null) return;
+
+            _animator.SetBool(AnimatorParams.DeadId, !g.Alive);
+            if (!g.Alive) return;
+
+            _animator.SetFloat(AnimatorParams.SpeedId, g.Vel.magnitude * _arena.VirtualToWorld);
+            _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
         }
 
         private void AdvanceEffects(float dt)
