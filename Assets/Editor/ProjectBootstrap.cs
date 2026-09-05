@@ -422,6 +422,15 @@ namespace ColosseumDuel.EditorTools
             var sandMat = Lit("Sand", new Color(0.76f, 0.66f, 0.44f));
             ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
 
+            // Re-loaded here rather than reused from above, and not defensively - it is genuinely
+            // needed. Writing the sand texture and building its material runs an asset import, and
+            // an import unloads a ScriptableObject that nothing in the scene (still empty at that
+            // point) references yet. What is left is a reference alive enough to serialise into the
+            // scene correctly, but reading as null to any code that asks - so the arena was dressed
+            // with the no-kit fallback wall while the saved scene pointed at a perfectly good
+            // palette. Nothing logged, and the scene file looked right.
+            palette = AssetDatabase.LoadAssetAtPath<ViewPalette>(PalettePath);
+
             // --- arena root: owns the virtual->world conversion and the hazard ring visuals ---
             var arenaGo = new GameObject("Arena");
             var arena = arenaGo.AddComponent<ArenaView>();
@@ -443,10 +452,11 @@ namespace ColosseumDuel.EditorTools
             // left in the scene would drag the whole physics module into the build.
             UnityEngine.Object.DestroyImmediate(floor.GetComponent<Collider>());
 
-            // The wall, the posts and the gallery behind them are built by ArenaView at runtime,
-            // out of the modular stone kit in the palette. Not baked into the scene here: the kit is
-            // a paid pack kept out of the repository, and a scene carrying several hundred prefab
-            // instances that point into it would open in a clean clone as a field of missing objects.
+            // The wall, the posts, the gallery and the torches are placed into the scene as prefab
+            // instances, so they can be selected and re-dressed by hand in the Editor. Rebuilding
+            // the layout from these figures is a separate menu item, so tweaking one prop does not
+            // mean regenerating the whole arena.
+            ArenaDecor.BuildAll(arena, palette);
 
             // --- camera: fixed, angled, perspective ---
             // It never moves - no follow, no zoom, no shake - so the arena always sits in exactly
