@@ -206,6 +206,60 @@ namespace ColosseumDuel.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
+        /// <summary>
+        /// A white circle, or a ring when innerFraction is above zero, as a sprite.
+        ///
+        /// Needed as an actual sprite because the radial rage gauge uses Image.Type.Filled, and
+        /// fillAmount is ignored outright on an Image with no sprite - it draws full and says
+        /// nothing about it.
+        /// </summary>
+        public static Sprite EnsureDisc(string path, float innerFraction = 0f)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            const int size = 128;
+            const float outer = size * 0.5f - 1f;
+            float inner = outer * innerFraction;
+            var centre = new Vector2(size * 0.5f, size * 0.5f);
+
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), centre);
+
+                    // Antialiased over a one-pixel band, otherwise a circle this size looks jagged
+                    // against the arena behind it.
+                    float alpha = Mathf.Clamp01(outer - d);
+                    if (inner > 0f) alpha = Mathf.Min(alpha, Mathf.Clamp01(d - inner));
+
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                }
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
         // ------------------------------------------------------------------
 
         private static Color32 Tint(Color baseColor, float shade)

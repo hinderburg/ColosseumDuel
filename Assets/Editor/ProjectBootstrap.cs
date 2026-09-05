@@ -36,6 +36,8 @@ namespace ColosseumDuel.EditorTools
         private const string PalettePath = SettingsDir + "/ViewPalette.asset";
         private const string HudFontPath = "Assets/Fonts/Inter-Regular.ttf";
         private const string TexturesDir = "Assets/Textures";
+        private const string AbilityFirePrefabPath =
+            "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch Intense/CartoonFireTorchIntenseYellow.prefab";
 
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
@@ -297,6 +299,15 @@ namespace ColosseumDuel.EditorTools
             // its licence). Unity's built-in font has no Cyrillic glyphs, so it draws nothing at all
             // for the Russian captions once there are no OS fonts to fall back on - i.e. in a build.
             palette.Skull = ProceduralTextures.EnsureSkull(TexturesDir + "/Skull.png");
+            palette.Disc = ProceduralTextures.EnsureDisc(TexturesDir + "/Disc.png");
+            palette.Ring = ProceduralTextures.EnsureDisc(TexturesDir + "/Ring.png", innerFraction: 0.78f);
+
+            // From Epic Toon FX, which is not in the repository (see PROJECT_CONTEXT.md). Missing is
+            // a normal state for a clean clone, so it warns rather than failing the bootstrap.
+            palette.AbilityReadyFire = AssetDatabase.LoadAssetAtPath<GameObject>(AbilityFirePrefabPath);
+            if (palette.AbilityReadyFire == null)
+                Debug.LogWarning($"[Colosseum] Effect prefab not found at {AbilityFirePrefabPath} - " +
+                                 "the ability-ready flame will be skipped. Import Epic Toon FX to get it.");
 
             palette.HudFont = AssetDatabase.LoadAssetAtPath<Font>(HudFontPath);
             if (palette.HudFont == null)

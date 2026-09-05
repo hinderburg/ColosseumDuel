@@ -135,10 +135,14 @@ namespace ColosseumDuel.Tests
             yield return null;
             Assert.IsTrue(ability.interactable);
 
+            // Arming used to be a tick in the caption; the caption now names the ability instead,
+            // and the armed state is carried by the button filling with the rage colour.
+            var background = (Image)ability.targetGraphic;
+            var idle = background.color;
+
             ability.onClick.Invoke();
             yield return null;
-            var label = ability.GetComponentInChildren<Text>();
-            StringAssert.Contains("✓", label.text, "an armed ability should read as armed");
+            Assert.AreNotEqual(idle, background.color, "an armed ability should read as armed");
         }
 
         [UnityTest]

@@ -59,6 +59,19 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Marker drawn over a gladiator who is out of the match.</summary>
         public Sprite Skull;
 
+        /// <summary>Filled circle - backing for the round action buttons.</summary>
+        public Sprite Disc;
+
+        /// <summary>Ring - the radial rage gauge around the ability button.</summary>
+        public Sprite Ring;
+
+        /// <summary>
+        /// Flame played beside the gladiator while the ability is charged and ready.
+        /// Comes from an Asset Store pack that is not in the repository, so a clean clone will find
+        /// this null - everything else has to keep working without it.
+        /// </summary>
+        public GameObject AbilityReadyFire;
+
         /// <summary>
         /// Unity's built-in primitive meshes, referenced as assets rather than fetched at runtime.
         ///

@@ -28,7 +28,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private Text _hint;
         private Button _defendButton;
         private Button _abilityButton;
-        private Text _abilityLabel;
+        private ActionButtonsView _actionButtons;
 
         private GameObject _overlay;
         private Text _overlayTitle;
@@ -115,31 +115,18 @@ namespace ColosseumDuel.Gameplay.Hud
             _phaseLabel.rectTransform.anchoredPosition = new Vector2(0f, -(RosterEntryView.Height + 26f));
         }
 
-        /// <summary>Action buttons and the control hint, bottom right - opposite the player's squad.</summary>
+        /// <summary>
+        /// The action buttons follow the gladiator (see ActionButtonsView); this leaves the control
+        /// hint.
+        /// </summary>
         private void BuildBottomBar(RectTransform root)
         {
-            var actions = HudFactory.CreateRect("Actions", root);
-            actions.anchorMin = new Vector2(1f, 0f);
-            actions.anchorMax = new Vector2(1f, 0f);
-            actions.pivot = new Vector2(1f, 0f);
-            actions.sizeDelta = new Vector2(210f, 130f);
-            actions.anchoredPosition = new Vector2(-10f, 34f);
+            var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
+            _actionButtons = ActionButtonsView.Create(root, palette, Controller != null ? Controller.Arena : null);
 
-            var layout = actions.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 8f;
-            layout.childAlignment = TextAnchor.LowerRight;
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
-            layout.childControlWidth = false;
-            layout.childControlHeight = false;
-
-            _abilityButton = HudFactory.CreateButton("Ability", actions, "Способность", 20);
-            _abilityButton.GetComponent<RectTransform>().sizeDelta = new Vector2(196f, 54f);
-            _abilityLabel = _abilityButton.GetComponentInChildren<Text>();
+            _abilityButton = _actionButtons.Ability;
+            _defendButton = _actionButtons.Defend;
             _abilityButton.onClick.AddListener(() => Input?.ToggleAbility());
-
-            _defendButton = HudFactory.CreateButton("Defend", actions, "Защита", 20);
-            _defendButton.GetComponent<RectTransform>().sizeDelta = new Vector2(196f, 54f);
             _defendButton.onClick.AddListener(() => Input?.SubmitDefend());
 
             _hint = HudFactory.CreateLabel("Hint", root,
@@ -249,13 +236,11 @@ namespace ColosseumDuel.Gameplay.Hud
             var g = state.P1.Active;
             bool canAct = state.Phase == MatchPhase.Planning && g != null && g.Alive;
 
+            _actionButtons.Sync(g, state.Phase,
+                Controller != null && Controller.Arena != null ? Controller.Arena.ArenaCamera : null,
+                Input != null && Input.AbilityArmed);
+
             _defendButton.interactable = canAct;
-            _abilityButton.interactable = canAct && g.CanActivateAbility;
-
-            bool armed = Input != null && Input.AbilityArmed;
-            _abilityLabel.text = armed ? "Способность ✓" : "Способность";
-            _abilityLabel.color = armed ? HudFactory.RageColor : HudFactory.TextColor;
-
             _hint.enabled = canAct;
         }
 
