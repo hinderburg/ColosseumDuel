@@ -191,6 +191,30 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator TheControlSwitchIsOfferedOnlyOnTheOpeningPick()
+        {
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            Assert.AreEqual(ControlScheme.Drag, input.Scheme, "dragging is the default");
+
+            var row = Find("ControlSwitch");
+            Assert.IsNotNull(row, "no control switch on the pick screen");
+            Assert.IsTrue(row.activeInHierarchy, "it should be there before the first pick");
+
+            FindButton($"Control_{ControlScheme.Tap}").onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(ControlScheme.Tap, input.Scheme);
+            StringAssert.Contains("Тапни", Find("Hint").GetComponent<Text>().text,
+                "the hint should describe the control actually chosen");
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            // Gone from here on. A later pick screen belongs to whoever just lost a gladiator, which
+            // is no moment to be re-learning the controls.
+            Assert.IsFalse(row.activeInHierarchy, "the switch should not come back mid-match");
+        }
+
+        [UnityTest]
         public IEnumerator TheScreenEdgesTintWhilePlanningAndClearWhileActing()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);

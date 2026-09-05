@@ -237,6 +237,93 @@ namespace ColosseumDuel.Tests
                 $"the preview promised {predicted} but the gladiator finished at {player.Pos}");
         }
 
+        // ------------------------------------------------------------------
+        // grabbing the figure, not the patch of sand under him
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void APressAnywhereOnTheFigureStartsAPull()
+        {
+            var camera = _controller.Arena.ArenaCamera;
+            float bodyTop = _controller.Arena.ScaleLength(GameConstants.GladiatorRadius) * 5.6f;
+
+            // Feet, waist and head. The head is the case that used to fail: the camera looks down at
+            // 66 degrees, so the top of the model is a long way up the screen from the ground point
+            // it stands on, and the press projected onto the sand well behind him.
+            foreach (float height in new[] { 0f, bodyTop * 0.5f, bodyTop })
+            {
+                var screen = camera.WorldToScreenPoint(_controller.Arena.ToWorld(Player.Pos, height));
+
+                _input.CancelDrag();
+                Assert.IsTrue(_input.TryBeginDragFromScreen(screen),
+                    $"a press {height:0.0} units up the figure should have grabbed him");
+                Assert.IsTrue(_input.IsDragging);
+            }
+
+            _input.CancelDrag();
+        }
+
+        [Test]
+        public void APressWellClearOfTheFigureDoesNotStartAPull()
+        {
+            var camera = _controller.Arena.ArenaCamera;
+            var onHim = camera.WorldToScreenPoint(_controller.Arena.ToWorld(Player.Pos));
+
+            Assert.IsFalse(_input.TryBeginDragFromScreen(onHim + new Vector3(Screen.height * 0.3f, 0f, 0f)),
+                "the whole screen must not be a grab handle");
+            Assert.IsFalse(_input.IsDragging);
+        }
+
+        // ------------------------------------------------------------------
+        // tap to move
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void ATapInsideHisReachSendsHimExactlyThere()
+        {
+            _input.Scheme = ControlScheme.Tap;
+            Player.Pos = Vector2.zero;
+
+            // Half a dash away, so the power should come out at about half.
+            float reach = Player.DashReach();
+            var target = new Vector2(0f, reach * 0.5f);
+            var screen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
+
+            Assert.IsTrue(_input.TapTo(screen));
+            Assert.AreEqual(ActionType.Move, Player.PlannedAction);
+            Assert.AreEqual(0.5f, Player.PlannedPower, 0.05f,
+                "a tap half a dash away should ask for half power, not a full charge past it");
+            Assert.AreEqual(1f, Player.PlannedAimDirection.y, 0.05f);
+        }
+
+        [Test]
+        public void ATapBeyondHisReachSendsHimAsFarAsHeCanGo()
+        {
+            _input.Scheme = ControlScheme.Tap;
+            Player.Pos = new Vector2(0f, -ArenaShape.RadiusY * 0.8f);
+
+            // Right across the arena - further than one dash carries for any archetype.
+            var target = new Vector2(0f, ArenaShape.RadiusY * 0.8f);
+            Assert.Greater(Vector2.Distance(Player.Pos, target), Player.DashReach(),
+                "the test needs a target he genuinely cannot reach");
+
+            var screen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
+
+            Assert.IsTrue(_input.TapTo(screen));
+            Assert.AreEqual(1f, Player.PlannedPower, 0.001f, "out of range means flat out");
+        }
+
+        [Test]
+        public void TappingOnHimselfIsNotAMove()
+        {
+            _input.Scheme = ControlScheme.Tap;
+            var screen = _controller.Arena.ArenaCamera.WorldToScreenPoint(
+                _controller.Arena.ToWorld(Player.Pos));
+
+            Assert.IsFalse(_input.TapTo(screen), "a tap with nowhere to go is a mis-tap, not an order");
+            Assert.AreEqual(ActionType.None, Player.PlannedAction);
+        }
+
         private static IEnumerator RunSeconds(float seconds)
         {
             float t = 0f;

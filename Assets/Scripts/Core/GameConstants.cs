@@ -38,7 +38,9 @@ namespace ColosseumDuel.Core
 
         public const float CollideDistance = GladiatorRadius * 2f - 4f;   // 28
         public const float PassByDistance = GladiatorRadius * 2f + 34f;  // 66
-        public const float PickupDistance = GladiatorRadius + ItemRadius + 6f; // 34
+        // Reach for picking something off the sand: the two radii, a little slack, and 15% on top
+        // of the lot after a pass where running over an item and not getting it was too common.
+        public const float PickupDistance = (GladiatorRadius + ItemRadius + 6f) * 1.15f;
 
         // Both fighters are placed at opposite ends of the arena at the start of every round, this
         // far from the centre as a fraction of the LONG semi-axis - the one they are spread along.

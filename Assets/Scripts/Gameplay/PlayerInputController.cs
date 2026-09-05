@@ -21,8 +21,25 @@ namespace ColosseumDuel.Gameplay
         public GameController Controller;
         public Camera ArenaCamera;
 
-        [Tooltip("How far from the gladiator, in virtual units, a press still counts as grabbing them.")]
+        [Tooltip("Which control the player is using. Set from the pick screen; drag is the default.")]
+        public ControlScheme Scheme = ControlScheme.Drag;
+
+        [Tooltip("How far from the gladiator, in virtual units, a press still counts as grabbing " +
+                 "them. Only used by the simulation-space entry point; real presses are measured " +
+                 "against the figure on screen.")]
         public float GrabRadiusVirtual = GameConstants.GladiatorRadius * 3f;
+
+        /// <summary>
+        /// How far from the drawn figure a press still grabs him, as a fraction of screen height.
+        ///
+        /// A fraction rather than pixels so the target stays the same size on the finger whatever
+        /// the screen; at the reference height of 1024 this is about 56 pixels, a little over a
+        /// thumb's contact patch.
+        /// </summary>
+        private const float GrabScreenFraction = 0.055f;
+
+        /// <summary>Height of a gladiator in body radii, for finding the top of him on screen.</summary>
+        private const float BodyHeightInRadii = 5.6f;
 
         [Tooltip("Pulls shorter than this fraction of the maximum are treated as a mis-click, not a move.")]
         public float MinPowerToSubmit = 0.05f;
@@ -135,8 +152,10 @@ namespace ColosseumDuel.Gameplay
             if (Input.GetMouseButtonDown(0))
             {
                 // A press that landed on a HUD button must not also start a pull underneath it.
-                if (!IsPointerOverHud() && TryScreenToVirtual(Input.mousePosition, out var start))
-                    TryBeginDrag(start);
+                if (IsPointerOverHud()) return;
+
+                if (Scheme == ControlScheme.Tap) TapTo(Input.mousePosition);
+                else TryBeginDragFromScreen(Input.mousePosition);
             }
             else if (Input.GetMouseButton(0) && IsDragging)
             {
@@ -174,20 +193,112 @@ namespace ColosseumDuel.Gameplay
         // the drag itself - device independent, so tests can drive it directly
         // ------------------------------------------------------------------
 
-        /// <summary>Starts a pull, but only if the press landed on the player's own gladiator.</summary>
+        /// <summary>
+        /// Starts a pull if the press landed anywhere on the player's own gladiator on screen.
+        ///
+        /// Tested against his silhouette rather than against a circle on the ground, which is what
+        /// the old check did and why grabbing him so often missed: the camera looks down at 66
+        /// degrees, so the model stands well above the point it occupies on the floor, and a press
+        /// on the chest or the head projects onto the sand somewhere behind him - sometimes outside
+        /// the grab radius entirely. The taller the figure, the worse it got.
+        ///
+        /// The target is the segment from his feet to the top of his head, plus a thumb's width, so
+        /// what is grabbable is exactly what is drawn.
+        /// </summary>
+        public bool TryBeginDragFromScreen(Vector3 screenPos)
+        {
+            var g = PlayerGladiator();
+            if (g == null || ArenaCamera == null || Controller == null || Controller.Arena == null)
+                return false;
+
+            var arena = Controller.Arena;
+            var feet = ArenaCamera.WorldToScreenPoint(arena.ToWorld(g.Pos));
+            var head = ArenaCamera.WorldToScreenPoint(
+                arena.ToWorld(g.Pos, arena.ScaleLength(GameConstants.GladiatorRadius) * BodyHeightInRadii));
+
+            // Behind the camera - not something a fixed camera above the arena can produce, but a
+            // negative w would otherwise fold the screen point back on itself and grab at random.
+            if (feet.z <= 0f || head.z <= 0f) return false;
+
+            float grabPixels = Screen.height * GrabScreenFraction;
+            if (DistanceToSegment(screenPos, feet, head) > grabPixels) return false;
+            if (!TryScreenToVirtual(screenPos, out var virtualPoint)) return false;
+
+            // The pull is measured from the gladiator himself, so where on him the press landed
+            // does not bias the launch.
+            BeginDrag(virtualPoint);
+            return true;
+        }
+
+        /// <summary>
+        /// Sends the gladiator at a point on the sand: the whole of the alternative control.
+        ///
+        /// Aims at the tap and pulls exactly hard enough to arrive there, or as hard as he can if
+        /// the point is further than one dash carries. Reach comes from the simulation rather than
+        /// from a number here, so "as hard as he can" stays true when the speed or the phase length
+        /// is retuned.
+        /// </summary>
+        public bool TapTo(Vector3 screenPos)
+        {
+            var g = PlayerGladiator();
+            if (g == null) return false;
+            if (!TryScreenToVirtual(screenPos, out var target)) return false;
+
+            var toTarget = target - g.Pos;
+            float distance = toTarget.magnitude;
+            if (distance < 0.0001f) return false;
+
+            float reach = g.DashReach();
+            float power = reach > 0.0001f ? Mathf.Clamp01(distance / reach) : 1f;
+            if (power <= MinPowerToSubmit) return false;
+
+            DefendArmed = false;
+            CancelDrag();
+
+            bool ability = AbilityArmed;
+            Controller.SubmitPlayerMove(toTarget / distance, power, ability);
+            AbilityArmed = false;
+            return true;
+        }
+
+        /// <summary>Perpendicular distance from a point to a line segment, in screen pixels.</summary>
+        private static float DistanceToSegment(Vector3 point, Vector3 a, Vector3 b)
+        {
+            var ab = (Vector2)(b - a);
+            var ap = (Vector2)(point - a);
+            float lengthSq = ab.sqrMagnitude;
+            if (lengthSq < 0.0001f) return ap.magnitude;
+
+            float t = Mathf.Clamp01(Vector2.Dot(ap, ab) / lengthSq);
+            return (ap - ab * t).magnitude;
+        }
+
+        /// <summary>
+        /// Starts a pull from a point on the arena floor, within a radius measured on the floor too.
+        ///
+        /// Kept for callers that work in simulation space - tests, and anything driving the game
+        /// without a camera. Real presses go through TryBeginDragFromScreen, which measures against
+        /// the figure as drawn; this one cannot, because a point on the ground carries no
+        /// information about where the model above it lands on screen.
+        /// </summary>
         public bool TryBeginDrag(Vector2 virtualPoint)
         {
             var g = PlayerGladiator();
             if (g == null) return false;
             if (Vector2.Distance(virtualPoint, g.Pos) > GrabRadiusVirtual) return false;
 
+            BeginDrag(virtualPoint);
+            return true;
+        }
+
+        private void BeginDrag(Vector2 virtualPoint)
+        {
             // Pulling back is choosing to move, which is the other half of the same either-or. The
             // guard has to let go here, or the button would sit lit while the gladiator charges.
             DefendArmed = false;
 
             IsDragging = true;
             UpdateDrag(virtualPoint);
-            return true;
         }
 
         /// <summary>

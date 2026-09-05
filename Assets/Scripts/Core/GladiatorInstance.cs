@@ -55,6 +55,16 @@ namespace ColosseumDuel.Core
 
         public bool IsDefending => PlannedAction == ActionType.Defend;
 
+        /// <summary>
+        /// How far a full-power dash carries this gladiator, in virtual units.
+        ///
+        /// Here rather than in the input layer because it is the same product the action phase
+        /// actually integrates - aiming at a point needs it to work out how hard to pull, and a
+        /// second copy of the formula would drift from this one the first time either factor moved.
+        /// Ignores wall bounces, which change where he ends up but not how far he runs.
+        /// </summary>
+        public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
+
         public float EffectiveSpeed()
         {
             float speed = Def.Speed;
