@@ -163,6 +163,34 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator RestartingBringsBackThePickOverlayWithNothingArmed()
+        {
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            State.P1.Active.Rage = GameConstants.RageMax;
+            yield return null;
+            input.ToggleAbility();
+            FindButton("Defend").onClick.Invoke();
+            yield return null;
+            Assert.IsTrue(input.AbilityArmed && input.DefendArmed, "the test needs both armed first");
+
+            FindButton("Restart").onClick.Invoke();
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(Find("Overlay").activeInHierarchy, "a restart should land on the pick screen");
+            foreach (var def in GladiatorDef.All)
+                Assert.IsTrue(FindButton($"Pick_{def.Name}").interactable,
+                    $"{def.Name} should be pickable again");
+
+            Assert.IsFalse(input.AbilityArmed, "an armed ability survived into the new match");
+            Assert.IsFalse(input.DefendArmed, "an armed guard survived into the new match");
+        }
+
+        [UnityTest]
         public IEnumerator TheScreenEdgesTintWhilePlanningAndClearWhileActing()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);

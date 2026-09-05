@@ -245,6 +245,43 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void ARestartGoesBackToThePickScreenWithEverythingCleared()
+        {
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            // Leave the match thoroughly dirtied: a fighter chosen, rage banked, a buff running, the
+            // ability on cooldown, gear carried and several cycles on the clock.
+            var p1 = m.State.P1.Active;
+            p1.Rage = GameConstants.RageMax;
+            p1.ActivateAbility();
+            p1.Weapon = WeaponType.TwoHanded;
+            p1.HasShield = true;
+            p1.Hp = 5f;
+            m.State.Cycle = 9;
+
+            m.StartMatch(Squad, Squad);
+
+            // Back at the pick screen, which is what NeedsPick answers - and it reads Active, so an
+            // Active left over from the previous match is exactly what used to skip this screen.
+            Assert.AreEqual(MatchPhase.Pick, m.State.Phase);
+            Assert.IsNull(m.State.P1.Active, "the player should have nobody chosen yet");
+            Assert.IsTrue(m.State.P1.NeedsPick, "the pick screen is keyed off this");
+            Assert.AreEqual(0, m.State.Round);
+            Assert.AreEqual(0, m.State.Cycle);
+
+            foreach (var g in m.State.P1.Roster)
+            {
+                Assert.IsTrue(g.Alive);
+                Assert.AreEqual(g.Def.MaxHp, g.Hp, Tol);
+                Assert.AreEqual(0f, g.Rage, Tol, $"{g.Def.Name} carried rage into a fresh match");
+                Assert.IsFalse(g.Buff.IsActive, $"{g.Def.Name} carried a running ability into a fresh match");
+                Assert.AreEqual(WeaponType.None, g.Weapon);
+                Assert.IsFalse(g.HasShield);
+            }
+        }
+
+        [Test]
         public void DashCarriesTheSameGround()
         {
             // The reach of one dash is Speed * SpeedScale * ActionTime, and the two constants have

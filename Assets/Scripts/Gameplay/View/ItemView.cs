@@ -18,8 +18,25 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public const float TwoHandedScale = 1.5f;
 
-        /// <summary>Angle a weapon lies at on the sand, so it reads as dropped rather than planted.</summary>
-        private static readonly Quaternion LyingDown = Quaternion.Euler(84f, 0f, 0f);
+        /// <summary>
+        /// How a weapon lies on the sand: blade along the arena's long axis, flat face upwards.
+        ///
+        /// Built from where the axes have to end up rather than from Euler angles, because the two
+        /// that matter here pull in different directions. The blade is the model's +Y and its flat
+        /// face is its +Z, so simply tipping it over about X lays the blade down but stands the flat
+        /// face on edge - and a blade six hundredths of a unit thick, seen edge-on from above, is a
+        /// scratch on the sand. Mapping +Z to world X puts the flat of the blade under the camera.
+        /// </summary>
+        private static readonly Quaternion LyingDown =
+            Quaternion.LookRotation(Vector3.right, Vector3.forward);
+
+        /// <summary>
+        /// Half the blade's length, to shift the model back onto the pickup point.
+        ///
+        /// The model is pivoted at the grip, so laid down as-is the whole sword trails off to one
+        /// side of the spot the simulation will actually let a gladiator pick it up from.
+        /// </summary>
+        private const float BladeHalfLength = 0.59f;
 
         private ArenaView _arena;
         private GameObject _weapon;
@@ -50,6 +67,7 @@ namespace ColosseumDuel.Gameplay.View
                 var sword = Instantiate(palette.SwordModel, view._weapon.transform);
                 sword.name = "Model";
                 sword.transform.localRotation = LyingDown;
+                sword.transform.localPosition = new Vector3(-BladeHalfLength, 0f, 0f);
                 view._weaponModel = view._weapon.transform;
             }
             else
@@ -93,14 +111,22 @@ namespace ColosseumDuel.Gameplay.View
 
             transform.localPosition = _arena.ToWorld(item.Pos);
 
-            _weapon.SetActive(item.Kind == ItemKind.Weapon);
-            _shield.SetActive(item.Kind == ItemKind.Shield);
-            _random.SetActive(item.Kind == ItemKind.Random);
+            // Anything that hands over a weapon is drawn as one, which includes the third "random"
+            // slot: it rolls a weapon type and grants it on pickup, but used to sit there as a
+            // featureless sphere. Half the two-handers on the arena were therefore invisible as
+            // such, and running onto one destroyed the shield the player was carrying with no
+            // warning that it would.
+            bool armsHim = item.WeaponType != WeaponType.None
+                           && (item.Kind == ItemKind.Weapon || item.Kind == ItemKind.Random);
 
-            // Weapons lie at their natural size; a two-hander is the same sword, larger. This is the
-            // only thing on the floor that tells the player which of the two they are running at,
-            // and it decides whether they can keep the shield they are carrying.
-            if (_weaponModel != null && item.Kind == ItemKind.Weapon)
+            _weapon.SetActive(armsHim);
+            _shield.SetActive(item.Kind == ItemKind.Shield);
+            _random.SetActive(item.Kind == ItemKind.Random && !armsHim);
+
+            // A two-hander is the same sword, larger. That size is the only thing on the floor that
+            // tells the player which of the two they are running at, and it decides whether they
+            // get to keep their shield.
+            if (_weaponModel != null && armsHim)
                 _weaponModel.localScale = item.WeaponType == WeaponType.TwoHanded
                     ? Vector3.one * TwoHandedScale
                     : Vector3.one;

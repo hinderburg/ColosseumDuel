@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Failed(Child)" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:15Z" duration="3,3499078">
+  <test-suite type="TestSuite" id="1079" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="63" result="Failed" site="Child" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:15Z" duration="3.349908" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1074" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="63" result="Failed" site="Child" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:15Z" duration="3.336081" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="42696" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1075" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="63" result="Failed" site="Child" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:15Z" duration="3.333850" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1076" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="63" result="Failed" site="Child" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:15Z" duration="3.332060" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestFixture" id="1052" name="ItemPropTests" fullname="ColosseumDuel.Tests.ItemPropTests" classname="ColosseumDuel.Tests.ItemPropTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:15Z" duration="3.328436" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-case id="1053" name="ATwoHandedWeaponLiesOnTheSandBiggerThanAOneHanded" fullname="ColosseumDuel.Tests.ItemPropTests.ATwoHandedWeaponLiesOnTheSandBiggerThanAOneHanded" methodname="ATwoHandedWeaponLiesOnTheSandBiggerThanAOneHanded" classname="ColosseumDuel.Tests.ItemPropTests" runstate="Runnable" seed="1006158677" result="Passed" start-time="2026-09-05 15:15:12Z" end-time="2026-09-05 15:15:13Z" duration="1.783022" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1054" name="TheRandomSlotShowsTheWeaponItActuallyGrants" fullname="ColosseumDuel.Tests.ItemPropTests.TheRandomSlotShowsTheWeaponItActuallyGrants" methodname="TheRandomSlotShowsTheWeaponItActuallyGrants" classname="ColosseumDuel.Tests.ItemPropTests" runstate="Runnable" seed="323645230" result="Failed" start-time="2026-09-05 15:15:13Z" end-time="2026-09-05 15:15:15Z" duration="1.528703" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <failure>
+                <message><![CDATA[  a slot that grants a weapon has to look like one
+  Expected: True
+  But was:  False
+]]></message>
+                <stack-trace><![CDATA[at ColosseumDuel.Tests.ItemPropTests+<TheRandomSlotShowsTheWeaponItActuallyGrants>d__5.MoveNext () [0x000b9] in C:\Users\avshu\Documents\Dev\ColosseumDuel\Assets\Tests\PlayMode\ItemPropTests.cs:74
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0004e] in .\Library\PackageCache\com.unity.test-framework@bd7f943e9647\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+              </failure>
+              <output><![CDATA[Saving results to: C:/Users/avshu/AppData/LocalLow/ColosseumDuel/Colosseum Duel\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

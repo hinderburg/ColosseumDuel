@@ -117,9 +117,12 @@ namespace ColosseumDuel.Gameplay
             {
                 if (IsDragging) CancelDrag();
 
-                // The guard is a decision about one planning phase. Left standing, it would come up
-                // already pressed at the start of the next one, showing a choice nobody made.
+                // Both arm flags are decisions about one planning phase, and by now that phase has
+                // submitted whatever it was going to. Left standing they would come up already
+                // pressed at the start of the next one - or, after a restart, carry an armed ability
+                // into a match where nothing has been chosen at all.
                 DefendArmed = false;
+                AbilityArmed = false;
                 return;
             }
 

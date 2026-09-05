@@ -47,6 +47,13 @@ namespace ColosseumDuel.Core
         {
             State.P1.Roster = p1Squad.Select(d => new GladiatorInstance(d)).ToList();
             State.Bot.Roster = botSquad.Select(d => new GladiatorInstance(d)).ToList();
+
+            // Both sides put back to "nobody chosen yet". Without this a restart kept the previous
+            // match's fighter as the active one: NeedsPick reads Active == null, so the pick screen
+            // never came up, and that stale instance carried its rage, its running buff and its
+            // ability lock into a match that was supposed to start clean.
+            State.P1.Active = null;
+            State.Bot.Active = null;
             State.Items = new ItemSystem(_rng);
             State.Items.SpawnInitial();
             State.Round = 0;
