@@ -119,14 +119,13 @@ namespace ColosseumDuel.Core
         /// of the arena and the opponent's at the far end, matching where each side's roster sits on
         /// screen.
         ///
-        /// The distance between them is still measured against the short semi-axis, not the long
-        /// one. It is not a geometric figure but a pacing one - it is tuned against how far a dash
-        /// carries in one action phase, and scaling it to the long axis would double the gap and
-        /// leave the slowest gladiator spending five cycles closing it before a blow could land.
+        /// The distance is a fraction of the long semi-axis - the one they are spread along. What
+        /// spreading them costs is measured in cycles spent closing rather than in units; see
+        /// SpawnDistanceFraction.
         /// </summary>
         private void PlaceFightersForRound()
         {
-            float d = GameConstants.ArenaRadius * GameConstants.SpawnDistanceFraction;
+            float d = ArenaShape.RadiusY * GameConstants.SpawnDistanceFraction;
             Place(State.P1.Active, new Vector2(0f, -d), Vector2.up);
             Place(State.Bot.Active, new Vector2(0f, d), Vector2.down);
         }
@@ -361,6 +360,14 @@ namespace ColosseumDuel.Core
             dir = dir.normalized;
             a.Pos = mid + dir * (GameConstants.KnockbackDistance * 0.5f);
             b.Pos = mid - dir * (GameConstants.KnockbackDistance * 0.5f);
+
+            // Put them back inside the wall here rather than leaving it to the next step. A
+            // collision against the wall throws one of them through it, and because the collision
+            // also ends the action phase, nothing steps him again until the next one - so he would
+            // stand outside the arena for the whole of planning, which is seconds, not a frame.
+            var still = Vector2.zero;
+            ArenaShape.Bounce(ref a.Pos, ref still, GameConstants.GladiatorRadius);
+            ArenaShape.Bounce(ref b.Pos, ref still, GameConstants.GladiatorRadius);
 
             State.CollisionEndTimer = GameConstants.CollisionEarlyEndDelay;
         }

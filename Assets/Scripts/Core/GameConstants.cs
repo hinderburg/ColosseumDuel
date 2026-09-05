@@ -32,16 +32,30 @@ namespace ColosseumDuel.Core
         public const float PassByDistance = GladiatorRadius * 2f + 34f;  // 66
         public const float PickupDistance = GladiatorRadius + ItemRadius + 6f; // 34
 
-        // Both fighters are placed on opposite sides of the arena at the start of every round, this
-        // far from the center (as a fraction of ArenaRadius). Only HP and carried items persist for
-        // a round winner - position does not, so no round starts from an arbitrary leftover spot.
-        public const float SpawnDistanceFraction = 0.6f;
+        // Both fighters are placed at opposite ends of the arena at the start of every round, this
+        // far from the centre as a fraction of the LONG semi-axis - the one they are spread along.
+        // Only HP and carried items persist for a round winner; position does not, so no round
+        // starts from an arbitrary leftover spot.
+        //
+        // The cost of spreading them is measured in cycles, not in units: two fighters charging at
+        // full power close the gap between them at twice their own speed, and at this distance the
+        // slowest pair (two Brutius, 75/s each) needs two action phases to meet where they used to
+        // need one. The fastest still meets inside a single phase. Lower this if the wait shows.
+        public const float SpawnDistanceFraction = 0.45f;
 
         public const float SpeedScale = 7.5f;
         public const float MaxDragVirtual = 90f; // max pull-back distance for the slingshot move
 
-        // Knockback after a direct collision: ~1 body length, increased 30% per a later design pass.
-        public const float KnockbackDistance = GladiatorRadius * 1.3f * 1.3f;
+        // How far apart a direct collision leaves the two fighters, measured centre to centre.
+        //
+        // It has to clear their own bodies, and for a long time it did not: it was written as a
+        // multiple of one radius and came out at 27, against a collide threshold of 28 and two
+        // bodies 32 wide. The "knockback" placed them closer than the distance at which they had
+        // just collided, still overlapping - so on screen nothing was thrown back at all, the two
+        // simply stopped in each other.
+        //
+        // Expressed against the width of the pair, which is what it actually has to beat.
+        public const float KnockbackDistance = GladiatorRadius * 2f * 1.4f;
         public const float CollisionEarlyEndDelay = 0.25f; // cut the action phase short this long after a collision
 
         public const int ActionSubsteps = 6; // subdivide stepAction(dt) to avoid tunneling through fast-moving gladiators

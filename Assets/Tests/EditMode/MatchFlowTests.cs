@@ -85,9 +85,7 @@ namespace ColosseumDuel.Tests
 
             // Down the long axis, and always the same way round - the player's fighter at the near
             // end, where the player's own roster sits on screen, and the opponent's at the far end.
-            // The distance is still measured against the short semi-axis: it is tuned to what one
-            // dash covers in an action phase, not to the shape of the arena.
-            float expected = GameConstants.ArenaRadius * GameConstants.SpawnDistanceFraction;
+            float expected = ArenaShape.RadiusY * GameConstants.SpawnDistanceFraction;
             Assert.AreEqual(-expected, p1.Pos.y, Tol, "the player's fighter starts at the near end");
             Assert.AreEqual(expected, bot.Pos.y, Tol, "the opponent's starts at the far end");
             Assert.AreEqual(0f, p1.Pos.x, Tol);
@@ -95,6 +93,8 @@ namespace ColosseumDuel.Tests
 
             Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), GameConstants.PassByDistance,
                 "they must start well out of weapon range");
+            Assert.LessOrEqual(ArenaShape.NormalizedDistance(p1.Pos), 0.75f,
+                "spawning past the first danger ring would start a late round already on fire");
 
             Assert.AreEqual(1f, p1.Facing.y, Tol, "P1 looks towards the bot");
             Assert.AreEqual(-1f, bot.Facing.y, Tol, "the bot looks back");
@@ -175,8 +175,45 @@ namespace ColosseumDuel.Tests
 
             Assert.Less(p1.Hp, p1Hp);
             Assert.Less(bot.Hp, botHp);
-            Assert.GreaterOrEqual(Vector2.Distance(p1.Pos, bot.Pos), GameConstants.KnockbackDistance - Tol,
-                "the knockback should leave room to disengage next cycle");
+            // Measured against their bodies, not against the knockback constant. Asserting the
+            // knockback matches KnockbackDistance is the constant checking itself, and it passed
+            // happily for as long as that constant was 27 - less than the 28 they collide at and
+            // well inside the 32 their two bodies occupy, so they were left standing in each other
+            // and nothing on screen looked thrown back at all.
+            float apart = Vector2.Distance(p1.Pos, bot.Pos);
+            Assert.Greater(apart, GameConstants.GladiatorRadius * 2f,
+                "the knockback left them overlapping, so nothing appears to have been thrown back");
+            Assert.Greater(apart, GameConstants.CollideDistance,
+                "they should end up outside the range they just collided at");
+        }
+
+        [Test]
+        public void ACollisionAgainstTheWallDoesNotThrowAnyoneThroughIt()
+        {
+            // The knockback is applied straight to both positions, and a collision at the wall
+            // pushes one of them outward. It also ends the action phase, so nothing would step him
+            // again until the next one - he would stand outside the arena through all of planning.
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            float wall = ArenaShape.RadiusY - GameConstants.GladiatorRadius;
+            p1.Pos = new Vector2(0f, wall - 30f);
+            bot.Pos = new Vector2(0f, wall);
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.up, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            // Without this the test would pass on any run where they never actually met.
+            Assert.IsTrue(m.State.Collided, "they never collided, so no knockback was applied");
+
+            foreach (var g in new[] { p1, bot })
+                Assert.LessOrEqual(ArenaShape.NormalizedDistance(g.Pos), 1.0001f,
+                    $"{g.Def.Name} was knocked through the wall to {g.Pos}");
         }
 
         [Test]
