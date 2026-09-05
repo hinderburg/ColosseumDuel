@@ -160,6 +160,52 @@ namespace ColosseumDuel.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
+        /// <summary>
+        /// The dash pattern for the trajectory preview: an opaque run followed by a transparent gap,
+        /// tiled along the line by LineRenderer.
+        ///
+        /// A LineRenderer cannot draw dashes on its own. Splitting the polyline into separate
+        /// segments would work on a straight run but makes dash length wander at every bounce,
+        /// because the points are not evenly spaced. Tiling a texture keys the dashes to distance
+        /// travelled instead, so they stay even all the way round a bounce.
+        /// </summary>
+        public static Texture2D EnsureDash(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int width = 64;
+            const int height = 8;
+            const int dashLength = 38; // the rest of the width is the gap
+
+            var pixels = new Color32[width * height];
+            for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
+                    pixels[y * width + x] = x < dashLength
+                        ? new Color32(255, 255, 255, 255)
+                        : new Color32(255, 255, 255, 0);
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.wrapMode = TextureWrapMode.Repeat; // required, or tiling clamps to one dash
+            importer.filterMode = FilterMode.Point;     // crisp dash ends
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
         // ------------------------------------------------------------------
 
         private static Color32 Tint(Color baseColor, float shade)

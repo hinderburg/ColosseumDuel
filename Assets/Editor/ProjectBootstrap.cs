@@ -285,7 +285,12 @@ namespace ColosseumDuel.EditorTools
             palette.BarHp = Unlit("BarHp", new Color(0.30f, 0.85f, 0.35f));
             palette.BarRage = Unlit("BarRage", new Color(0.95f, 0.65f, 0.15f));
 
-            palette.Trajectory = Unlit("Trajectory", new Color(0.98f, 0.95f, 0.55f));
+            // White, not the old yellow: over bright sand and a red danger ring the yellow line was
+            // hard to pick out, which is what made the preview easy to miss.
+            palette.Trajectory = TransparentUnlit("Trajectory", Color.white);
+            ApplyTexture(palette.Trajectory, ProceduralTextures.EnsureDash(TexturesDir + "/Dash.png"), Vector2.one);
+
+            palette.PullLine = TransparentUnlit("PullLine", new Color(1f, 1f, 1f, 0.75f));
             palette.Burst = TransparentUnlit("Burst", Color.white);
 
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with

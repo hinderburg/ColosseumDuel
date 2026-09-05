@@ -37,7 +37,15 @@ namespace ColosseumDuel.Gameplay
 
         public Vector2 CurrentAim { get; private set; }
 
+        /// <summary>World width of the trajectory line. Wide on purpose - the old hairline was easy
+        /// to lose against bright sand and the red danger rings.</summary>
+        private const float TrajectoryWidth = 0.22f;
+
+        /// <summary>World length of one dash plus its gap.</summary>
+        private const float DashPeriod = 0.55f;
+
         private LineRenderer _trajectory;
+        private LineRenderer _pullLine;
         private readonly List<Vector3> _worldPoints = new List<Vector3>();
 
         private void Reset()
@@ -57,21 +65,39 @@ namespace ColosseumDuel.Gameplay
 
         private void BuildTrajectoryLine()
         {
-            var arena = Controller != null ? Controller.Arena : null;
+            var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
 
-            var go = new GameObject("TrajectoryPreview");
+            _trajectory = CreateLine("TrajectoryPreview", palette != null ? palette.Trajectory : null,
+                TrajectoryWidth);
+
+            // Dashes come from a tiled texture keyed to distance along the line, so they stay evenly
+            // spaced through a bounce even though the preview's points are not evenly spaced.
+            _trajectory.textureMode = LineTextureMode.Tile;
+            _trajectory.textureScale = new Vector2(1f / DashPeriod, 1f);
+
+            // The pull is drawn slightly narrower and solid, so at a glance the two lines read as
+            // different things: what you are doing now, and what will happen when you let go.
+            _pullLine = CreateLine("PullLine", palette != null ? palette.PullLine : null,
+                TrajectoryWidth * 0.65f);
+        }
+
+        private LineRenderer CreateLine(string name, Material material, float width)
+        {
+            var go = new GameObject(name);
             go.transform.SetParent(transform, false);
 
-            _trajectory = go.AddComponent<LineRenderer>();
-            _trajectory.useWorldSpace = true;
-            _trajectory.positionCount = 0;
-            _trajectory.widthMultiplier = 0.08f;
-            _trajectory.numCapVertices = 2;
-            _trajectory.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _trajectory.receiveShadows = false;
-            if (arena != null && arena.Palette != null && arena.Palette.Trajectory != null)
-                _trajectory.sharedMaterial = arena.Palette.Trajectory;
-            _trajectory.enabled = false;
+            var line = go.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = 0;
+            line.widthMultiplier = width;
+            line.numCapVertices = 2;
+            line.alignment = LineAlignment.TransformZ; // lie flat on the arena, not billboard at the camera
+            line.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            if (material != null) line.sharedMaterial = material;
+            line.enabled = false;
+            return line;
         }
 
         // ------------------------------------------------------------------
@@ -165,6 +191,7 @@ namespace ColosseumDuel.Gameplay
             CurrentAim = pull.sqrMagnitude > 0.0001f ? pull.normalized : Vector2.zero;
 
             DrawTrajectory(g);
+            DrawPullLine(g, virtualPoint);
         }
 
         /// <summary>Submits the move. Returns false if the pull was too short to count.</summary>
@@ -211,11 +238,42 @@ namespace ColosseumDuel.Gameplay
             IsDragging = false;
             CurrentPower = 0f;
             CurrentAim = Vector2.zero;
-            if (_trajectory != null)
+            Hide(_trajectory);
+            Hide(_pullLine);
+        }
+
+        private static void Hide(LineRenderer line)
+        {
+            if (line == null) return;
+            line.positionCount = 0;
+            line.enabled = false;
+        }
+
+        /// <summary>
+        /// The pull itself: gladiator to pointer. Without it the drag has no visible handle - the
+        /// trajectory alone shows the result but not the gesture producing it.
+        /// </summary>
+        private void DrawPullLine(GladiatorInstance g, Vector2 pointer)
+        {
+            if (_pullLine == null || Controller.Arena == null) return;
+
+            if (CurrentPower <= MinPowerToSubmit)
             {
-                _trajectory.positionCount = 0;
-                _trajectory.enabled = false;
+                Hide(_pullLine);
+                return;
             }
+
+            // Clamped to the maximum useful pull, so dragging further does not draw a line that
+            // promises power the release will not deliver.
+            Vector2 pull = g.Pos - pointer;
+            Vector2 clamped = pull.magnitude > GameConstants.MaxDragVirtual
+                ? pull.normalized * GameConstants.MaxDragVirtual
+                : pull;
+
+            _pullLine.positionCount = 2;
+            _pullLine.SetPosition(0, Controller.Arena.ToWorld(g.Pos, 0.07f));
+            _pullLine.SetPosition(1, Controller.Arena.ToWorld(g.Pos - clamped, 0.07f));
+            _pullLine.enabled = true;
         }
 
         private void DrawTrajectory(GladiatorInstance g)
@@ -224,8 +282,7 @@ namespace ColosseumDuel.Gameplay
 
             if (CurrentPower <= MinPowerToSubmit || CurrentAim == Vector2.zero)
             {
-                _trajectory.positionCount = 0;
-                _trajectory.enabled = false;
+                Hide(_trajectory);
                 return;
             }
 

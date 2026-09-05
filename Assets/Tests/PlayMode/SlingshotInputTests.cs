@@ -127,9 +127,10 @@ namespace ColosseumDuel.Tests
         [UnityTest]
         public IEnumerator TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease()
         {
-            var line = _controller.GetComponentInChildren<LineRenderer>(true)
-                       ?? Object.FindObjectsByType<LineRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                              .FirstOrDefault();
+            // By name: there is more than one line in the scene now, and picking whichever comes
+            // back first found the pull line instead - a two-point line that trivially fails a
+            // "should be a polyline" check.
+            var line = FindLine("TrajectoryPreview");
             Assert.IsNotNull(line, "the input controller should have built a trajectory LineRenderer");
             Assert.IsFalse(line.enabled, "nothing to preview before a pull starts");
 
@@ -142,6 +143,71 @@ namespace ColosseumDuel.Tests
 
             _input.CancelDrag();
             Assert.IsFalse(line.enabled, "cancelling clears the preview");
+        }
+
+        private LineRenderer FindLine(string name)
+            => Object.FindObjectsByType<LineRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(l => l.name == name);
+
+        [UnityTest]
+        public IEnumerator ThePullIsDrawnFromTheGladiatorTowardsThePointer()
+        {
+            var pullLine = FindLine("PullLine");
+            Assert.IsNotNull(pullLine, "the input controller should have built a pull line");
+            Assert.IsFalse(pullLine.enabled, "nothing to draw before a pull starts");
+
+            var player = Player;
+            var pointer = player.Pos + new Vector2(-GameConstants.MaxDragVirtual * 0.5f, 0f);
+            _input.TryBeginDrag(player.Pos);
+            _input.UpdateDrag(pointer);
+            yield return null;
+
+            Assert.IsTrue(pullLine.enabled);
+            Assert.AreEqual(2, pullLine.positionCount, "the pull is a straight line, not a curve");
+
+            var arena = _controller.Arena;
+            Assert.Less(Vector3.Distance(pullLine.GetPosition(0), arena.ToWorld(player.Pos, 0.07f)), 0.01f,
+                "it should start on the gladiator");
+            Assert.Less(Vector3.Distance(pullLine.GetPosition(1), arena.ToWorld(pointer, 0.07f)), 0.01f,
+                "and end where the pointer is");
+
+            _input.CancelDrag();
+            Assert.IsFalse(pullLine.enabled, "cancelling clears it");
+        }
+
+        [Test]
+        public void TheTrajectoryIsWideWhiteAndDashed()
+        {
+            // Regression for "the movement line is hard to see": it used to be a thin yellow
+            // hairline, which disappeared against bright sand and the red danger rings.
+            var line = FindLine("TrajectoryPreview");
+            Assert.IsNotNull(line);
+
+            Assert.GreaterOrEqual(line.widthMultiplier, 0.18f,
+                "the trajectory should be several times wider than a hairline");
+            Assert.AreEqual(LineTextureMode.Tile, line.textureMode,
+                "dashes come from a tiled texture, so they stay even through a bounce");
+            Assert.IsNotNull(line.sharedMaterial.mainTexture, "the dash pattern is a texture");
+
+            var colour = line.sharedMaterial.color;
+            Assert.Greater(Mathf.Min(colour.r, colour.g, colour.b), 0.9f, "and it should be white");
+        }
+
+        [UnityTest]
+        public IEnumerator ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver()
+        {
+            var pullLine = FindLine("PullLine");
+            var player = Player;
+
+            _input.TryBeginDrag(player.Pos);
+            // Drag far past the maximum useful pull.
+            _input.UpdateDrag(player.Pos + new Vector2(-GameConstants.MaxDragVirtual * 4f, 0f));
+            yield return null;
+
+            float drawn = Vector3.Distance(pullLine.GetPosition(0), pullLine.GetPosition(1));
+            float maximum = _controller.Arena.ScaleLength(GameConstants.MaxDragVirtual);
+            Assert.Less(drawn, maximum * 1.02f,
+                "over-pulling must not draw a longer band than full power");
         }
 
         [UnityTest]

@@ -35,7 +35,11 @@ namespace ColosseumDuel.Gameplay.View
         public Material BarRage;
 
         [Header("Input")]
+        /// <summary>Dashed white line: where the gladiator will run if released now.</summary>
         public Material Trajectory;
+
+        /// <summary>Solid white line: the pull itself, from the gladiator back to the pointer.</summary>
+        public Material PullLine;
 
         /// <summary>
         /// Transparent unlit material for the expanding impact/ability rings. Shared, with per-ring
