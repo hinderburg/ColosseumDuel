@@ -224,7 +224,13 @@ namespace ColosseumDuel.EditorTools
             // faster in JS, and the size difference is small at this scale.
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
             PlayerSettings.WebGL.decompressionFallback = true;
-            PlayerSettings.WebGL.dataCaching = true;
+            // Off. It keeps the build's data file in the browser's IndexedDB, which sounds like a
+            // free second-visit speedup and in practice serves the previous build: the URL does not
+            // change between publishes, so a returning player gets today's loader with last week's
+            // game and no indication that anything is stale. That has now cost real confusion twice
+            // - a balance change that "did not apply" was this. A slower first frame is a fair price
+            // for the build on screen being the build that was published.
+            PlayerSettings.WebGL.dataCaching = false;
             // Not ExplicitlyThrownExceptionsOnly: that mode silently swallows null references, so a
             // per-frame exception in Update would look exactly like "the game ignores input" with
             // nothing in the console to explain it. Without stack traces keeps most of the size back

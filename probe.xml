@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1,9397042">
+  <test-suite type="TestSuite" id="1094" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1.939704" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1089" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1.927448" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="37008" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1090" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1.925751" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1091" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1.924424" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1040" name="HudTests" fullname="ColosseumDuel.Tests.HudTests" classname="ColosseumDuel.Tests.HudTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1.920931" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1049" name="TheActionButtonsStayClearOfTheGladiator" fullname="ColosseumDuel.Tests.HudTests.TheActionButtonsStayClearOfTheGladiator" methodname="TheActionButtonsStayClearOfTheGladiator" classname="ColosseumDuel.Tests.HudTests" runstate="Runnable" seed="1275253330" result="Passed" start-time="2026-09-05 17:08:55Z" end-time="2026-09-05 17:08:57Z" duration="1.903468" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[[BtnProbe] Defend anchor=(-62.00, 14.34) radius=37 feet=(0.00, -91.97) head=(0.00, -76.56) clearance=110,0352 screen=640x480
+[BtnProbe] Ability anchor=(62.00, 14.34) radius=37 feet=(0.00, -91.97) head=(0.00, -76.56) clearance=110,0352 screen=640x480
+Saving results to: C:/Users/avshu/AppData/LocalLow/ColosseumDuel/Colosseum Duel\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

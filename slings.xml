@@ -1,136 +1,144 @@
 <?xml version="1.0" encoding="utf-8"?>
-<test-run id="2" testcasecount="19" result="Passed" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:03:29Z" duration="37,9216735">
-  <test-suite type="TestSuite" id="1087" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="71" result="Passed" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:03:29Z" duration="37.921674" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+<test-run id="2" testcasecount="20" result="Passed" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:05:19Z" duration="38,5507339">
+  <test-suite type="TestSuite" id="1094" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:05:19Z" duration="38.550734" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
     <properties>
       <property name="platform" value="PlayMode" />
     </properties>
-    <test-suite type="Assembly" id="1082" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="71" result="Passed" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:03:29Z" duration="37.909014" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <test-suite type="Assembly" id="1089" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:05:19Z" duration="38.537881" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
       <properties>
-        <property name="_PID" value="41116" />
+        <property name="_PID" value="45924" />
         <property name="_APPDOMAIN" value="Unity Child Domain" />
         <property name="platform" value="PlayMode" />
         <property name="EditorOnly" value="False" />
       </properties>
-      <test-suite type="TestSuite" id="1083" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="71" result="Passed" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:03:29Z" duration="37.907179" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <test-suite type="TestSuite" id="1090" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:05:19Z" duration="38.535762" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
         <properties />
-        <test-suite type="TestSuite" id="1084" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="71" result="Passed" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:03:29Z" duration="37.905707" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <test-suite type="TestSuite" id="1091" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:05:19Z" duration="38.534139" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
           <properties />
-          <test-suite type="TestFixture" id="1062" name="SlingshotInputTests" fullname="ColosseumDuel.Tests.SlingshotInputTests" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:03:29Z" duration="37.902146" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <test-suite type="TestFixture" id="1068" name="SlingshotInputTests" fullname="ColosseumDuel.Tests.SlingshotInputTests" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" testcasecount="20" result="Passed" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:05:19Z" duration="38.530422" total="20" passed="20" failed="0" inconclusive="0" skipped="0" asserts="0">
             <properties />
-            <test-case id="1066" name="AMisClickWithAlmostNoPullSubmitsNothing" fullname="ColosseumDuel.Tests.SlingshotInputTests.AMisClickWithAlmostNoPullSubmitsNothing" methodname="AMisClickWithAlmostNoPullSubmitsNothing" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1460369330" result="Passed" start-time="2026-09-05 16:02:51Z" end-time="2026-09-05 16:02:53Z" duration="1.668447" asserts="0">
+            <test-case id="1072" name="AMisClickWithAlmostNoPullSubmitsNothing" fullname="ColosseumDuel.Tests.SlingshotInputTests.AMisClickWithAlmostNoPullSubmitsNothing" methodname="AMisClickWithAlmostNoPullSubmitsNothing" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="588308321" result="Passed" start-time="2026-09-05 17:04:41Z" end-time="2026-09-05 17:04:43Z" duration="1.674797" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1076" name="APressAnywhereOnTheFigureStartsAPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.APressAnywhereOnTheFigureStartsAPull" methodname="APressAnywhereOnTheFigureStartsAPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="343911445" result="Passed" start-time="2026-09-05 16:02:53Z" end-time="2026-09-05 16:02:54Z" duration="1.424933" asserts="0">
+            <test-case id="1082" name="APressAnywhereOnTheFigureStartsAPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.APressAnywhereOnTheFigureStartsAPull" methodname="APressAnywhereOnTheFigureStartsAPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1607906364" result="Passed" start-time="2026-09-05 17:04:43Z" end-time="2026-09-05 17:04:44Z" duration="1.423448" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1063" name="APressAwayFromTheGladiatorDoesNotStartAPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.APressAwayFromTheGladiatorDoesNotStartAPull" methodname="APressAwayFromTheGladiatorDoesNotStartAPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1271208266" result="Passed" start-time="2026-09-05 16:02:54Z" end-time="2026-09-05 16:02:56Z" duration="1.422465" asserts="0">
+            <test-case id="1069" name="APressAwayFromTheGladiatorDoesNotStartAPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.APressAwayFromTheGladiatorDoesNotStartAPull" methodname="APressAwayFromTheGladiatorDoesNotStartAPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="2010022310" result="Passed" start-time="2026-09-05 17:04:44Z" end-time="2026-09-05 17:04:45Z" duration="1.419734" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1077" name="APressWellClearOfTheFigureDoesNotStartAPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.APressWellClearOfTheFigureDoesNotStartAPull" methodname="APressWellClearOfTheFigureDoesNotStartAPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1681804174" result="Passed" start-time="2026-09-05 16:02:56Z" end-time="2026-09-05 16:02:57Z" duration="1.416162" asserts="0">
+            <test-case id="1084" name="APressWellClearOfTheFigureDoesNotStartAPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.APressWellClearOfTheFigureDoesNotStartAPull" methodname="APressWellClearOfTheFigureDoesNotStartAPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="432972483" result="Passed" start-time="2026-09-05 17:04:45Z" end-time="2026-09-05 17:04:47Z" duration="1.421318" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1070" name="ArmingTheAbilityIsConsumedByTheActionItWasArmedFor" fullname="ColosseumDuel.Tests.SlingshotInputTests.ArmingTheAbilityIsConsumedByTheActionItWasArmedFor" methodname="ArmingTheAbilityIsConsumedByTheActionItWasArmedFor" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1193874248" result="Passed" start-time="2026-09-05 16:02:57Z" end-time="2026-09-05 16:02:59Z" duration="1.421549" asserts="0">
-              <properties>
-                <property name="retryIteration" value="0" />
-                <property name="repeatIteration" value="0" />
-              </properties>
-            </test-case>
-            <test-case id="1079" name="ATapBeyondHisReachSendsHimAsFarAsHeCanGo" fullname="ColosseumDuel.Tests.SlingshotInputTests.ATapBeyondHisReachSendsHimAsFarAsHeCanGo" methodname="ATapBeyondHisReachSendsHimAsFarAsHeCanGo" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1737133395" result="Passed" start-time="2026-09-05 16:02:59Z" end-time="2026-09-05 16:03:00Z" duration="1.431240" asserts="0">
-              <properties>
-                <property name="retryIteration" value="0" />
-                <property name="repeatIteration" value="0" />
-              </properties>
-            </test-case>
-            <test-case id="1078" name="ATapInsideHisReachSendsHimExactlyThere" fullname="ColosseumDuel.Tests.SlingshotInputTests.ATapInsideHisReachSendsHimExactlyThere" methodname="ATapInsideHisReachSendsHimExactlyThere" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="657919198" result="Passed" start-time="2026-09-05 16:03:00Z" end-time="2026-09-05 16:03:02Z" duration="1.417048" asserts="0">
-              <properties>
-                <property name="retryIteration" value="0" />
-                <property name="repeatIteration" value="0" />
-              </properties>
-            </test-case>
-            <test-case id="1080" name="ATapLeavesAMarkerAndADottedRunBehindIt" fullname="ColosseumDuel.Tests.SlingshotInputTests.ATapLeavesAMarkerAndADottedRunBehindIt" methodname="ATapLeavesAMarkerAndADottedRunBehindIt" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1772491744" result="Passed" start-time="2026-09-05 16:03:02Z" end-time="2026-09-05 16:03:06Z" duration="4.722366" asserts="0">
+            <test-case id="1076" name="ArmingTheAbilitySurvivesOrderingAMove_ButNotThePhase" fullname="ColosseumDuel.Tests.SlingshotInputTests.ArmingTheAbilitySurvivesOrderingAMove_ButNotThePhase" methodname="ArmingTheAbilitySurvivesOrderingAMove_ButNotThePhase" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="560862248" result="Passed" start-time="2026-09-05 17:04:47Z" end-time="2026-09-05 17:04:51Z" duration="3.627281" asserts="0">
               <properties>
                 <property name="_JOINTYPE" value="UnityCombinatorial" />
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1065" name="PowerIsClampedAtAFullPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.PowerIsClampedAtAFullPull" methodname="PowerIsClampedAtAFullPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1613923985" result="Passed" start-time="2026-09-05 16:03:06Z" end-time="2026-09-05 16:03:08Z" duration="1.419472" asserts="0">
+            <test-case id="1086" name="ATapBeyondHisReachSendsHimAsFarAsHeCanGo" fullname="ColosseumDuel.Tests.SlingshotInputTests.ATapBeyondHisReachSendsHimAsFarAsHeCanGo" methodname="ATapBeyondHisReachSendsHimAsFarAsHeCanGo" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="255694459" result="Passed" start-time="2026-09-05 17:04:51Z" end-time="2026-09-05 17:04:52Z" duration="1.426927" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1064" name="PullingBackAimsForwards_AndScalesPowerByPullDistance" fullname="ColosseumDuel.Tests.SlingshotInputTests.PullingBackAimsForwards_AndScalesPowerByPullDistance" methodname="PullingBackAimsForwards_AndScalesPowerByPullDistance" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="206325625" result="Passed" start-time="2026-09-05 16:03:08Z" end-time="2026-09-05 16:03:09Z" duration="1.420367" asserts="0">
+            <test-case id="1085" name="ATapInsideHisReachSendsHimExactlyThere" fullname="ColosseumDuel.Tests.SlingshotInputTests.ATapInsideHisReachSendsHimExactlyThere" methodname="ATapInsideHisReachSendsHimExactlyThere" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="121963092" result="Passed" start-time="2026-09-05 17:04:52Z" end-time="2026-09-05 17:04:53Z" duration="1.420507" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1067" name="ReleasingSubmitsAMoveInTheAimedDirection" fullname="ColosseumDuel.Tests.SlingshotInputTests.ReleasingSubmitsAMoveInTheAimedDirection" methodname="ReleasingSubmitsAMoveInTheAimedDirection" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1693110692" result="Passed" start-time="2026-09-05 16:03:09Z" end-time="2026-09-05 16:03:11Z" duration="1.420014" asserts="0">
-              <properties>
-                <property name="retryIteration" value="0" />
-                <property name="repeatIteration" value="0" />
-              </properties>
-            </test-case>
-            <test-case id="1081" name="TappingOnHimselfIsNotAMove" fullname="ColosseumDuel.Tests.SlingshotInputTests.TappingOnHimselfIsNotAMove" methodname="TappingOnHimselfIsNotAMove" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="519252685" result="Passed" start-time="2026-09-05 16:03:11Z" end-time="2026-09-05 16:03:12Z" duration="1.421524" asserts="0">
-              <properties>
-                <property name="retryIteration" value="0" />
-                <property name="repeatIteration" value="0" />
-              </properties>
-            </test-case>
-            <test-case id="1069" name="TheAbilityToggleOnlyArmsWhenTheAbilityCouldActuallyFire" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheAbilityToggleOnlyArmsWhenTheAbilityCouldActuallyFire" methodname="TheAbilityToggleOnlyArmsWhenTheAbilityCouldActuallyFire" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="339396749" result="Passed" start-time="2026-09-05 16:03:12Z" end-time="2026-09-05 16:03:13Z" duration="1.417646" asserts="0">
-              <properties>
-                <property name="retryIteration" value="0" />
-                <property name="repeatIteration" value="0" />
-              </properties>
-            </test-case>
-            <test-case id="1068" name="TheDragIsAbandonedWhenPlanningEnds" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheDragIsAbandonedWhenPlanningEnds" methodname="TheDragIsAbandonedWhenPlanningEnds" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="685767610" result="Passed" start-time="2026-09-05 16:03:13Z" end-time="2026-09-05 16:03:18Z" duration="4.524420" asserts="0">
+            <test-case id="1087" name="ATapLeavesAMarkerAndADottedRunBehindIt" fullname="ColosseumDuel.Tests.SlingshotInputTests.ATapLeavesAMarkerAndADottedRunBehindIt" methodname="ATapLeavesAMarkerAndADottedRunBehindIt" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="596584397" result="Passed" start-time="2026-09-05 17:04:53Z" end-time="2026-09-05 17:04:57Z" duration="3.722533" asserts="0">
               <properties>
                 <property name="_JOINTYPE" value="UnityCombinatorial" />
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1075" name="ThePreviewEndsWhereTheGladiatorActuallyEndsUp" fullname="ColosseumDuel.Tests.SlingshotInputTests.ThePreviewEndsWhereTheGladiatorActuallyEndsUp" methodname="ThePreviewEndsWhereTheGladiatorActuallyEndsUp" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1927757633" result="Passed" start-time="2026-09-05 16:03:18Z" end-time="2026-09-05 16:03:23Z" duration="5.627507" asserts="0">
+            <test-case id="1071" name="PowerIsClampedAtAFullPull" fullname="ColosseumDuel.Tests.SlingshotInputTests.PowerIsClampedAtAFullPull" methodname="PowerIsClampedAtAFullPull" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1138957333" result="Passed" start-time="2026-09-05 17:04:57Z" end-time="2026-09-05 17:04:59Z" duration="1.420285" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1070" name="PullingBackAimsForwards_AndScalesPowerByPullDistance" fullname="ColosseumDuel.Tests.SlingshotInputTests.PullingBackAimsForwards_AndScalesPowerByPullDistance" methodname="PullingBackAimsForwards_AndScalesPowerByPullDistance" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="922846822" result="Passed" start-time="2026-09-05 17:04:59Z" end-time="2026-09-05 17:05:00Z" duration="1.416829" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1073" name="ReleasingSubmitsAMoveInTheAimedDirection" fullname="ColosseumDuel.Tests.SlingshotInputTests.ReleasingSubmitsAMoveInTheAimedDirection" methodname="ReleasingSubmitsAMoveInTheAimedDirection" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1106500464" result="Passed" start-time="2026-09-05 17:05:00Z" end-time="2026-09-05 17:05:01Z" duration="1.423677" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1088" name="TappingOnHimselfIsNotAMove" fullname="ColosseumDuel.Tests.SlingshotInputTests.TappingOnHimselfIsNotAMove" methodname="TappingOnHimselfIsNotAMove" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="864471263" result="Passed" start-time="2026-09-05 17:05:01Z" end-time="2026-09-05 17:05:03Z" duration="1.422858" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1075" name="TheAbilityToggleOnlyArmsWhenTheAbilityCouldActuallyFire" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheAbilityToggleOnlyArmsWhenTheAbilityCouldActuallyFire" methodname="TheAbilityToggleOnlyArmsWhenTheAbilityCouldActuallyFire" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1191878872" result="Passed" start-time="2026-09-05 17:05:03Z" end-time="2026-09-05 17:05:04Z" duration="1.415909" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1083" name="TheActionButtonsDoNotCoverTheGladiator" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheActionButtonsDoNotCoverTheGladiator" methodname="TheActionButtonsDoNotCoverTheGladiator" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="597325224" result="Passed" start-time="2026-09-05 17:05:04Z" end-time="2026-09-05 17:05:06Z" duration="1.430891" asserts="0">
               <properties>
                 <property name="_JOINTYPE" value="UnityCombinatorial" />
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1074" name="ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver" fullname="ColosseumDuel.Tests.SlingshotInputTests.ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver" methodname="ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1505820039" result="Passed" start-time="2026-09-05 16:03:23Z" end-time="2026-09-05 16:03:25Z" duration="1.427349" asserts="0">
+            <test-case id="1074" name="TheDragIsAbandonedWhenPlanningEnds" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheDragIsAbandonedWhenPlanningEnds" methodname="TheDragIsAbandonedWhenPlanningEnds" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1438256723" result="Passed" start-time="2026-09-05 17:05:06Z" end-time="2026-09-05 17:05:09Z" duration="3.522821" asserts="0">
               <properties>
                 <property name="_JOINTYPE" value="UnityCombinatorial" />
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1072" name="ThePullIsDrawnFromTheGladiatorTowardsThePointer" fullname="ColosseumDuel.Tests.SlingshotInputTests.ThePullIsDrawnFromTheGladiatorTowardsThePointer" methodname="ThePullIsDrawnFromTheGladiatorTowardsThePointer" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="846409053" result="Passed" start-time="2026-09-05 16:03:25Z" end-time="2026-09-05 16:03:26Z" duration="1.422986" asserts="0">
+            <test-case id="1081" name="ThePreviewEndsWhereTheGladiatorActuallyEndsUp" fullname="ColosseumDuel.Tests.SlingshotInputTests.ThePreviewEndsWhereTheGladiatorActuallyEndsUp" methodname="ThePreviewEndsWhereTheGladiatorActuallyEndsUp" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1719772204" result="Passed" start-time="2026-09-05 17:05:09Z" end-time="2026-09-05 17:05:14Z" duration="4.620144" asserts="0">
               <properties>
                 <property name="_JOINTYPE" value="UnityCombinatorial" />
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1073" name="TheTrajectoryIsWideWhiteAndDashed" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheTrajectoryIsWideWhiteAndDashed" methodname="TheTrajectoryIsWideWhiteAndDashed" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1615030085" result="Passed" start-time="2026-09-05 16:03:26Z" end-time="2026-09-05 16:03:28Z" duration="1.433289" asserts="0">
+            <test-case id="1080" name="ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver" fullname="ColosseumDuel.Tests.SlingshotInputTests.ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver" methodname="ThePullDoesNotPromiseMorePowerThanAReleaseWouldDeliver" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1238808442" result="Passed" start-time="2026-09-05 17:05:14Z" end-time="2026-09-05 17:05:15Z" duration="1.421793" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1078" name="ThePullIsDrawnFromTheGladiatorTowardsThePointer" fullname="ColosseumDuel.Tests.SlingshotInputTests.ThePullIsDrawnFromTheGladiatorTowardsThePointer" methodname="ThePullIsDrawnFromTheGladiatorTowardsThePointer" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="788377479" result="Passed" start-time="2026-09-05 17:05:15Z" end-time="2026-09-05 17:05:17Z" duration="1.424880" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1079" name="TheTrajectoryIsWideWhiteAndDashed" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheTrajectoryIsWideWhiteAndDashed" methodname="TheTrajectoryIsWideWhiteAndDashed" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="1565459716" result="Passed" start-time="2026-09-05 17:05:17Z" end-time="2026-09-05 17:05:18Z" duration="1.426993" asserts="0">
               <properties>
                 <property name="retryIteration" value="0" />
                 <property name="repeatIteration" value="0" />
               </properties>
             </test-case>
-            <test-case id="1071" name="TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease" methodname="TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="73615395" result="Passed" start-time="2026-09-05 16:03:28Z" end-time="2026-09-05 16:03:29Z" duration="1.420924" asserts="0">
+            <test-case id="1077" name="TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease" fullname="ColosseumDuel.Tests.SlingshotInputTests.TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease" methodname="TheTrajectoryPreviewIsDrawnWhilePullingAndClearedOnRelease" classname="ColosseumDuel.Tests.SlingshotInputTests" runstate="Runnable" seed="614741432" result="Passed" start-time="2026-09-05 17:05:18Z" end-time="2026-09-05 17:05:19Z" duration="1.423592" asserts="0">
               <properties>
                 <property name="_JOINTYPE" value="UnityCombinatorial" />
                 <property name="retryIteration" value="0" />

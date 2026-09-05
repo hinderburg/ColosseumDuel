@@ -20,9 +20,15 @@ namespace ColosseumDuel.Gameplay.Hud
     /// </summary>
     public sealed class ActionButtonsView : MonoBehaviour
     {
-        /// <summary>Screen-space offsets from the gladiator, in reference-resolution pixels.</summary>
-        private static readonly Vector2 DefendOffset = new Vector2(-62f, 54f);
-        private static readonly Vector2 AbilityOffset = new Vector2(62f, 54f);
+        /// <summary>
+        /// Screen-space offsets from the gladiator, in reference-resolution pixels.
+        ///
+        /// Raised well clear of the figure. At the old height the buttons' lower edges sat on his
+        /// body, and a press there went to the button rather than to him - so the pull the phase
+        /// exists for could not be started from half the places it looked like it should.
+        /// </summary>
+        private static readonly Vector2 DefendOffset = new Vector2(-62f, 100f);
+        private static readonly Vector2 AbilityOffset = new Vector2(62f, 100f);
 
         /// <summary>
         /// The countdown sits above the pair, on the gladiator's own column.
@@ -31,7 +37,7 @@ namespace ColosseumDuel.Gameplay.Hud
         /// player is looking at their gladiator and the two buttons beside him, and a clock in the
         /// far corner is read by looking away from the decision it is timing.
         /// </summary>
-        private static readonly Vector2 TimerOffset = new Vector2(0f, 104f);
+        private static readonly Vector2 TimerOffset = new Vector2(0f, 154f);
 
         private const float ButtonSize = 74f;
 
