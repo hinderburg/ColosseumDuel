@@ -547,6 +547,12 @@ namespace ColosseumDuel.EditorTools
             // in the .unity file, and it is the one the build actually plays with.
             input.Scheme = ControlScheme.Tap;
 
+            // The one thing allowed to move the camera. It reads its home pose off the transform at
+            // startup, so it has to be added after the camera has been placed.
+            var deathCamera = cameraGo.AddComponent<DeathCameraView>();
+            deathCamera.Controller = controller;
+            deathCamera.Arena = arena;
+
 
             BuildHud(controller, input);
 

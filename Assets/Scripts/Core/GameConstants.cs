@@ -20,7 +20,10 @@ namespace ColosseumDuel.Core
         // trade if the approach starts to drag.
         public const float ActionTime = 1.0f;
         public const float RevealTime = 1.0f;   // picks stay on screen this long before the round's first Planning
-        public const float RoundEndTime = 1.0f; // pause after a death so the knockout reads on screen
+        // Pause after a death, in real seconds. Long enough that the knockout plays out at the
+        // slowed rate the camera comes in on: at DeathTimeScale this is roughly half a second of
+        // animation, which is what a fall takes.
+        public const float RoundEndTime = 1.4f;
 
         // --- arena geometry, in "virtual" 2D simulation units (top-down plane) ---
         // The simulation runs entirely in this 2D virtual space; only the presentation layer

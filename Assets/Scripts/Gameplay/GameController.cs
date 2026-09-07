@@ -24,6 +24,11 @@ namespace ColosseumDuel.Gameplay
                  "full real-time duration - only the visuals slow down.")]
         [Range(0.05f, 1f)] public float PlanningTimeScale = 0.3f;
 
+        [Tooltip("How fast the world runs while a knockout plays out. Not as slow as planning: the " +
+                 "round-end pause is a fixed length in real seconds, and at a quarter speed the " +
+                 "death animation would only be a quarter played when the next round started.")]
+        [Range(0.05f, 1f)] public float DeathTimeScale = 0.35f;
+
         [Tooltip("Leave at 0 for a different match every run; set a value to replay a deterministic one.")]
         public int RandomSeed = 0;
 
@@ -124,7 +129,10 @@ namespace ColosseumDuel.Gameplay
 
         private void ApplyTimeScale()
         {
-            float target = Manager.State.Phase == MatchPhase.Planning ? PlanningTimeScale : 1f;
+            float target = 1f;
+            if (Manager.State.Phase == MatchPhase.Planning) target = PlanningTimeScale;
+            else if (Manager.State.Phase == MatchPhase.RoundEnd) target = DeathTimeScale;
+
             if (!Mathf.Approximately(Time.timeScale, target)) Time.timeScale = target;
         }
 
