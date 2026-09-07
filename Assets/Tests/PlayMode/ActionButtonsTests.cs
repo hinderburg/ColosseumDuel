@@ -32,6 +32,9 @@ namespace ColosseumDuel.Tests
             _buttons = Object.FindFirstObjectByType<ActionButtonsView>(FindObjectsInactive.Include);
             Assert.IsNotNull(_buttons, "the HUD should have built the action buttons");
 
+            // Past the menu, which stands the whole match HUD down while it is up.
+            Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.MenuView>().StartMatch();
+
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
             Assert.AreEqual(MatchPhase.Planning, _controller.Manager.State.Phase);

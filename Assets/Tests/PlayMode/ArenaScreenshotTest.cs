@@ -46,6 +46,17 @@ namespace ColosseumDuel.Tests
             canvas.worldCamera = Camera.main;
             canvas.planeDistance = 1f;
 
+            // The menu is what the game actually opens on, so it gets a frame of its own - and so
+            // does the roster screen, which is the only place the weapon badges are ever read.
+            var menu = Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.MenuView>();
+            yield return Capture(SuffixPath("-menu"));
+
+            menu.OpenRosterScreen();
+            yield return null;
+            yield return Capture(SuffixPath("-roster"));
+
+            menu.StartMatch();
+            yield return null;
             yield return Capture(SuffixPath("-pick"));
 
             controller.SubmitPlayerPick(GladiatorId.Brutius);

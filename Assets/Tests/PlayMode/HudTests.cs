@@ -31,6 +31,10 @@ namespace ColosseumDuel.Tests
             _controller = Object.FindFirstObjectByType<GameController>();
             _hud = Object.FindFirstObjectByType<MatchHud>();
             Assert.IsNotNull(_hud, "the Arena scene must contain a MatchHud");
+
+            // Past the menu. Every one of these tests is about the match HUD, and the menu standing
+            // in front of it is a separate screen with its own tests.
+            Object.FindFirstObjectByType<MenuView>().StartMatch();
             yield return null; // let LateUpdate populate it once
         }
 

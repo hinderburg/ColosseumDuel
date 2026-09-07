@@ -72,6 +72,20 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public Sprite[] ArchetypeIcons;
 
+        /// <summary>
+        /// One badge per weapon kind, in WeaponDef.All order. Drawn white so the UI can paint it -
+        /// the roster cards want it green, as the mark of what a gladiator is trained in.
+        /// </summary>
+        public Sprite[] WeaponIcons;
+
+        public Sprite IconFor(ColosseumDuel.Core.WeaponKind kind)
+        {
+            if (WeaponIcons == null) return null;
+            for (int i = 0; i < ColosseumDuel.Core.WeaponDef.All.Count && i < WeaponIcons.Length; i++)
+                if (ColosseumDuel.Core.WeaponDef.All[i].Kind == kind) return WeaponIcons[i];
+            return null;
+        }
+
         public Sprite IconFor(ColosseumDuel.Core.GladiatorId id)
         {
             int index = (int)id;

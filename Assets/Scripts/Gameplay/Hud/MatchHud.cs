@@ -40,6 +40,9 @@ namespace ColosseumDuel.Gameplay.Hud
         private Image _planningVignette;
         private float _vignetteStrength;
         private Button _restartButton;
+        private MenuView _menu;
+        private GameObject _playerCorner;
+        private GameObject _botCorner;
 
         private bool _built;
 
@@ -73,6 +76,12 @@ namespace ColosseumDuel.Gameplay.Hud
             BuildTopBar(root);
             BuildBottomBar(root);
             BuildOverlay(root);
+
+            // Last, so it draws over everything else in the canvas: it is a screen in front of the
+            // match rather than a panel inside it.
+            _menu = MenuView.Create(root,
+                Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null,
+                Controller);
         }
 
         /// <summary>
@@ -107,6 +116,12 @@ namespace ColosseumDuel.Gameplay.Hud
                 _botIcons.Add(RosterEntryView.Create($"Bot_{i}", botCorner, HudFactory.BotColor, skull, palette));
                 _playerIcons.Add(RosterEntryView.Create($"P1_{i}", playerCorner, HudFactory.PlayerColor, skull, palette));
             }
+
+            // Kept so the menu can take them off screen. They are the only part of the HUD that
+            // sits in the corners the menu's own panels leave clear, so they show straight through
+            // it and read as part of the menu.
+            _playerCorner = playerCorner.gameObject;
+            _botCorner = botCorner.gameObject;
 
             // Below the opponent's corner, not beside it: at this width a phase line long enough to
             // be useful runs straight into the squad tiles.
@@ -310,12 +325,24 @@ namespace ColosseumDuel.Gameplay.Hud
             if (manager == null) return;
 
             var state = manager.State;
+
+            // The menu sits over a match that is already built and waiting on its pick screen, so
+            // while it is up the whole match HUD stands down. Reported here rather than each view
+            // asking, because "is the player even looking at the arena" is one question.
+            bool menuUp = _menu != null && _menu.IsOpen;
+
             SyncRoster(state);
             SyncActions(state);
             SyncPhaseLabel(state);
             SyncPlanningVignette(state);
             _tutorial.Sync(state);
-            SyncOverlay(state);
+            SyncOverlay(menuUp ? null : state);
+
+            SetActive(_phaseLabel.gameObject, !menuUp);
+            SetActive(_playerCorner, !menuUp);
+            SetActive(_botCorner, !menuUp);
+            _actionButtons.SetHidden(menuUp);
+            if (menuUp) _hint.enabled = false;
         }
 
         private void SyncRoster(MatchState state)
@@ -382,8 +409,15 @@ namespace ColosseumDuel.Gameplay.Hud
             }
         }
 
+        /// <summary>Draws the pick/reveal/end overlay. A null state means the menu has the screen.</summary>
         private void SyncOverlay(MatchState state)
         {
+            if (state == null)
+            {
+                if (_overlay.activeSelf) _overlay.SetActive(false);
+                return;
+            }
+
             // Keyed off NeedsPick rather than Phase: from round two only the loser picks, so when the
             // player is the survivor the Pick phase is entered and left within the same frame and
             // would never be catchable by a phase check.

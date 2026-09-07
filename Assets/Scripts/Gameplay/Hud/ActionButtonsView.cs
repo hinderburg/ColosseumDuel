@@ -160,6 +160,15 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>
+        /// Takes the buttons off screen regardless of the match, for whatever is standing in front
+        /// of it. Applied after Sync, so the ordinary rules still decide when nothing is.
+        /// </summary>
+        public void SetHidden(bool hidden)
+        {
+            if (hidden && gameObject.activeSelf) gameObject.SetActive(false);
+        }
+
+        /// <summary>
         /// Places and updates both buttons. <paramref name="gladiator"/> is null whenever the player
         /// has nobody on the arena, which hides the pair.
         /// </summary>

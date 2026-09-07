@@ -342,6 +342,14 @@ namespace ColosseumDuel.EditorTools
                     ProceduralTextures.EnsureArchetypeIcon($"{TexturesDir}/Icon_{def.Id}.png", def.Id);
             }
 
+            palette.WeaponIcons = new Sprite[WeaponDef.All.Count];
+            for (int i = 0; i < WeaponDef.All.Count; i++)
+            {
+                var weapon = WeaponDef.All[i];
+                palette.WeaponIcons[i] =
+                    ProceduralTextures.EnsureWeaponIcon($"{TexturesDir}/Weapon_{weapon.Kind}.png", weapon.Kind);
+            }
+
             // From Epic Toon FX, which is not in the repository (see PROJECT_CONTEXT.md). Missing is
             // a normal state for a clean clone, so it warns rather than failing the bootstrap.
             palette.AbilityReadyFire = AssetDatabase.LoadAssetAtPath<GameObject>(AbilityFirePrefabPath);

@@ -244,6 +244,93 @@ namespace ColosseumDuel.EditorTools
         }
 
         /// <summary>
+        /// One badge per weapon kind, for the green mark that says what a gladiator is trained in.
+        ///
+        /// Silhouettes rather than the weapon models: these are read at about thirty pixels on a
+        /// roster card, and a rendered mace at that size is a grey smudge. Each is one solid mass
+        /// for the same reason the archetype icons are - an interior gap collapses.
+        /// </summary>
+        public static Sprite EnsureWeaponIcon(string path, WeaponKind kind)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            return WriteBitmapSprite(path, WeaponIconRows(kind));
+        }
+
+        private static string[] WeaponIconRows(WeaponKind kind)
+        {
+            switch (kind)
+            {
+                // Twin swords: two blades crossed. The pair is the whole identity of the weapon.
+                case WeaponKind.DualSwords:
+                    return new[]
+                    {
+                        "................",
+                        ".##..........##.",
+                        "..##........##..",
+                        "...##......##...",
+                        "....##....##....",
+                        ".....##..##.....",
+                        "......####......",
+                        ".......##.......",
+                        "......####......",
+                        ".....##..##.....",
+                        "....##....##....",
+                        "...##......##...",
+                        "..##........##..",
+                        ".##..........##.",
+                        "................",
+                        "................",
+                    };
+
+                // Sword and shield: a blade behind a heater shield.
+                case WeaponKind.SwordAndShield:
+                    return new[]
+                    {
+                        "................",
+                        "............##..",
+                        "...........####.",
+                        "..#######...##..",
+                        ".#########..##..",
+                        ".#########..##..",
+                        ".#########..##..",
+                        ".#########..##..",
+                        ".#########..##..",
+                        "..#######...##..",
+                        "..#######...##..",
+                        "...#####...####.",
+                        "....###....####.",
+                        ".....#..........",
+                        "................",
+                        "................",
+                    };
+
+                // Two-handed mace: a heavy head on a long haft.
+                default:
+                    return new[]
+                    {
+                        "................",
+                        "....########....",
+                        "...##########...",
+                        "..############..",
+                        "..############..",
+                        "...##########...",
+                        "....########....",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        "......####......",
+                        ".....######.....",
+                        "................",
+                        "................",
+                    };
+            }
+        }
+
+        /// <summary>
         /// The "this gladiator is out" marker, as a sprite.
         ///
         /// Drawn from a bitmap rather than taken from a font glyph: Inter has no skull character, and
