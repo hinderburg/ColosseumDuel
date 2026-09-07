@@ -372,7 +372,6 @@ namespace ColosseumDuel.Core
         private void BeginActionPhase()
         {
             State.Collided = false;
-            State.WasNear = false;
             State.CollisionEndTimer = null;
 
             // Wounds settle up before anyone moves, which is the whole shape of a bleed: it is the
@@ -433,26 +432,10 @@ namespace ColosseumDuel.Core
 
             if (a == null || b == null || !a.Alive || !b.Alive) return;
 
-            float dist = Vector2.Distance(a.Pos, b.Pos);
-
             if (State.Collided) return;
 
-            if (dist <= GameConstants.CollideDistance)
-            {
+            if (Vector2.Distance(a.Pos, b.Pos) <= GameConstants.CollideDistance)
                 ResolveCollision(a, b);
-                return;
-            }
-
-            if (dist <= GameConstants.PassByDistance)
-            {
-                State.WasNear = true;
-            }
-            else if (State.WasNear)
-            {
-                // They came close without touching and have now separated again.
-                State.WasNear = false;
-                ResolvePassBy(a, b);
-            }
         }
 
         private void StepGladiator(GladiatorInstance g, float dt)
@@ -487,7 +470,6 @@ namespace ColosseumDuel.Core
         private void ResolveCollision(GladiatorInstance a, GladiatorInstance b)
         {
             State.Collided = true;
-            State.WasNear = false;
             a.Vel = Vector2.zero;
             b.Vel = Vector2.zero;
 
@@ -516,28 +498,60 @@ namespace ColosseumDuel.Core
             State.CollisionEndTimer = GameConstants.CollisionEarlyEndDelay;
         }
 
-        private void ResolvePassBy(GladiatorInstance a, GladiatorInstance b)
+        /// <summary>
+        /// The blow at the end of a run: whoever finishes the cycle with the other inside his own
+        /// weapon's reach swings at him.
+        ///
+        /// This replaces the old pass-by, which fired mid-flight the moment the two crossed a single
+        /// fixed band and separated again. Two things were wrong with it. It ignored the weapon -
+        /// everybody's reach was the same 66 units, so the mace's whole point had nowhere to live.
+        /// And it fired on approach rather than on arrival, which meant a move that ended next to
+        /// somebody and a move that merely brushed past them at speed were the same event.
+        ///
+        /// Ordinary movement can now finish in an attack, which is the point: closing to exactly the
+        /// edge of your reach and no further is a real decision, and the answer differs per weapon.
+        ///
+        /// Each side is checked against its own reach, so a mace user really can land a blow from a
+        /// distance a pair of short blades cannot answer from. That asymmetry is the reason reach is
+        /// a stat rather than a constant.
+        /// </summary>
+        private void ResolveReachAttacks()
         {
-            ExchangeBlows(a, b);
+            var a = State.P1.Active;
+            var b = State.Bot.Active;
+            if (a == null || b == null || !a.Alive || !b.Alive) return;
+
+            float distance = Vector2.Distance(a.Pos, b.Pos);
+            bool aReaches = distance <= a.WeaponDef.Reach;
+            bool bReaches = distance <= b.WeaponDef.Reach;
+            if (!aReaches && !bReaches) return;
+
+            ExchangeBlows(a, b, aReaches, bReaches);
         }
 
         /// <summary>
-        /// One exchange. Each side spends one of the attacks it has left this cycle, so a normal
-        /// gladiator lands a single blow while Mongoose (Hilius) gets a second one. The first
-        /// exchange is simultaneous - a lethal hit does not rob the dying fighter of their return
-        /// blow - but a fighter who died there does not get to throw any follow-up attacks.
+        /// One exchange. Each side spends the attacks it has left this cycle, so a weapon that
+        /// swings twice lands twice and Mongoose doubles whatever that was. The first exchange is
+        /// simultaneous - a lethal hit does not rob the dying fighter of their return blow - but a
+        /// fighter who died there does not get to throw any follow-up attacks.
+        ///
+        /// A side out of reach neither swings nor spends anything: reach decides who is in the
+        /// exchange at all, and the two sides can disagree about the answer.
         /// </summary>
         /// <param name="a">Always the player's active gladiator.</param>
         /// <param name="b">Always the bot's.</param>
-        private void ExchangeBlows(GladiatorInstance a, GladiatorInstance b)
+        private void ExchangeBlows(GladiatorInstance a, GladiatorInstance b,
+            bool aMaySwing = true, bool bMaySwing = true)
         {
-            for (int exchange = 0; a.AttacksRemainingThisCycle > 0 || b.AttacksRemainingThisCycle > 0; exchange++)
+            for (int exchange = 0;
+                 (aMaySwing && a.AttacksRemainingThisCycle > 0) || (bMaySwing && b.AttacksRemainingThisCycle > 0);
+                 exchange++)
             {
-                bool aSwings = a.AttacksRemainingThisCycle > 0 && (exchange == 0 || a.Alive);
-                bool bSwings = b.AttacksRemainingThisCycle > 0 && (exchange == 0 || b.Alive);
+                bool aSwings = aMaySwing && a.AttacksRemainingThisCycle > 0 && (exchange == 0 || a.Alive);
+                bool bSwings = bMaySwing && b.AttacksRemainingThisCycle > 0 && (exchange == 0 || b.Alive);
 
-                if (a.AttacksRemainingThisCycle > 0) a.AttacksRemainingThisCycle--;
-                if (b.AttacksRemainingThisCycle > 0) b.AttacksRemainingThisCycle--;
+                if (aMaySwing && a.AttacksRemainingThisCycle > 0) a.AttacksRemainingThisCycle--;
+                if (bMaySwing && b.AttacksRemainingThisCycle > 0) b.AttacksRemainingThisCycle--;
 
                 // Deal first, announce second. Folding the call into Damaged?.Invoke(...) would put
                 // it inside a null-conditional, and with no subscriber the argument is never
@@ -582,16 +596,9 @@ namespace ColosseumDuel.Core
 
         private void EndActionPhase()
         {
-            // The phase ran out while the two were still inside the pass-by band without colliding.
-            // Without this, ending a cycle mid-near-miss would deal no damage to anyone.
-            if (!State.Collided && State.WasNear)
-            {
-                var pa = State.P1.Active;
-                var pb = State.Bot.Active;
-                State.WasNear = false;
-                if (pa != null && pb != null && pa.Alive && pb.Alive)
-                    ResolvePassBy(pa, pb);
-            }
+            // A collision already resolved its own exchange and threw the two apart, so it does not
+            // also get the end-of-run blow: one approach, one exchange.
+            if (!State.Collided) ResolveReachAttacks();
 
             State.P1.Active?.ResolveCycleRage();
             State.Bot.Active?.ResolveCycleRage();

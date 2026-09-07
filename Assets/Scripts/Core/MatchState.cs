@@ -43,10 +43,6 @@ namespace ColosseumDuel.Core
 
         // action-phase collision/pass-by bookkeeping for the current cycle
         public bool Collided;
-        /// <summary>True while the two actives are inside PassByDistance without having collided.
-        /// A pass-by resolves when they leave that band again, or when the action phase ends while
-        /// they are still inside it (otherwise ending a phase in a near-miss would deal no damage).</summary>
-        public bool WasNear;
         public float? CollisionEndTimer;
 
         public PlayerState Get(PlayerSide side) => side == PlayerSide.P1 ? P1 : Bot;

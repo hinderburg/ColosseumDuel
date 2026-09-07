@@ -77,24 +77,29 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void APassByReportsDamageButNoImpact()
+        public void ABlowAtTheEndOfARunReportsDamageButNoImpact()
         {
-            // The design separates a glancing pass-by from a head-on collision; so should the effects.
+            // A blow landed at the end of a move is not a crash, and the effects should not say it
+            // was: no shockwave ring, only the two hits.
             var m = StartedRound();
             int impacts = 0, hits = 0;
             m.Impact += _ => impacts++;
             m.Damaged += (_, __) => hits++;
 
-            float gap = (GameConstants.CollideDistance + GameConstants.PassByDistance) * 0.5f;
-            m.State.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
-            m.State.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            float shortest = Mathf.Min(p1.WeaponDef.Reach, bot.WeaponDef.Reach);
+            float gap = (GameConstants.CollideDistance + shortest) * 0.5f;
+
+            p1.Pos = new Vector2(-gap * 0.5f, 0f);
+            bot.Pos = new Vector2(gap * 0.5f, 0f);
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 
             RunOneCycle(m);
 
             Assert.AreEqual(0, impacts, "nobody collided head-on");
-            Assert.AreEqual(2, hits, "but both took pass-by damage");
+            Assert.AreEqual(2, hits, "but both were within reach when the cycle ended");
         }
 
         [Test]

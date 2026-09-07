@@ -91,8 +91,8 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(0f, p1.Pos.x, Tol);
             Assert.AreEqual(0f, bot.Pos.x, Tol);
 
-            Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), GameConstants.PassByDistance,
-                "they must start well out of weapon range");
+            Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), WeaponDef.TwoHandedMace.Reach,
+                "they must start out of even the longest weapon's range");
             Assert.LessOrEqual(ArenaShape.NormalizedDistance(p1.Pos), 0.75f,
                 "spawning past the first danger ring would start a late round already on fire");
 
@@ -132,16 +132,19 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void APassByThatNeverSeparates_StillDealsDamageWhenTheCycleEnds()
+        public void AMoveThatEndsInsideWeaponRange_FinishesWithABlow()
         {
-            // Regression: a pass-by only resolved on leaving the near band, so a cycle that ended
-            // with both fighters still standing next to each other dealt no damage at all.
+            // Ordinary movement can end in an attack now, which is what makes closing to exactly
+            // the edge of your reach a decision rather than a formality.
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
-            float gap = (GameConstants.CollideDistance + GameConstants.PassByDistance) * 0.5f;
+
+            // Well inside both weapons and well outside a collision, so nobody runs into anybody.
+            float gap = GameConstants.CollideDistance
+                        + (Mathf.Min(p1.WeaponDef.Reach, bot.WeaponDef.Reach) - GameConstants.CollideDistance) * 0.5f;
             p1.Pos = new Vector2(-gap * 0.5f, 0f);
             bot.Pos = new Vector2(gap * 0.5f, 0f);
 
@@ -152,8 +155,64 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
-            Assert.Less(p1.Hp, p1Hp, "the player should have taken pass-by damage");
+            Assert.IsFalse(m.State.Collided, "they never touched - this is the reach blow, not a crash");
+            Assert.Less(p1.Hp, p1Hp, "the player should have been struck at the end of the cycle");
             Assert.Less(bot.Hp, botHp, "and so should the bot");
+        }
+
+        [Test]
+        public void AMoveThatEndsOutOfRange_LandsNothing()
+        {
+            // The other half of the same rule, and the half that makes reach worth reading: stop
+            // one unit short and the cycle costs nothing at all.
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            float gap = Mathf.Max(p1.WeaponDef.Reach, bot.WeaponDef.Reach) + 4f;
+            p1.Pos = new Vector2(-gap * 0.5f, 0f);
+            bot.Pos = new Vector2(gap * 0.5f, 0f);
+
+            float p1Hp = p1.Hp, botHp = bot.Hp;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            Assert.AreEqual(p1Hp, p1.Hp, Tol, "nothing was in range of him");
+            Assert.AreEqual(botHp, bot.Hp, Tol);
+        }
+
+        [Test]
+        public void TheLongerWeaponStrikesFromWhereTheShorterOneCannotAnswer()
+        {
+            // The reason reach is a stat rather than a constant. A mace ending its run at its own
+            // limit hits a twin-sword fighter who has no way to reach back from there.
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            p1.Weapon = WeaponKind.DualSwords;
+            bot.Weapon = WeaponKind.TwoHandedMace;
+
+            float gap = (WeaponDef.DualSwords.Reach + WeaponDef.TwoHandedMace.Reach) * 0.5f;
+            Assert.Greater(gap, WeaponDef.DualSwords.Reach, "the gap has to be past the short weapon");
+            p1.Pos = new Vector2(-gap * 0.5f, 0f);
+            bot.Pos = new Vector2(gap * 0.5f, 0f);
+
+            float p1Hp = p1.Hp, botHp = bot.Hp;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            Assert.Less(p1.Hp, p1Hp, "the mace should have reached him");
+            Assert.AreEqual(botHp, bot.Hp, Tol, "and the short blades should not have reached back");
         }
 
         [Test]
