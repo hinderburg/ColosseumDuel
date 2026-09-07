@@ -47,8 +47,8 @@ namespace ColosseumDuel.Core
 
     public enum AbilityKey
     {
-        Spirit,   // Brutius - "Дух": +50% speed for 2 cycles
-        Fury,     // Barbarius - "Ярость": -25% damage taken for 2 cycles
-        Mongoose  // Hilius - "Мангуст": 2 attacks per cycle for 2 cycles
+        Spirit,   // Brutius - +50% speed for 2 cycles
+        Fury,     // Barbarius - -25% damage taken for 2 cycles
+        Mongoose  // Hilius - 2 attacks per cycle for 2 cycles
     }
 }

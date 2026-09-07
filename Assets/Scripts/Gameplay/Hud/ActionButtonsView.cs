@@ -74,7 +74,7 @@ namespace ColosseumDuel.Gameplay.Hud
             view._arena = arena;
             view._canvas = canvas.GetComponentInParent<Canvas>();
 
-            view.Defend = view.BuildRound(root, "Defend", palette, "Щит", HudFactory.PlayerColor,
+            view.Defend = view.BuildRound(root, "Defend", palette, "Block", HudFactory.PlayerColor,
                 out view._defendRect, out view._defendGroup);
             view._defendBackground = (Image)view.Defend.targetGraphic;
 

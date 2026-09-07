@@ -135,7 +135,7 @@ namespace ColosseumDuel.Gameplay.Hud
             _defendButton.onClick.AddListener(() => Input?.ToggleDefend());
 
             _hint = HudFactory.CreateLabel("Hint", root,
-                "Потяни от гладиатора и отпусти — рывок",
+                "Drag back from your gladiator and release to dash",
                 14, TextAnchor.LowerCenter, HudFactory.MutedTextColor);
             // Above the player's corner, for the same reason the phase line sits below the opponent's.
             _hint.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -277,7 +277,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
                 // The ability on its own line, in its own colour: what it does is the whole basis of
                 // the choice, and it was previously reduced to a bare name at the end of the stats -
-                // "Мангуст" tells a first-time player nothing at all.
+                // "Mongoose" tells a first-time player nothing at all.
                 var ability = HudFactory.CreateLabel($"Ability_{def.Id}", button.transform,
                     $"{def.AbilityName}: {def.AbilityDescription}", 14, TextAnchor.LowerLeft,
                     HudFactory.RageColor);
@@ -291,7 +291,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 _pickAbilityLabels.Add(ability);
             }
 
-            _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Ещё раз", 24);
+            _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Again", 24);
             _restartButton.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
             _restartButton.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
             _restartButton.GetComponent<RectTransform>().sizeDelta = new Vector2(240f, 66f);
@@ -351,13 +351,15 @@ namespace ColosseumDuel.Gameplay.Hud
             // The generic hint stands down while the tutorial is talking: during the first round the
             // tutorial line is the hint, and two lines saying near enough the same thing a few pixels
             // apart read as clutter rather than as help.
-            _hint.enabled = canAct && !(state.Tutorial && state.Round == 1);
+            _hint.enabled = canAct
+                            && !(state.Tutorial && state.Round == 1
+                                 && state.Cycle <= TutorialView.TutorialCycles);
 
             // The hint has to say what the chosen control actually is; a line about pulling back is
             // worse than no line at all for a player who picked tapping.
             _hint.text = Input != null && Input.Scheme == ControlScheme.Tap
-                ? "Тапни по арене — гладиатор побежит туда"
-                : "Потяни от гладиатора и отпусти — рывок";
+                ? "Tap the arena and your gladiator runs there"
+                : "Drag back from your gladiator and release to dash";
         }
 
         private void SyncPhaseLabel(MatchState state)
@@ -367,16 +369,16 @@ namespace ColosseumDuel.Gameplay.Hud
                 // No countdown here any more - it lives above the gladiator, next to the two buttons
                 // it is timing. Two clocks showing the same number is one more than anyone reads.
                 case MatchPhase.Planning:
-                    _phaseLabel.text = $"Раунд {state.Round} · цикл {state.Cycle} · планирование";
+                    _phaseLabel.text = $"Round {state.Round} · cycle {state.Cycle} · planning";
                     break;
                 case MatchPhase.Action:
-                    _phaseLabel.text = $"Раунд {state.Round} · цикл {state.Cycle} · действие";
+                    _phaseLabel.text = $"Round {state.Round} · cycle {state.Cycle} · action";
                     break;
                 case MatchPhase.Pick:
-                    _phaseLabel.text = "Выбор гладиатора";
+                    _phaseLabel.text = "Choosing a gladiator";
                     break;
                 default:
-                    _phaseLabel.text = state.Round > 0 ? $"Раунд {state.Round}" : "";
+                    _phaseLabel.text = state.Round > 0 ? $"Round {state.Round}" : "";
                     break;
             }
         }
@@ -399,10 +401,10 @@ namespace ColosseumDuel.Gameplay.Hud
 
             if (picking)
             {
-                _overlayTitle.text = state.Round == 0 ? "Colosseum Duel" : "Выберите гладиатора";
+                _overlayTitle.text = state.Round == 0 ? "Colosseum Duel" : "Choose a gladiator";
                 _overlaySubtitle.text = state.Round == 0
-                    ? "Кем начнёте бой?"
-                    : "Ваш боец пал — кто выйдет на арену?";
+                    ? "Who opens the fight?"
+                    : "Your fighter has fallen - who steps out?";
 
                 for (int i = 0; i < _pickButtons.Count; i++)
                 {
@@ -414,8 +416,8 @@ namespace ColosseumDuel.Gameplay.Hud
                     // below, the stat line is the only place the actual trade between the three is
                     // visible, and "200 HP" alone does not say that Brutius is also the slowest.
                     _pickButtonLabels[i].text = alive
-                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} урон · {Mathf.RoundToInt(def.Speed)} скор."
-                        : $"{def.Name}\nвыбыл";
+                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} dmg · {Mathf.RoundToInt(def.Speed)} spd"
+                        : $"{def.Name}\nout";
                     _pickAbilityLabels[i].text = alive
                         ? $"{def.AbilityName}: {def.AbilityDescription}"
                         : "";
@@ -426,27 +428,27 @@ namespace ColosseumDuel.Gameplay.Hud
             if (matchOver)
             {
                 bool won = state.WinnerSide == PlayerSide.P1;
-                _overlayTitle.text = won ? "Победа" : "Поражение";
+                _overlayTitle.text = won ? "Victory" : "Defeat";
                 _overlayTitle.color = won ? HudFactory.HpColor : HudFactory.BotColor;
                 _overlaySubtitle.text = won
-                    ? "У противника не осталось гладиаторов."
-                    : "Ваши гладиаторы пали.";
+                    ? "The opponent has no gladiators left."
+                    : "Your gladiators have fallen.";
                 return;
             }
 
             if (state.Phase == MatchPhase.Reveal)
             {
-                _overlayTitle.text = $"Раунд {state.Round}";
+                _overlayTitle.text = $"Round {state.Round}";
                 _overlayTitle.color = HudFactory.TextColor;
                 _overlaySubtitle.text = state.P1.Active != null && state.Bot.Active != null
-                    ? $"{state.P1.Active.Def.Name}   против   {state.Bot.Active.Def.Name}"
+                    ? $"{state.P1.Active.Def.Name}   vs   {state.Bot.Active.Def.Name}"
                     : "";
                 return;
             }
 
             // RoundEnd
             bool playerLost = state.P1.Active == null || !state.P1.Active.Alive;
-            _overlayTitle.text = playerLost ? "Раунд проигран" : "Раунд выигран";
+            _overlayTitle.text = playerLost ? "Round lost" : "Round won";
             _overlayTitle.color = playerLost ? HudFactory.BotColor : HudFactory.HpColor;
             _overlaySubtitle.text = "";
         }

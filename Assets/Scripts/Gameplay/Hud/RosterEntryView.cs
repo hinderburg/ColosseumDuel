@@ -115,7 +115,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             _name.text = g.Def.Name;
             _name.color = alive ? HudFactory.TextColor : HudFactory.MutedTextColor;
-            _level.text = $"ур. {g.Def.Level}";
+            _level.text = $"lv. {g.Def.Level}";
 
             _tile.color = alive ? HudFactory.PanelColor : HudFactory.DeadColor;
             _frame.gameObject.SetActive(isActive && alive);

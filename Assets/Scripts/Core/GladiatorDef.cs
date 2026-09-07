@@ -40,19 +40,19 @@ namespace ColosseumDuel.Core
         }
 
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Брутиус", maxHp: 200f, damage: 25f, speed: 10f,
-            ability: AbilityKey.Spirit, abilityName: "Дух",
-            abilityDescription: "+50% скорости на 2 цикла");
+            GladiatorId.Brutius, "Brutius", maxHp: 200f, damage: 25f, speed: 10f,
+            ability: AbilityKey.Spirit, abilityName: "Spirit",
+            abilityDescription: "+50% speed for 2 cycles");
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Барбариус", maxHp: 100f, damage: 32.5f, speed: 15f,
-            ability: AbilityKey.Fury, abilityName: "Ярость",
-            abilityDescription: "-25% получаемого урона на 2 цикла");
+            GladiatorId.Barbarius, "Barbarius", maxHp: 100f, damage: 32.5f, speed: 15f,
+            ability: AbilityKey.Fury, abilityName: "Fury",
+            abilityDescription: "-25% damage taken for 2 cycles");
 
         public static readonly GladiatorDef Hilius = new GladiatorDef(
-            GladiatorId.Hilius, "Хилиус", maxHp: 150f, damage: 17.5f, speed: 20f,
-            ability: AbilityKey.Mongoose, abilityName: "Мангуст",
-            abilityDescription: "2 атаки за цикл на 2 цикла");
+            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 17.5f, speed: 20f,
+            ability: AbilityKey.Mongoose, abilityName: "Mongoose",
+            abilityDescription: "2 attacks per cycle, for 2 cycles");
 
         public static readonly IReadOnlyList<GladiatorDef> All = new List<GladiatorDef>
         {
