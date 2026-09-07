@@ -52,21 +52,39 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheHudFontCanActuallyDrawTheCyrillicCaptionsTheGameUses()
+        public void TheHudFontCanActuallyDrawEveryCaptionTheGameUses()
         {
             // Regression: the HUD was built on Unity's built-in font, which has no Cyrillic glyphs.
             // In the Editor the OS fonts quietly cover for it, so this only surfaced in the first
-            // WebGL build - as gladiator names rendering into thin air.
+            // WebGL build - as gladiator names rendering into thin air. The captions are English
+            // now and that particular hole is closed, but the check is kept and pointed at whatever
+            // the HUD is actually holding rather than at a list of words copied out of it: a list
+            // goes stale the moment the wording changes, and then it is checking nothing.
             var font = _hud.GetComponentInChildren<Text>(true).font;
             Assert.IsNotNull(font, "HUD labels must have a font");
 
+            int checkedCharacters = 0;
+            foreach (var label in _hud.GetComponentsInChildren<Text>(true))
+                foreach (char c in label.text ?? "")
+                {
+                    if (char.IsWhiteSpace(c)) continue;
+                    Assert.IsTrue(font.HasCharacter(c),
+                        $"the HUD font has no glyph for '{c}' - \"{label.text}\" on {label.name} " +
+                        "would render blank in a build");
+                    checkedCharacters++;
+                }
+
             foreach (var def in GladiatorDef.All)
-                foreach (char c in def.Name + def.AbilityName)
+                foreach (char c in def.Name + def.AbilityName + def.AbilityDescription)
+                {
+                    if (char.IsWhiteSpace(c)) continue;
                     Assert.IsTrue(font.HasCharacter(c),
                         $"the HUD font has no glyph for '{c}' - \"{def.Name}\" would render blank in a build");
+                    checkedCharacters++;
+                }
 
-            foreach (char c in "Победа Поражение Защита Способность Раунд цикл планирование выбыл")
-                Assert.IsTrue(font.HasCharacter(c), $"the HUD font has no glyph for '{c}'");
+            Assert.Greater(checkedCharacters, 50,
+                "nothing was actually checked - the HUD came up with no text in it");
         }
 
         [UnityTest]
@@ -152,7 +170,7 @@ namespace ColosseumDuel.Tests
                 Assert.IsNotNull(icon, $"{def.Name}'s card has no icon");
                 Assert.AreSame(_controller.Arena.Palette.IconFor(def.Id), icon.sprite);
 
-                // The name alone says nothing: "Мангуст" tells a first-time player neither what it
+                // The name alone says nothing: "Mongoose" tells a first-time player neither what it
                 // does nor how long it lasts, and that is the whole basis of the choice being made.
                 var ability = card.GetComponentsInChildren<Text>(true)
                     .FirstOrDefault(t => t.name == $"Ability_{def.Id}");
@@ -419,6 +437,43 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(MatchPhase.Pick, State.Phase);
             Assert.IsTrue(State.P1.Roster.All(g => g.Alive), "a new match starts with a full squad");
             Assert.AreEqual(GladiatorDef.Brutius.MaxHp, State.P1.Roster[0].Hp, 0.01f);
+        }
+
+        /// <summary>
+        /// The teaching labels are for the opening of the first fight and then they go.
+        ///
+        /// Two cycles is long enough to run at the sword and swing once with it. Left up they cover
+        /// the sand the player has just learned to read - a caption over every trap and pickup is
+        /// help on cycle one and an obstruction on cycle five - so the end of it is worth a test
+        /// rather than an eyeball: it only shows itself several cycles into a match nobody replays.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTutorialLabelsGoAwayAfterTwoCycles()
+        {
+            var tutorial = Object.FindFirstObjectByType<TutorialView>(FindObjectsInactive.Include);
+            Assert.IsNotNull(tutorial, "the HUD should carry a tutorial layer");
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            Assert.IsTrue(State.Tutorial, "the first fight of a session is the taught one");
+            Assert.AreEqual(1, State.Cycle);
+            Assert.IsTrue(tutorial.gameObject.activeInHierarchy, "cycle one should be labelled");
+
+            State.Cycle = TutorialView.TutorialCycles;
+            yield return null;
+            Assert.IsTrue(tutorial.gameObject.activeInHierarchy,
+                $"cycle {TutorialView.TutorialCycles} is the last one that carries the labels");
+
+            State.Cycle = TutorialView.TutorialCycles + 1;
+            yield return null;
+            Assert.IsFalse(tutorial.gameObject.activeInHierarchy,
+                "the labels should be gone by now - they cover the arena the player is reading");
+
+            // The ordinary control hint takes over where the tutorial line left off, rather than
+            // both being off and the player left with nothing.
+            var hint = _hud.GetComponentsInChildren<Text>(true).First(t => t.name == "Hint");
+            Assert.IsTrue(hint.enabled, "the standing hint should come back once the tutorial ends");
         }
 
         private static IEnumerator RunSeconds(float seconds)

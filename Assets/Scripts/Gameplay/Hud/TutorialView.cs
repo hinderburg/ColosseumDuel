@@ -26,6 +26,9 @@ namespace ColosseumDuel.Gameplay.Hud
     /// </summary>
     public sealed class TutorialView : MonoBehaviour
     {
+        /// <summary>How many cycles of the first fight carry the labels.</summary>
+        public const int TutorialCycles = 2;
+
         /// <summary>How high above a thing on the floor its label sits, in reference pixels.</summary>
         private const float LabelLift = 34f;
 
@@ -37,6 +40,11 @@ namespace ColosseumDuel.Gameplay.Hud
 
         /// <summary>Clear air between two plates that would otherwise sit on each other.</summary>
         private const float LabelGap = 3f;
+
+        /// <summary>
+        /// How much of the frame, top and bottom, the squad rosters occupy. Labels stay out of it.
+        /// </summary>
+        private const float RosterBandFraction = 0.13f;
 
         /// <summary>Ink. Near-black rather than black, which reads less like a system dialog.</summary>
         private static readonly Color InkColor = new Color(0.07f, 0.06f, 0.05f);
@@ -76,7 +84,7 @@ namespace ColosseumDuel.Gameplay.Hud
             /// Sets the caption and fits the plate to it.
             ///
             /// Sized from the text rather than left at a fixed width: these captions run from
-            /// "Капкан" to "Двуручный: бьёт на пролёте", and one width that suits both is either a
+            /// "Trap" to "Two-handed: hits in passing", and one width that suits both is either a
             /// slab of empty parchment around the short one or a plate the long one hangs out of.
             /// </summary>
             public void SetText(string text)
@@ -151,17 +159,19 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>What a pickup is worth, in as few words as will fit above it.</summary>
         private static string DescribeItem(ArenaItem item)
         {
-            if (item.Kind == ItemKind.Shield) return "Щит: вдвое меньше урона";
+            if (item.Kind == ItemKind.Shield) return "Shield: half the damage";
             return item.WeaponType == WeaponType.TwoHanded
-                ? "Двуручный: бьёт на пролёте"
-                : "Меч: урон в полтора раза";
+                ? "Two-handed: hits in passing"
+                : "Sword: half again the damage";
         }
 
         public void Sync(MatchState state)
         {
-            // The opening round of a first fight and nothing else. From round two the player has
-            // fought, and labels on everything would be in the way rather than in aid.
-            bool teaching = state.Tutorial && state.Round == 1
+            // The first two cycles of a first fight and nothing else. Two is enough to run at the
+            // sword and swing once with it; past that the player has done the thing the labels were
+            // there to explain, and a caption on every trap and pickup is in the way rather than in
+            // aid - it covers exactly the sand they are now trying to read.
+            bool teaching = state.Tutorial && state.Round == 1 && state.Cycle <= TutorialCycles
                             && state.Phase != MatchPhase.Pick && state.Phase != MatchPhase.MatchEnd;
 
             if (gameObject.activeSelf != teaching) gameObject.SetActive(teaching);
@@ -180,7 +190,7 @@ namespace ColosseumDuel.Gameplay.Hud
             {
                 bool show = traps != null && i < traps.Count && traps[i].Armed;
                 Place(_trapHints[i], show ? (Vector2?)traps[i].Pos : null,
-                      show ? "Капкан" : null);
+                      show ? "Trap" : null);
             }
 
             // The instruction first: it is an obstacle for the rest, and it has to be at its final
@@ -198,19 +208,17 @@ namespace ColosseumDuel.Gameplay.Hud
         /// transparent captions overlapping merely look untidy; a plate is opaque and simply deletes
         /// what is under it.
         ///
-        /// Upwards, and only as far as clearing takes: the label stays visibly attached to the thing
-        /// it names, which matters more than perfect placement.
+        /// Away from the middle of the frame, and only as far as clearing takes: the label stays
+        /// visibly attached to the thing it names, which matters more than perfect placement.
+        ///
+        /// Which way "away" is depends on which half the label is in. Everything used to stack
+        /// upwards, so a knot of traps at the far end of the arena piled up into the opponent's
+        /// roster cards - opaque, and drawn over everything. In the top half a stack therefore grows
+        /// downwards, into the empty middle of the arena, and only in the bottom half does it grow
+        /// up. Both directions run away from the squad strips rather than into them.
         /// </summary>
         private void SeparateOverlaps()
         {
-            _placed.Clear();
-            foreach (var hint in _itemHints) if (hint.Active) _placed.Add(hint);
-            foreach (var hint in _trapHints) if (hint.Active) _placed.Add(hint);
-
-            // Lowest first, so a stack grows away from the sand rather than down into it, and each
-            // label only ever has to clear ones already settled.
-            _placed.Sort((a, b) => Centre(a).y.CompareTo(Centre(b).y));
-
             // The instruction is an obstacle rather than a participant: it sits where it sits, and
             // an item that happens to lie near the bottom of the arena had its label swallowed whole
             // by it - the plate is opaque, so the caption did not even read as hidden, it read as
@@ -218,29 +226,55 @@ namespace ColosseumDuel.Gameplay.Hud
             var fixedCentre = Centre(_instruction);
             var fixedSize = _instruction.Rect.sizeDelta;
 
+            SeparateHalf(-1f, fixedCentre, fixedSize);
+            SeparateHalf(1f, fixedCentre, fixedSize);
+        }
+
+        /// <summary>
+        /// Settles the labels in one half of the frame, pushing them in the given direction.
+        ///
+        /// The two halves are settled independently. They cannot reach each other: nothing is ever
+        /// moved across the middle, so a label in the bottom half is no obstacle to one in the top.
+        /// </summary>
+        private void SeparateHalf(float direction, Vector2 fixedCentre, Vector2 fixedSize)
+        {
+            _placed.Clear();
+            foreach (var hint in _itemHints)
+                if (hint.Active && Mathf.Sign(Centre(hint).y) == direction) _placed.Add(hint);
+            foreach (var hint in _trapHints)
+                if (hint.Active && Mathf.Sign(Centre(hint).y) == direction) _placed.Add(hint);
+
+            // Nearest the middle first, so a stack grows outwards and each label only ever has to
+            // clear ones already settled.
+            _placed.Sort((a, b) => (direction * Centre(a).y).CompareTo(direction * Centre(b).y));
+
             for (int i = 0; i < _placed.Count; i++)
             {
-                // At most one lift per obstacle below it: every pass moves this label strictly
-                // upwards, past the highest thing it currently touches, so it cannot cycle.
+                var size = _placed[i].Rect.sizeDelta;
+
+                // At most one shove per obstacle nearer the middle: every pass moves this label
+                // strictly outwards, past the outermost thing it currently touches, so it cannot
+                // cycle.
                 for (int pass = 0; pass <= i; pass++)
                 {
-                    float clearTop = float.NegativeInfinity;
+                    float clearEdge = float.NegativeInfinity;
 
-                    if (Overlaps(Centre(_placed[i]), _placed[i].Rect.sizeDelta, fixedCentre, fixedSize))
-                        clearTop = fixedCentre.y + fixedSize.y * 0.5f;
+                    if (Overlaps(Centre(_placed[i]), size, fixedCentre, fixedSize))
+                        clearEdge = direction * fixedCentre.y + fixedSize.y * 0.5f;
 
                     for (int j = 0; j < i; j++)
                     {
                         var other = Centre(_placed[j]);
-                        if (Overlaps(Centre(_placed[i]), _placed[i].Rect.sizeDelta,
-                                     other, _placed[j].Rect.sizeDelta))
-                            clearTop = Mathf.Max(clearTop, other.y + _placed[j].Rect.sizeDelta.y * 0.5f);
+                        if (Overlaps(Centre(_placed[i]), size, other, _placed[j].Rect.sizeDelta))
+                            clearEdge = Mathf.Max(clearEdge,
+                                direction * other.y + _placed[j].Rect.sizeDelta.y * 0.5f);
                     }
 
-                    if (float.IsNegativeInfinity(clearTop)) break;
+                    if (float.IsNegativeInfinity(clearEdge)) break;
 
                     var p = _placed[i].Rect.anchoredPosition;
-                    p.y += clearTop + LabelGap + _placed[i].Rect.sizeDelta.y * 0.5f - Centre(_placed[i]).y;
+                    p.y += direction * (clearEdge + LabelGap + size.y * 0.5f)
+                           - Centre(_placed[i]).y;
                     _placed[i].Rect.anchoredPosition = p;
                 }
             }
@@ -284,8 +318,8 @@ namespace ColosseumDuel.Gameplay.Hud
             bool armed = player != null && player.Weapon != WeaponType.None;
 
             _instruction.SetText(armed
-                ? "Меч у тебя — тапни к противнику и бей"
-                : "Тапни чуть дальше меча — подберёшь на бегу");
+                ? "Sword in hand - tap toward the enemy and swing"
+                : "Tap just past the sword - you pick it up on the way");
 
             // The ring marks the spot only while it is still the thing to do.
             bool marking = !armed && state.Phase == MatchPhase.Planning
@@ -305,8 +339,13 @@ namespace ColosseumDuel.Gameplay.Hud
                     // Text first: the plate has to be its final width before it can be kept inside
                     // the frame, or a long caption is clamped by the width of the previous one.
                     hint.SetText(text);
+
+                    // Above things in the near half of the arena and below things in the far half,
+                    // so a label always hangs towards the middle of the frame and away from the
+                    // squad strip at that end.
+                    float lift = local.y > 0f ? -LabelLift : LabelLift;
                     hint.Rect.anchoredPosition = ClampToCanvas(
-                        local + new Vector2(0f, LabelLift), hint.Rect.sizeDelta.x);
+                        local + new Vector2(0f, lift), hint.Rect.sizeDelta.x);
                 }
                 else show = false;
             }
@@ -325,8 +364,17 @@ namespace ColosseumDuel.Gameplay.Hud
         private Vector2 ClampToCanvas(Vector2 local, float labelWidth)
         {
             var canvasRect = ((RectTransform)_canvas.transform).rect;
-            float limit = Mathf.Max(canvasRect.width * 0.5f - labelWidth * 0.5f - 6f, 0f);
-            local.x = Mathf.Clamp(local.x, -limit, limit);
+
+            float sideLimit = Mathf.Max(canvasRect.width * 0.5f - labelWidth * 0.5f - 6f, 0f);
+            local.x = Mathf.Clamp(local.x, -sideLimit, sideLimit);
+
+            // And out of the squad strips along the top and bottom. A trap at the far end of the
+            // arena projects up behind the opponent's roster cards, which are opaque and sit over
+            // everything - so its label was landing on top of a gladiator portrait, reading as part
+            // of the card rather than as something on the sand.
+            float endLimit = Mathf.Max(
+                canvasRect.height * (0.5f - RosterBandFraction) - LabelHeight * 0.5f, 0f);
+            local.y = Mathf.Clamp(local.y, -endLimit, endLimit);
             return local;
         }
 
