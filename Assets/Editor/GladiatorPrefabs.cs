@@ -37,8 +37,20 @@ namespace ColosseumDuel.EditorTools
         /// </summary>
         private const float HelmetSizeFraction = 0.135f;
 
-        /// <summary>How far up its own height the helmet rides above the head bone.</summary>
+        /// <summary>How far up its own height the helmet rides above the head bone, before the
+        /// measured drop in SitOnTheHead settles it. Only a starting guess now.</summary>
         private const float HelmetLiftFromNeck = 0.28f;
+
+        /// <summary>How far the crown of the helm stands over the crown of the bare head.</summary>
+        private const float HelmetProudOfCrown = -0.04f;
+
+        /// <summary>
+        /// How far forward the helm sits from the head bone, as a share of its own depth.
+        ///
+        /// The bone is at the back of the skull on this rig, so a helm centred on it covers the
+        /// crown and leaves the face in the open. Pushed forward until the brow is under it.
+        /// </summary>
+        private const float HelmetForward = 0.3f;
 
         public static string PathFor(GladiatorId id) => $"{PrefabDir}/Gladiator_{id}.prefab";
 
@@ -152,6 +164,8 @@ namespace ColosseumDuel.EditorTools
                     helmet.AddComponent<MeshRenderer>();
                 }
 
+                SitOnTheHead(helmet, figure);
+
                 PrefabUtility.SaveAsPrefabAsset(root, PathFor(def.Id));
             }
             finally
@@ -186,11 +200,44 @@ namespace ColosseumDuel.EditorTools
             }
 
             var local = root.InverseTransformPoint(head.position);
-            local.y += TargetHeight * HelmetSizeFraction * HelmetLiftFromNeck;
 
-            Debug.Log($"[Colosseum] Helmet placed at {local} (head bone), " +
-                      $"proportion would have said {fallback:0.###}.");
+            local.y += TargetHeight * HelmetSizeFraction * HelmetLiftFromNeck;
             return local;
+        }
+
+        /// <summary>
+        /// Drops the helmet onto the head by measurement rather than by proportion.
+        ///
+        /// Everything before this is a guess about where a skull is; this is the one fact available:
+        /// the top of the figure IS the top of its head, because nothing else on a gladiator is
+        /// higher. Lining the crown of the helm up with it puts the helm on the head whatever the
+        /// rig calls its bones and wherever it decided to put them - and the first attempt needed
+        /// exactly that, because it placed the helm from the head bone and left it hanging a tenth
+        /// of a unit clear, looking like a hat thrown in the air.
+        ///
+        /// A helmet does add a little height over a bare head, so the crown ends up marginally proud
+        /// rather than flush.
+        /// </summary>
+        private static void SitOnTheHead(GameObject helmet, GameObject figure)
+        {
+            var helmetBounds = MeasureBounds(helmet);
+            var figureBounds = MeasureBounds(figure);
+            if (helmetBounds.size.y < 0.0001f || figureBounds.size.y < 0.0001f) return;
+
+            float crown = figureBounds.max.y + helmetBounds.size.y * HelmetProudOfCrown;
+            helmet.transform.localPosition += new Vector3(
+                0f,
+                crown - helmetBounds.max.y,
+                helmetBounds.size.z * HelmetForward);
+        }
+
+        private static Bounds MeasureBounds(GameObject instance)
+        {
+            var renderers = instance.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return default;
+            var bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            return bounds;
         }
 
         /// <summary>Height of the renderers, which is what actually shows - not the transform.</summary>
