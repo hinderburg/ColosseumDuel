@@ -101,6 +101,38 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void TheyKeepLookingAtEachOtherWhicheverWayTheyRun()
+        {
+            // Facing used to follow the run, so a gladiator ordered to back off spent the cycle
+            // showing the enemy his shoulders. With a camera fixed overhead, which way a figure is
+            // looking is most of what says these two are in a fight.
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            // Straight backwards, away from the opponent, at full power.
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.right, 1f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+
+            for (int i = 0; i < 20 && m.State.Phase == MatchPhase.Action; i++)
+            {
+                m.Tick(Dt);
+                if (!p1.Alive || !bot.Alive) break;
+
+                var between = (bot.Pos - p1.Pos).normalized;
+                Assert.AreEqual(1f, Vector2.Dot(p1.Facing, between), 0.001f,
+                    "the player's fighter turned away while retreating");
+                Assert.AreEqual(1f, Vector2.Dot(bot.Facing, -between), 0.001f,
+                    "the opponent turned away while running sideways");
+            }
+
+            Assert.Less(p1.Pos.y, bot.Pos.y, "he really did move away, so this was not vacuous");
+        }
+
+        [Test]
         public void TheBotMakesAFreshDecisionEveryCycle()
         {
             // Regression: BeginCycle did not clear PlannedAction, and AutoFillMissingPlans only asks

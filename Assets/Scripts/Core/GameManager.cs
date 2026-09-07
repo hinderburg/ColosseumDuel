@@ -382,6 +382,7 @@ namespace ColosseumDuel.Core
 
             ApplyPlannedAction(PlayerSide.P1, State.P1.Active, State.Bot.Active);
             ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
+            FaceOpponents();
 
             SetPhase(MatchPhase.Action);
         }
@@ -405,21 +406,38 @@ namespace ColosseumDuel.Core
                 AbilityFired?.Invoke(side);
             }
 
-            if (g.PlannedAction == ActionType.Move)
-            {
-                g.Vel = g.PlannedAimDirection * (g.EffectiveSpeed() * GameConstants.SpeedScale * g.PlannedPower);
-                if (g.PlannedAimDirection.sqrMagnitude > 0.0001f) g.Facing = g.PlannedAimDirection;
-            }
-            else
-            {
-                g.Vel = Vector2.zero; // Defend (or no plan) - stand still
-                // Design doc: a defender turns to face the opponent.
-                if (opponent != null)
-                {
-                    Vector2 toOpponent = opponent.Pos - g.Pos;
-                    if (toOpponent.sqrMagnitude > 0.0001f) g.Facing = toOpponent.normalized;
-                }
-            }
+            // Facing is not set here any more - see FaceOpponents. A gladiator never turns his back
+            // on the other one, whichever way he is running.
+            g.Vel = g.PlannedAction == ActionType.Move
+                ? g.PlannedAimDirection * (g.EffectiveSpeed() * GameConstants.SpeedScale * g.PlannedPower)
+                : Vector2.zero; // Defend, or no plan at all - stand still
+        }
+
+        /// <summary>
+        /// Turns both fighters to look at each other, whatever either of them is doing.
+        ///
+        /// Facing used to follow the run, which meant a gladiator ordered to back off or circle
+        /// spent the cycle showing the enemy his shoulders - and with the camera fixed overhead, the
+        /// direction a figure looks is most of what says the two are in a fight rather than two
+        /// people crossing the same field. Movement is still whatever the player ordered; only where
+        /// he is looking is decided here.
+        ///
+        /// The cost is that the run clip now plays while strafing or retreating. On a figure this
+        /// size it reads as footwork; a directional blend tree would do it properly, and is not
+        /// worth a rig change yet.
+        /// </summary>
+        private void FaceOpponents()
+        {
+            var a = State.P1.Active;
+            var b = State.Bot.Active;
+            if (a == null || b == null) return;
+
+            var between = b.Pos - a.Pos;
+            if (between.sqrMagnitude < 0.0001f) return;
+
+            var towardsBot = between.normalized;
+            if (a.Alive) a.Facing = towardsBot;
+            if (b.Alive) b.Facing = -towardsBot;
         }
 
         private void StepActionSub(float dt)
@@ -429,6 +447,7 @@ namespace ColosseumDuel.Core
 
             StepGladiator(a, dt);
             StepGladiator(b, dt);
+            FaceOpponents();
 
             if (a == null || b == null || !a.Alive || !b.Alive) return;
 
@@ -444,7 +463,6 @@ namespace ColosseumDuel.Core
 
             g.Pos += g.Vel * dt;
             ArenaShape.Bounce(ref g.Pos, ref g.Vel, GameConstants.GladiatorRadius);
-            if (g.Vel.sqrMagnitude > 0.0001f) g.Facing = g.Vel.normalized;
 
             // hazard damage - continuous DOT while standing in an active danger ring
             if (HazardSystem.IsInActiveHazard(g.Pos, State.Cycle))
