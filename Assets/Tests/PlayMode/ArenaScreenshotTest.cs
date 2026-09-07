@@ -2,6 +2,7 @@ using System.Collections;
 using System.IO;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay;
+using ColosseumDuel.Gameplay.View;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -131,6 +132,198 @@ namespace ColosseumDuel.Tests
 
                 yield return Capture(SuffixPath($"-{def.Id}"));
             }
+        }
+
+        /// <summary>
+        /// One frame per weapon: a fighter mid-swing, the ring at the distance that weapon is
+        /// allowed to strike from, and an opponent standing exactly on it.
+        ///
+        /// The ring is WeaponDef.Reach itself, centre to centre, drawn at the scale the arena is
+        /// drawn at. Whether a blade covers the ground it looks like it covers is the one thing
+        /// about the reach numbers that cannot be read off them, and this is the only place it can
+        /// be seen; the measured extents go to the log beside the frame.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WeaponReachRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+            var camera = Camera.main;
+            var cameraPos = camera.transform.position;
+            var cameraRot = camera.transform.rotation;
+
+            // The camera writes its own position every LateUpdate to drift home after a death, so
+            // moving it from here without switching that off lasts exactly no frames.
+            var cameraDriver = camera.GetComponent<DeathCameraView>();
+            if (cameraDriver != null) cameraDriver.enabled = false;
+
+            foreach (var weapon in WeaponDef.All)
+            {
+                controller.RestartMatch();
+                yield return null;
+
+                // Each weapon on the archetype trained in it, at his own build: anyone else holding
+                // it is drawn inside the red untrained shell, which is a different thing to look at.
+                controller.SubmitPlayerPick(OwnerOf(weapon.Kind));
+                yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+                var player = controller.Manager.State.P1.Active;
+                var bot = controller.Manager.State.Bot.Active;
+                player.Weapon = weapon.Kind;
+
+                // The opponent is here as a distance marker and nothing else: armed, he would be
+                // holding a weapon he is not trained in, and the red shell that warns about that is
+                // a second red circle in a frame whose whole subject is a red circle.
+                bot.Weapon = WeaponKind.None;
+
+                // Set apart along X, the axis a camera at sixty-six degrees does not foreshorten, so
+                // the rings are read across their widest diameter and the two stand level.
+                var centre = new Vector2(0f, -40f);
+                player.Pos = centre;
+                bot.Pos = centre + new Vector2(weapon.Reach, 0f);
+                yield return null;
+
+                // Mid-swing, because a weapon at rest hangs down the body and says nothing about how
+                // far it covers. This is the pose the reach is supposed to describe.
+                PlayerView().PlaySwing();
+                yield return RunSeconds(0.18f);
+
+                float tip = MeasureWeaponExtent(controller.Arena, weapon);
+                var rings = DrawReachRings(controller.Arena, centre, weapon.Reach, tip);
+                FrameOnPair(camera, controller.Arena, centre, weapon.Reach, tip);
+                yield return null;
+
+                yield return Capture(SuffixPath($"-reach-{weapon.Kind}"));
+
+                Object.DestroyImmediate(rings);
+            }
+
+            camera.transform.SetPositionAndRotation(cameraPos, cameraRot);
+            if (cameraDriver != null) cameraDriver.enabled = true;
+        }
+
+        /// <summary>
+        /// The three circles around a fighter that the question is about: the body the simulation
+        /// collides with, the distance his weapon is allowed to strike from, and the distance the
+        /// weapon in his fist actually reaches to. The last two are the comparison.
+        /// </summary>
+        private static GameObject DrawReachRings(ArenaView arena, Vector2 centreVirtual,
+            float reachVirtual, float tipVirtual)
+        {
+            var root = new GameObject("ReachRings");
+            root.transform.position = arena.ToWorld(centreVirtual, 0.06f);
+
+            float band = arena.ScaleLength(2.6f);
+            AddRing(root, arena.ScaleLength(GameConstants.GladiatorRadius), band, arena.Palette.BarBackground);
+            AddRing(root, arena.ScaleLength(reachVirtual), band, arena.Palette.HazardActive);
+            if (tipVirtual > 0f)
+                AddRing(root, arena.ScaleLength(tipVirtual), band, arena.Palette.PlayerHelmet);
+            return root;
+        }
+
+        /// <summary>Which archetype carries this weapon as his own.</summary>
+        private static GladiatorId OwnerOf(WeaponKind kind)
+        {
+            foreach (var def in GladiatorDef.All)
+                if (def.SkilledWith == kind) return def.Id;
+            return GladiatorId.Barbarius;
+        }
+
+        private static void AddRing(GameObject parent, float radius, float band, Material material)
+        {
+            var ring = new GameObject($"Ring_{radius:0.00}");
+            ring.transform.SetParent(parent.transform, false);
+            ring.AddComponent<MeshFilter>().sharedMesh =
+                ViewPrimitives.CreateAnnulus(Mathf.Max(0.01f, radius - band), radius, 96);
+            var renderer = ring.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+        }
+
+        /// <summary>
+        /// Pulls the camera in until everything the frame is about fits: both rings, whichever is
+        /// the larger, and the opponent standing out at the reach.
+        ///
+        /// Framed on the span rather than on the pair. The outer ring is centred on the fighter and
+        /// the opponent is off to one side of him, so the two are not centred on the same point, and
+        /// aiming at either of them alone runs the other off the edge.
+        /// </summary>
+        private static void FrameOnPair(Camera camera, ArenaView arena, Vector2 centreVirtual,
+            float reachVirtual, float tipVirtual)
+        {
+            const float pitch = 66f;   // the arena camera's own angle, so the frame reads like the game
+
+            float right = Mathf.Max(reachVirtual + GameConstants.GladiatorRadius, tipVirtual);
+            float left = -Mathf.Max(tipVirtual, GameConstants.GladiatorRadius);
+            const float margin = 1.12f;
+            float halfExtent = arena.ScaleLength((right - left) * 0.5f * margin);
+
+            float halfVertical = camera.fieldOfView * 0.5f * Mathf.Deg2Rad;
+            float halfHorizontal = Mathf.Atan(Mathf.Tan(halfVertical) * Width / (float)Height);
+            float distance = halfExtent / Mathf.Tan(halfHorizontal);
+
+            var target = arena.ToWorld(centreVirtual + new Vector2((left + right) * 0.5f, 0f), 1.2f);
+            var forward = Quaternion.Euler(pitch, 0f, 0f) * Vector3.forward;
+            camera.transform.SetPositionAndRotation(target - forward * distance,
+                Quaternion.Euler(pitch, 0f, 0f));
+        }
+
+        private static GladiatorView PlayerView()
+            => System.Array.Find(Object.FindObjectsByType<GladiatorView>(FindObjectsSortMode.None),
+                v => v.name == "Player");
+
+        /// <summary>
+        /// How far the weapon in his fist actually sticks out, measured off the meshes that are on
+        /// screen rather than derived from the numbers that placed them.
+        ///
+        /// Taken from each mesh's own local bounds through its own transform, not from the
+        /// world-axis-aligned bounds: a blade held at an angle fills a box far wider than itself,
+        /// and that box would report a reach the weapon does not have.
+        /// </summary>
+        private static float MeasureWeaponExtent(ArenaView arena, WeaponDef weapon)
+        {
+            var view = PlayerView();
+            if (view == null) return 0f;
+
+            var centre = view.transform.position;
+            float furthest = 0f;
+            foreach (var filter in view.GetComponentsInChildren<MeshFilter>())
+            {
+                if (filter.sharedMesh == null || !IsHeldWeapon(filter.transform)) continue;
+
+                var bounds = filter.sharedMesh.bounds;
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var local = bounds.center + Vector3.Scale(bounds.extents, new Vector3(
+                        (corner & 1) == 0 ? -1f : 1f,
+                        (corner & 2) == 0 ? -1f : 1f,
+                        (corner & 4) == 0 ? -1f : 1f));
+                    var world = filter.transform.TransformPoint(local);
+                    float flat = new Vector2(world.x - centre.x, world.z - centre.z).magnitude;
+                    if (flat > furthest) furthest = flat;
+                }
+            }
+
+            float tipVirtual = furthest / arena.VirtualToWorld;
+            Debug.Log($"[Colosseum] reach check {weapon.Kind}: " +
+                      $"reach {weapon.Reach:0.0} centre-to-centre, " +
+                      $"so the enemy's near edge sits {weapon.Reach - GameConstants.GladiatorRadius:0.0} out; " +
+                      $"the weapon itself reaches {tipVirtual:0.0} out from his own centre " +
+                      $"(body radius {GameConstants.GladiatorRadius:0.0}, all in virtual units)");
+            return tipVirtual;
+        }
+
+        private static bool IsHeldWeapon(Transform t)
+        {
+            for (var node = t; node != null; node = node.parent)
+                if (node.name == "HeldWeapon" || node.name == "HeldOffHand") return true;
+            return false;
         }
 
         /// <summary>
