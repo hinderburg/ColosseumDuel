@@ -128,41 +128,70 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator FireMarksTheEdgeOfTheDangerZoneAndClosesInWithIt()
+        public IEnumerator SpikesRiseOutOfTheGroundWhereItTurnsDangerous()
         {
-            var flameRoot = _controller.Arena.GetComponentsInChildren<Transform>(true)
-                .FirstOrDefault(t => t.name == "HazardFire");
-            if (flameRoot == null)
-            {
-                Assert.Ignore("No hazard flame prefab - Epic Toon FX is not imported here.");
-                yield break;
-            }
+            var spikeRoot = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "Spikes");
+            Assert.IsNotNull(spikeRoot, "the arena has no spikes");
 
-            var flames = flameRoot.Cast<Transform>().ToList();
-            Assert.AreEqual(_controller.Arena.HazardFireCount, flames.Count);
+            var spikes = spikeRoot.Cast<Transform>().ToList();
+            Assert.AreEqual(_controller.Arena.SpikeCount, spikes.Count);
 
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
-            Assert.IsTrue(flames.All(f => !f.gameObject.activeSelf),
-                "nothing is burning while the whole arena is still safe");
 
-            // Cycle 8: stages at 0.75-1.00 and 0.50-0.75 are alight, so safety ends at 0.50.
+            Assert.IsTrue(spikes.All(s => s.localPosition.y < 0f),
+                "nothing should be up while the whole arena is still safe");
+
+            // Cycle 8: the stages at 0.75-1.00 and 0.50-0.75 are live, so everything past half way
+            // out is dangerous and everything inside it is not.
             _controller.Manager.State.Cycle = 8;
-            yield return null;
+            yield return RunSeconds(1.5f); // they rise rather than snap up
 
-            Assert.IsTrue(flames.All(f => f.gameObject.activeSelf), "the boundary should be alight");
-            foreach (var flame in flames)
-                Assert.AreEqual(0.5f, NormalisedRadius(flame.localPosition), 0.02f,
-                    $"{flame.name} is not on the edge of the danger zone");
+            foreach (var spike in spikes)
+            {
+                float d = NormalisedRadius(spike.localPosition);
+                bool shouldBeUp = d > 0.5f;
 
-            // A later stage moves the edge further in.
-            _controller.Manager.State.Cycle = 9;
-            yield return null;
+                // Skip the ones sitting right on the boundary: which side of it they land on is a
+                // matter of floating-point luck, and it is not what this test is about.
+                if (Mathf.Abs(d - 0.5f) < 0.03f) continue;
 
-            foreach (var flame in flames)
-                Assert.AreEqual(0.25f, NormalisedRadius(flame.localPosition), 0.02f,
-                    "the ring of fire should close in as the arena shrinks");
+                Assert.AreEqual(shouldBeUp, spike.localPosition.y > -0.01f,
+                    $"a spike at {d:0.00} of the way out is {(shouldBeUp ? "down" : "up")} " +
+                    "when the danger boundary is at 0.50");
+            }
         }
+
+        [UnityTest]
+        public IEnumerator ATrapStopsTheGladiatorAndBites()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var traps = _controller.Manager.State.Traps;
+            Assert.IsNotNull(traps);
+            Assert.AreEqual(GameConstants.TrapCount, traps.Traps.Count);
+
+            var g = _controller.Manager.State.P1.Active;
+            var trap = traps.Traps[0];
+            g.Pos = trap.Pos;
+            g.Vel = new Vector2(0f, 200f);
+            float hp = g.Hp;
+
+            Assert.AreSame(trap, traps.TryTrigger(g));
+
+            // Stopping him is the point; the bite is the smallest attack in the game on purpose, so
+            // the scenery never out-hits the fighters it is there to inconvenience.
+            Assert.AreEqual(Vector2.zero, g.Vel, "a sprung trap has to stop the charge");
+            Assert.AreEqual(hp - TrapSystem.Damage, g.Hp, 0.001f);
+            Assert.AreEqual(GladiatorDef.All.Min(d => d.Damage), TrapSystem.Damage, 0.001f);
+
+            Assert.IsFalse(trap.Armed);
+            Assert.IsNull(traps.TryTrigger(g), "a sprung trap must not bite twice");
+            yield return null;
+        }
+
 
         /// <summary>Distance from the centre in wall units, measured on the arena's ellipse.</summary>
         private float NormalisedRadius(Vector3 localPosition)

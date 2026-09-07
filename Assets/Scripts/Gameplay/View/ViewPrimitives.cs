@@ -41,6 +41,45 @@ namespace ColosseumDuel.Gameplay.View
         /// shape the design actually calls for, and drawing it as real geometry keeps it readable
         /// under an orthographic top-down camera.
         /// </summary>
+        /// <summary>
+        /// A cone standing on the XZ plane with its point up, for the spikes in the danger zone.
+        ///
+        /// Built here rather than taken from a primitive because Unity has no cone among them, and
+        /// a squashed cylinder is not the same silhouette - what has to read from above is the point.
+        /// Flat-shaded on purpose: each side face gets its own vertices, so the facets catch the
+        /// light separately and a spike is legible as a spike at forty pixels.
+        /// </summary>
+        public static Mesh CreateCone(float radius, float height, int segments = 10)
+        {
+            var vertices = new System.Collections.Generic.List<Vector3>();
+            var triangles = new System.Collections.Generic.List<int>();
+            var apex = new Vector3(0f, height, 0f);
+
+            for (int i = 0; i < segments; i++)
+            {
+                float a0 = i / (float)segments * Mathf.PI * 2f;
+                float a1 = (i + 1) / (float)segments * Mathf.PI * 2f;
+                var p0 = new Vector3(Mathf.Cos(a0) * radius, 0f, Mathf.Sin(a0) * radius);
+                var p1 = new Vector3(Mathf.Cos(a1) * radius, 0f, Mathf.Sin(a1) * radius);
+
+                int at = vertices.Count;
+                vertices.Add(apex); vertices.Add(p1); vertices.Add(p0);
+                triangles.Add(at); triangles.Add(at + 1); triangles.Add(at + 2);
+
+                // The base too - a spike rising out of the floor shows its underside on the way up.
+                int ab = vertices.Count;
+                vertices.Add(Vector3.zero); vertices.Add(p0); vertices.Add(p1);
+                triangles.Add(ab); triangles.Add(ab + 1); triangles.Add(ab + 2);
+            }
+
+            var mesh = new Mesh { name = "Cone" };
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
         public static Mesh CreateAnnulus(float innerRadius, float outerRadius, int segments = 96)
         {
             var vertices = new Vector3[segments * 2];

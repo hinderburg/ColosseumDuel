@@ -26,12 +26,12 @@ namespace ColosseumDuel.Tests
         [Test]
         public void TheDamageTable()
         {
-            // The one place the actual numbers are stated. Doubled across the board in a balance
-            // pass; everything else in this file checks the multipliers applied on top of them, so
-            // a future pass touches this test alone.
-            Assert.AreEqual(20f, GladiatorDef.Brutius.Damage, Tol);
-            Assert.AreEqual(26f, GladiatorDef.Barbarius.Damage, Tol);
-            Assert.AreEqual(14f, GladiatorDef.Hilius.Damage, Tol);
+            // The one place the actual numbers are stated. Doubled in one balance pass and raised
+            // another quarter in the next; everything else in this file checks the multipliers
+            // applied on top of them, so a future pass touches this test alone.
+            Assert.AreEqual(25f, GladiatorDef.Brutius.Damage, Tol);
+            Assert.AreEqual(32.5f, GladiatorDef.Barbarius.Damage, Tol);
+            Assert.AreEqual(17.5f, GladiatorDef.Hilius.Damage, Tol);
         }
 
         [Test]

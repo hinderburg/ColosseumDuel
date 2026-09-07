@@ -96,6 +96,12 @@ namespace ColosseumDuel.Core
         // --- items ---
         public const int ItemCountOnArena = 3; // always exactly 1 weapon + 1 shield + 1 random
 
+        // --- traps ---
+        // Scattered fresh every round. Enough that crossing the arena is a decision rather than a
+        // formality, few enough that a dash is not a dice roll.
+        public const int TrapCount = 5;
+        public const float TrapRadius = 14f;
+
         // --- arena hazard (shrinking rings) ---
         // Share of max HP the danger zone burns through over one action phase. Doubled in a balance
         // pass: at 15% the fire was a nuisance to be walked through, which is the opposite of what a

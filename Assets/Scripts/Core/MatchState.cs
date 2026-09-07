@@ -23,6 +23,7 @@ namespace ColosseumDuel.Core
         public PlayerState P1 = new PlayerState { Side = PlayerSide.P1 };
         public PlayerState Bot = new PlayerState { Side = PlayerSide.Bot };
         public ItemSystem Items;
+        public TrapSystem Traps;
 
         public PlayerSide? WinnerSide;
 

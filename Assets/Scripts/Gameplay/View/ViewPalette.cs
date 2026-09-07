@@ -90,8 +90,9 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Flame set along the arena wall. Same caveat: absent in a clean clone.</summary>
         public GameObject Torch;
 
-        /// <summary>Ground flame marking the edge of the danger zone. Same caveat.</summary>
-        public GameObject HazardFire;
+        /// <summary>Iron for the spikes that fill the danger zone and the jaws of the traps.</summary>
+        public Material Spike;
+        public Material TrapIron;
 
         /// <summary>Burst played on a gladiator taking a hit. Same caveat.</summary>
         public GameObject BloodHit;

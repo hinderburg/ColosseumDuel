@@ -55,6 +55,10 @@ namespace ColosseumDuel.Tests
             // otherwise take seven real cycles (~35 seconds) to appear.
             controller.Manager.State.Cycle = 8;
 
+            // The spikes come up out of the sand rather than snapping into place, so the frame has
+            // to be taken a moment after the rings light up or it catches them still underground.
+            yield return RunSeconds(0.8f);
+
             // Hold a full-power pull aimed at the far wall, so the captured frame shows the
             // trajectory preview including its bounce.
             var player = controller.Manager.State.P1.Active;

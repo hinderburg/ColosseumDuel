@@ -56,6 +56,8 @@ namespace ColosseumDuel.Core
             State.Bot.Active = null;
             State.Items = new ItemSystem(_rng);
             State.Items.SpawnInitial();
+            State.Traps = new TrapSystem(_rng);
+            State.Traps.SpawnForRound();
             State.Round = 0;
             State.Cycle = 0;
             State.WinnerSide = null;
@@ -112,6 +114,10 @@ namespace ColosseumDuel.Core
             State.Round++;
             State.Cycle = 0;
             PlaceFightersForRound();
+
+            // Fresh traps every round. Left from the last one they would all be sprung by the time
+            // the third round started, and the arena would quietly stop having a hazard in it.
+            State.Traps?.SpawnForRound();
             // Reveal is a real phase with a duration (see Tick) so the UI can show both picks
             // before planning opens - it used to be skipped in the same frame it was entered.
             SetPhase(MatchPhase.Reveal);
@@ -136,6 +142,10 @@ namespace ColosseumDuel.Core
             Place(State.P1.Active, new Vector2(0f, -d), Vector2.up);
             Place(State.Bot.Active, new Vector2(0f, d), Vector2.down);
         }
+
+        /// <summary>Which side a gladiator is fighting for, for events that carry the victim.</summary>
+        private PlayerSide SideOf(GladiatorInstance g)
+            => ReferenceEquals(g, State.Bot.Active) ? PlayerSide.Bot : PlayerSide.P1;
 
         private static void Place(GladiatorInstance g, Vector2 pos, Vector2 facing)
         {
@@ -383,6 +393,15 @@ namespace ColosseumDuel.Core
             // item pickup
             var item = State.Items.TryPickup(g);
             if (item != null) State.Items.ApplyPickup(g, item);
+
+            // traps - checked after the move, so a gladiator who ran into one this substep is
+            // stopped at the jaws rather than a substep past them.
+            var trap = State.Traps?.TryTrigger(g);
+            if (trap != null)
+            {
+                Damaged?.Invoke(SideOf(g), TrapSystem.Damage);
+                Impact?.Invoke(trap.Pos);
+            }
         }
 
         private void ResolveCollision(GladiatorInstance a, GladiatorInstance b)

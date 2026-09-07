@@ -21,9 +21,10 @@ namespace ColosseumDuel.EditorTools
         /// <summary>
         /// World height of a gladiator. Chosen against the camera rather than against realism: a
         /// tilted view foreshortens vertical extent to about 40% of its true size, so a
-        /// life-sized figure on an arena this wide reads as a speck.
+        /// life-sized figure on an arena this wide reads as a speck. Raised a further quarter in a
+        /// later pass - the fighters are what the eye should land on first.
         /// </summary>
-        public const float TargetHeight = 3.0f;
+        public const float TargetHeight = 3.75f;
 
         public static string PathFor(GladiatorId id) => $"{PrefabDir}/Gladiator_{id}.prefab";
 

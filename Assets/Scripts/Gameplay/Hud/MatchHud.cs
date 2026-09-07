@@ -193,7 +193,10 @@ namespace ColosseumDuel.Gameplay.Hud
             // so it drags in step with everything else the slowdown touches.
             float pulse = 0.78f + 0.22f * Mathf.Sin(Time.time * 2.2f);
             var tint = PlanningTint;
-            tint.a = _vignetteStrength * 0.85f * pulse;
+            // Toned down when the wall grew: a tall bright parapet now fills the edges of the frame,
+            // which is exactly where this sits, and at the old strength it stopped being a hint
+            // about tempo and started being a blue filter over the arena.
+            tint.a = _vignetteStrength * 0.5f * pulse;
             _planningVignette.color = tint;
         }
 

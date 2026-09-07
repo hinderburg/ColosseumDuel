@@ -40,8 +40,6 @@ namespace ColosseumDuel.EditorTools
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch Intense/CartoonFireTorchIntenseYellow.prefab";
         private const string TorchPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Torch/CartoonFireTorchRed.prefab";
-        private const string HazardFirePrefabPath =
-            "Assets/Epic Toon FX/Prefabs/Environment/Fire/Cartoon/Field/FireFieldRed.prefab";
         private const string BloodPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
 
@@ -60,11 +58,15 @@ namespace ColosseumDuel.EditorTools
         private const float WorldArenaRadius = 8f;
 
         /// <summary>
-        /// How high the wall stands. Deliberately low - it is a parapet, not a barrier. The camera
-        /// looks down the length of the arena, and a wall tall enough to be realistic would hide the
-        /// far half of the floor along with whoever was fighting on it.
+        /// How high the wall stands: shoulder to shoulder with the gladiators, by request.
+        ///
+        /// It was a waist-high parapet for a long time, for a reason that still holds - the camera
+        /// looks down the length of the arena, so a wall as tall as a fighter hides the strip of
+        /// floor immediately behind it at the far end. That strip is outside the playable ellipse,
+        /// so nothing is lost that anyone fights over, and tying it to the gladiators means the two
+        /// cannot drift apart when either is resized.
         /// </summary>
-        private const float WallHeight = 1.2f;
+        private const float WallHeight = GladiatorPrefabs.TargetHeight;
 
         // --- presentation format ---
         // Portrait 9:16. The arena occupies the middle band and the two rosters sit above and below
@@ -351,9 +353,11 @@ namespace ColosseumDuel.EditorTools
             if (palette.Torch == null)
                 Debug.LogWarning($"[Colosseum] Torch prefab not found at {TorchPrefabPath} - the wall will be unlit.");
 
-            palette.HazardFire = AssetDatabase.LoadAssetAtPath<GameObject>(HazardFirePrefabPath);
-            if (palette.HazardFire == null)
-                Debug.LogWarning($"[Colosseum] Hazard flame not found at {HazardFirePrefabPath} - danger zones will be flat colour.");
+            // Iron, for the spikes that fill a danger zone and for the jaws of the traps. Dark and
+            // barely lit: they come up out of the sand and should read as a threat rather than as
+            // decoration, and against bright sand a dark silhouette does that better than a colour.
+            palette.Spike = Lit("Spike", new Color(0.30f, 0.31f, 0.35f));
+            palette.TrapIron = Lit("TrapIron", new Color(0.22f, 0.22f, 0.25f));
 
             palette.BloodHit = AssetDatabase.LoadAssetAtPath<GameObject>(BloodPrefabPath);
             if (palette.BloodHit == null)
@@ -501,7 +505,11 @@ namespace ColosseumDuel.EditorTools
             arena.ArenaCamera = cam;
 
             var lightGo = new GameObject("Sun");
-            lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            // Steep, and steeper since the wall grew: shadow length is height over the tangent of
+            // the elevation, so tripling the wall at 50 degrees threw a shadow three units deep
+            // across the floor and put a third of the playing area in the dark. At 68 it is under
+            // one and a half, which reads as a wall standing in sunlight rather than as a stain.
+            lightGo.transform.rotation = Quaternion.Euler(68f, -30f, 0f);
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
             light.intensity = 1.1f;

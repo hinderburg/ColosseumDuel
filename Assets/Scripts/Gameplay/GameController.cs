@@ -83,7 +83,8 @@ namespace ColosseumDuel.Gameplay
         private void BuildViews()
         {
             Arena.BuildHazardRings();
-            Arena.BuildHazardFire();
+            Arena.BuildSpikes();
+            Arena.BuildTraps();
             Arena.BuildBloodPool();
 
             var viewRoot = new GameObject("Views").transform;
