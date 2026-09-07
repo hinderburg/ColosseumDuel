@@ -88,13 +88,22 @@ namespace ColosseumDuel.Core
 
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
-        public const float ShieldDamageMult = 0.50f;      // -50% incoming damage, multiplicative with defend
-        public const float OneHandedWeaponMult = 1.5f;    // axe
-        public const float PassByDamageMult = 0.50f;      // normal pass-by damage share
-        public const float TwoHandedPassByDamageMult = 1.0f; // trident: full damage on a pass-by
+        public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
+
+        /// <summary>
+        /// How much better the gilded copies on the sand are than the weapon a gladiator arrives
+        /// with. It is the entire reason to break off and cross a mined arena for one, so it has to
+        /// be worth a trap and a stretch of danger zone - but it is a better version of the same
+        /// weapon, not a different tier of weapon.
+        /// </summary>
+        public const float GildedWeaponMult = 1.35f;
+
+        /// <summary>How far one mace blow throws its target, in virtual units - most of a body.</summary>
+        public const float MaceKnockback = GladiatorRadius * 1.6f;
 
         // --- items ---
-        public const int ItemCountOnArena = 3; // always exactly 1 weapon + 1 shield + 1 random
+        // One of each weapon kind, always on the floor. See ItemSystem.
+        public const int ItemCountOnArena = 3;
 
         // --- traps ---
         // Laid out fresh every round, half in each fighter's end. Even, so neither side starts the

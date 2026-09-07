@@ -11,8 +11,8 @@ using UnityEngine.TestTools;
 namespace ColosseumDuel.Tests
 {
     /// <summary>
-    /// What is lying on the sand has to match what picking it up will hand over - the size of a
-    /// weapon prop is the only warning the player gets that it will cost them their shield.
+    /// What is lying on the sand has to match what picking it up will hand over. Three weapons that
+    /// fight differently are only a decision if the player can tell them apart from above.
     /// </summary>
     public class ItemPropTests
     {
@@ -30,49 +30,83 @@ namespace ColosseumDuel.Tests
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
         }
 
-        private Transform WeaponPropFor(ArenaItem item)
+        private ItemView ViewFor(ArenaItem item)
         {
             int index = _controller.Manager.State.Items.Items.IndexOf(item);
-            var view = _controller.GetComponentsInChildren<ItemView>(true)[index];
-            return view.transform.Find("Weapon");
+            return _controller.GetComponentsInChildren<ItemView>(true)[index];
+        }
+
+        private static readonly string[] PropNames = { "DualSwords", "SwordAndShield", "Mace" };
+
+        [UnityTest]
+        public IEnumerator EveryWeaponOnTheSandDrawsAsItsOwnKindAndNothingElse()
+        {
+            var items = _controller.Manager.State.Items.Items;
+            Assert.AreEqual(GameConstants.ItemCountOnArena, items.Count);
+
+            foreach (var item in items)
+            {
+                var view = ViewFor(item);
+                string expected = NameFor(item.Kind);
+
+                foreach (var name in PropNames)
+                {
+                    var prop = view.transform.Find(name);
+                    Assert.IsNotNull(prop, $"the item view has no {name} prop at all");
+
+                    // Both directions. Checking only that the right one is up would pass just as
+                    // well with all three drawn on top of each other, which is what the player
+                    // would actually be looking at.
+                    Assert.AreEqual(name == expected, prop.gameObject.activeInHierarchy,
+                        $"a {item.Kind} on the sand should show {expected} and only {expected}");
+                }
+            }
+
+            yield return null;
         }
 
         [UnityTest]
-        public IEnumerator ATwoHandedWeaponLiesOnTheSandBiggerThanAOneHanded()
+        public IEnumerator TheMaceLiesThereBiggerThanTheBlades()
         {
-            var slot = _controller.Manager.State.Items.Items.First(i => i.Kind == ItemKind.Weapon);
-
-            slot.WeaponType = WeaponType.OneHanded;
+            // Size is what says "this one hits hardest and furthest" from a camera that never moves
+            // in for a closer look.
+            var mace = _controller.Manager.State.Items.Items.First(i => i.Kind == WeaponKind.TwoHandedMace);
+            var swords = _controller.Manager.State.Items.Items.First(i => i.Kind == WeaponKind.DualSwords);
             yield return null;
 
-            var prop = WeaponPropFor(slot);
-            Assert.IsNotNull(prop, "the weapon slot has no prop at all");
-            Assert.IsTrue(prop.gameObject.activeInHierarchy, "the weapon prop is not on the arena");
-            float oneHanded = prop.localScale.y;
+            float maceLength = ViewFor(mace).transform.Find("Mace").localScale.y;
+            float swordLength = ViewFor(swords).transform.Find("DualSwords").localScale.y;
 
-            slot.WeaponType = WeaponType.TwoHanded;
-            yield return null;
-
-            Assert.IsTrue(prop.gameObject.activeInHierarchy);
-            Assert.Greater(prop.localScale.y, oneHanded,
-                "a two-hander must lie there visibly bigger - it is the only thing that says " +
-                "picking it up will cost the player their shield");
+            Assert.Greater(maceLength, swordLength,
+                "the mace has to read as the big weapon before anyone runs at it");
         }
 
         [UnityTest]
-        public IEnumerator TheRandomSlotShowsTheWeaponItActuallyGrants()
+        public IEnumerator TheTwinSwordsAreDrawnAsTwo()
         {
-            // The third slot rolls a weapon type and hands one over on pickup, but it was drawn as a
-            // featureless sphere - so half the two-handers on the arena were invisible as such, and
-            // running onto one silently destroyed the shield the player was carrying.
-            var slot = _controller.Manager.State.Items.Items.First(i => i.Kind == ItemKind.Random);
-            slot.WeaponType = WeaponType.TwoHanded;
+            // Stacked exactly they read as one sword, and the pair is the whole identity of the
+            // weapon - two blows and a bleed rather than one heavy swing.
+            var swords = _controller.Manager.State.Items.Items.First(i => i.Kind == WeaponKind.DualSwords);
             yield return null;
 
-            var prop = WeaponPropFor(slot);
-            Assert.IsNotNull(prop, "the random slot has no weapon prop");
-            Assert.IsTrue(prop.gameObject.activeInHierarchy,
-                "a slot that grants a weapon has to look like one");
+            var prop = ViewFor(swords).transform.Find("DualSwords");
+            var left = prop.Find("Left");
+            var right = prop.Find("Right");
+
+            Assert.IsNotNull(left);
+            Assert.IsNotNull(right);
+            Assert.Greater(Vector3.Distance(left.position, right.position), 0.05f,
+                "the two blades are drawn on top of each other and read as one");
+        }
+
+        private static string NameFor(WeaponKind kind)
+        {
+            switch (kind)
+            {
+                case WeaponKind.DualSwords: return "DualSwords";
+                case WeaponKind.SwordAndShield: return "SwordAndShield";
+                default: return "Mace";
+            }
         }
 
         private static IEnumerator RunSeconds(float seconds)

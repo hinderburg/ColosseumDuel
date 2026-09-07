@@ -6,15 +6,20 @@ namespace ColosseumDuel.Core
 {
     public sealed class ArenaItem
     {
-        public ItemKind Kind;
-        public WeaponType WeaponType; // only meaningful when Kind == Weapon
+        public WeaponKind Kind;
         public Vector2 Pos;
     }
 
     /// <summary>
-    /// Keeps exactly GameConstants.ItemCountOnArena items on the floor at all times: 1 weapon,
-    /// 1 shield, 1 "random". Items are single-use - consuming one immediately respawns its slot
-    /// at a new random position with a freshly rolled type where applicable.
+    /// The weapons lying on the sand: one of each kind, always, gilded and better than the one a
+    /// gladiator walked in with.
+    ///
+    /// One of each rather than a random roll, because the arena is now a menu of three answers and
+    /// which of them is available should not be luck. A player being beaten by a mace can look for
+    /// the shield; a player who wants to bleed the opponent can look for the swords.
+    ///
+    /// Picking one up respawns its slot somewhere else, so the three choices stay on the floor for
+    /// the whole round.
     /// </summary>
     public sealed class ItemSystem
     {
@@ -29,27 +34,16 @@ namespace ColosseumDuel.Core
         public void SpawnInitial()
         {
             Items.Clear();
-            Items.Add(new ArenaItem { Kind = ItemKind.Weapon, WeaponType = RollWeaponType(), Pos = RandomItemPos() });
-            Items.Add(new ArenaItem { Kind = ItemKind.Shield, Pos = RandomItemPos() });
-            Items.Add(new ArenaItem { Kind = ItemKind.Random, WeaponType = RollWeaponType(), Pos = RandomItemPos() });
+            foreach (var weapon in WeaponDef.All)
+                Items.Add(new ArenaItem { Kind = weapon.Kind, Pos = RandomItemPos() });
         }
 
-        /// <summary>Call after an item is consumed (picked up or used as a block) to replace it.</summary>
+        /// <summary>Call after an item is taken to put the same kind back somewhere else.</summary>
         public void Respawn(ArenaItem consumed)
         {
             int idx = Items.IndexOf(consumed);
             if (idx < 0) return;
-            Items[idx] = new ArenaItem
-            {
-                Kind = consumed.Kind,
-                WeaponType = consumed.Kind == ItemKind.Shield ? WeaponType.None : RollWeaponType(),
-                Pos = RandomItemPos()
-            };
-        }
-
-        private WeaponType RollWeaponType()
-        {
-            return _rng.NextDouble() < 0.5 ? WeaponType.OneHanded : WeaponType.TwoHanded;
+            Items[idx] = new ArenaItem { Kind = consumed.Kind, Pos = RandomItemPos() };
         }
 
         private Vector2 RandomItemPos()
@@ -66,50 +60,38 @@ namespace ColosseumDuel.Core
                 onUnitCircle.y * (ArenaShape.RadiusY - margin));
         }
 
+        /// <summary>
+        /// The weapon he is standing on, if any.
+        ///
+        /// Anything is takeable now, including a weapon he was never trained in - the old rule about
+        /// a two-hander refusing a shield is gone with the slots it policed. Picking up the wrong
+        /// weapon is a mistake the player is allowed to make; the HUD rings it in red rather than
+        /// the simulation refusing it, because a pickup that silently does not happen reads as a
+        /// bug and a red ring reads as a warning.
+        ///
+        /// One he is already carrying is skipped: walking over the mace you are holding should not
+        /// teleport an identical mace to the other end of the arena.
+        /// </summary>
         public ArenaItem TryPickup(GladiatorInstance g)
         {
             foreach (var item in Items)
             {
                 if (Vector2.Distance(g.Pos, item.Pos) > GameConstants.PickupDistance) continue;
-                if (!CanCarry(g, item)) continue;
+                if (g.Weapon == item.Kind && g.WeaponIsGilded) continue;
                 return item;
             }
             return null;
         }
 
-        /// <summary>
-        /// A two-handed weapon and a shield cannot be held at once - both hands are on the haft.
-        ///
-        /// Checked here rather than in ApplyPickup so that an item he cannot take is simply not
-        /// picked up: it stays on the sand for him to come back to once his trident has broken,
-        /// instead of being consumed and respawned somewhere else for nothing.
-        ///
-        /// It blocks in both directions. The rule was asked for as "a two-hander blocks the shield",
-        /// but the other order produces the same impossible pair, and refusing the weapon leaves the
-        /// shield the player already earned rather than quietly destroying it.
-        /// </summary>
-        public static bool CanCarry(GladiatorInstance g, ArenaItem item)
-        {
-            if (item.Kind == ItemKind.Shield) return g.Weapon != WeaponType.TwoHanded;
-            if (item.WeaponType == WeaponType.TwoHanded) return !g.HasShield;
-            return true;
-        }
-
-        // NOTE: the original spec leaves the "random" 3rd slot loosely defined - it is currently
-        // wired up as an extra weapon roll (same effect as the Weapon slot). Swap in your own
-        // bonus-item type here once it's designed (speed boost, extra rage, etc).
         public void ApplyPickup(GladiatorInstance g, ArenaItem item)
         {
-            switch (item.Kind)
-            {
-                case ItemKind.Weapon:
-                case ItemKind.Random when item.WeaponType != WeaponType.None:
-                    g.Weapon = item.WeaponType;
-                    break;
-                case ItemKind.Shield:
-                    g.HasShield = true;
-                    break;
-            }
+            g.Weapon = item.Kind;
+            g.WeaponIsGilded = true;
+
+            // A weapon that swings a different number of times changes what is left this cycle.
+            // Without this, swapping twin swords for a mace mid-run would still land two blows.
+            g.AttacksRemainingThisCycle = Mathf.Min(g.AttacksRemainingThisCycle, g.AttacksPerCycle);
+
             Respawn(item);
         }
     }

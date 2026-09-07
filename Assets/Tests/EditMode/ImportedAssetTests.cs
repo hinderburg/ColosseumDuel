@@ -100,7 +100,7 @@ namespace ColosseumDuel.Tests
         private static readonly string[] GearPaths =
         {
             "Assets/Prefabs/Gear_Sword.prefab",
-            "Assets/Prefabs/Gear_Greatsword.prefab",
+            "Assets/Prefabs/Gear_Mace.prefab",
             "Assets/Prefabs/Gear_Shield.prefab",
             "Assets/Prefabs/Gear_Helmet.prefab",
         };

@@ -51,23 +51,25 @@ namespace ColosseumDuel.Tests
         }
     }
 
-    /// <summary>GDD section 6: exactly three items on the floor, all single-use.</summary>
+    /// <summary>Exactly three weapons on the floor, one of each kind, all gilded.</summary>
     public class ItemSystemTests
     {
         [Test]
-        public void SpawnInitial_PlacesOneWeaponOneShieldAndOneRandom()
+        public void SpawnInitial_PutsOneOfEveryWeaponOnTheSand()
         {
+            // One of each rather than a random roll. The arena is a menu of three answers now, and
+            // which of them is on offer should not be luck: a player being beaten by a mace has to
+            // be able to go looking for the shield.
             var items = new ItemSystem(new System.Random(1));
             items.SpawnInitial();
 
             Assert.AreEqual(GameConstants.ItemCountOnArena, items.Items.Count);
-            Assert.AreEqual(1, CountOf(items, ItemKind.Weapon));
-            Assert.AreEqual(1, CountOf(items, ItemKind.Shield));
-            Assert.AreEqual(1, CountOf(items, ItemKind.Random));
+            foreach (var weapon in WeaponDef.All)
+                Assert.AreEqual(1, CountOf(items, weapon.Kind), $"exactly one {weapon.Name}");
         }
 
         [Test]
-        public void PickingUpAnItem_ImmediatelyRefillsItsSlot()
+        public void PickingUpAWeapon_ImmediatelyRefillsItsSlot()
         {
             var items = new ItemSystem(new System.Random(7));
             items.SpawnInitial();
@@ -75,40 +77,79 @@ namespace ColosseumDuel.Tests
 
             for (int i = 0; i < 30; i++)
             {
-                // Empty-handed each time round. This test is about the slot invariant, and a
-                // gladiator who happened to be holding a two-hander would rightly decline the
-                // shield - a rule of its own, covered separately.
-                g.Weapon = WeaponType.None;
-                g.HasShield = false;
-
                 var target = items.Items[i % items.Items.Count];
                 g.Pos = target.Pos;
                 var picked = items.TryPickup(g);
-                Assert.IsNotNull(picked, "standing on an item must pick it up");
+                Assert.IsNotNull(picked, "standing on a weapon must pick it up");
                 items.ApplyPickup(g, picked);
 
                 Assert.AreEqual(GameConstants.ItemCountOnArena, items.Items.Count,
-                    "the arena always holds exactly three items");
-                Assert.AreEqual(1, CountOf(items, ItemKind.Weapon));
-                Assert.AreEqual(1, CountOf(items, ItemKind.Shield));
-                Assert.AreEqual(1, CountOf(items, ItemKind.Random));
+                    "the arena always holds exactly three weapons");
+                foreach (var weapon in WeaponDef.All)
+                    Assert.AreEqual(1, CountOf(items, weapon.Kind),
+                        $"all three choices stay on the floor - {weapon.Name} went missing");
             }
         }
 
         [Test]
-        public void PickedUpShieldAndWeapon_LandOnTheGladiator()
+        public void APickedUpWeaponIsTheGildedOne()
         {
             var items = new ItemSystem(new System.Random(3));
             items.SpawnInitial();
+
             var g = new GladiatorInstance(GladiatorDef.Brutius);
+            g.EquipTrainedWeapon();
+            Assert.IsFalse(g.WeaponIsGilded, "he walks in with his own");
 
-            var shield = items.Items.Find(i => i.Kind == ItemKind.Shield);
-            items.ApplyPickup(g, shield);
+            var shieldPair = items.Items.Find(i => i.Kind == WeaponKind.SwordAndShield);
+            items.ApplyPickup(g, shieldPair);
+
+            Assert.AreEqual(WeaponKind.SwordAndShield, g.Weapon);
             Assert.IsTrue(g.HasShield);
+            Assert.IsTrue(g.WeaponIsGilded, "everything on the sand is the better copy");
+        }
 
-            var weapon = items.Items.Find(i => i.Kind == ItemKind.Weapon);
-            items.ApplyPickup(g, weapon);
-            Assert.AreNotEqual(WeaponType.None, g.Weapon);
+        [Test]
+        public void AnythingCanBePickedUp_TrainedOrNot()
+        {
+            // The old rule about a two-hander refusing a shield went with the slots it policed.
+            // Taking the wrong weapon is a mistake the player is allowed to make - the HUD rings it
+            // in red rather than the simulation silently declining it, because a pickup that does
+            // not happen reads as a bug and a red ring reads as a warning.
+            var items = new ItemSystem(new System.Random(5));
+            items.SpawnInitial();
+
+            var g = new GladiatorInstance(GladiatorDef.Hilius);
+            g.EquipTrainedWeapon();
+            Assert.AreEqual(WeaponKind.SwordAndShield, g.Weapon);
+
+            var mace = items.Items.Find(i => i.Kind == WeaponKind.TwoHandedMace);
+            g.Pos = mace.Pos;
+            Assert.AreSame(mace, items.TryPickup(g), "he is allowed to pick up the wrong weapon");
+
+            items.ApplyPickup(g, mace);
+            Assert.AreEqual(WeaponKind.TwoHandedMace, g.Weapon);
+            Assert.IsTrue(g.IsUntrained, "and the HUD has to be able to say so");
+        }
+
+        [Test]
+        public void StandingOnTheGildedWeaponHeIsAlreadyHolding_DoesNothing()
+        {
+            // Otherwise walking over your own mace teleports an identical mace to the far end of
+            // the arena, and the three choices quietly shuffle every time anyone stands still.
+            var items = new ItemSystem(new System.Random(9));
+            items.SpawnInitial();
+
+            var mace = items.Items.Find(i => i.Kind == WeaponKind.TwoHandedMace);
+            var g = new GladiatorInstance(GladiatorDef.Brutius)
+            {
+                Weapon = WeaponKind.TwoHandedMace,
+                WeaponIsGilded = true,
+                Pos = mace.Pos,
+            };
+
+            Assert.IsNull(items.TryPickup(g));
+            CollectionAssert.Contains(items.Items, mace, "and it stays exactly where it was");
         }
 
         [Test]
@@ -122,47 +163,6 @@ namespace ColosseumDuel.Tests
                     Assert.Less(ArenaShape.NormalizedDistance(item.Pos), 1f,
                         "an item spawned outside the wall would be unreachable");
             }
-        }
-
-        [Test]
-        public void ATwoHandedWeaponAndAShieldCannotBeCarriedTogether()
-        {
-            var g = new GladiatorInstance(GladiatorDef.Brutius);
-            var shield = new ArenaItem { Kind = ItemKind.Shield };
-            var oneHanded = new ArenaItem { Kind = ItemKind.Weapon, WeaponType = WeaponType.OneHanded };
-            var twoHanded = new ArenaItem { Kind = ItemKind.Weapon, WeaponType = WeaponType.TwoHanded };
-
-            Assert.IsTrue(ItemSystem.CanCarry(g, shield), "empty-handed, he can take anything");
-            Assert.IsTrue(ItemSystem.CanCarry(g, twoHanded));
-
-            g.Weapon = WeaponType.TwoHanded;
-            Assert.IsFalse(ItemSystem.CanCarry(g, shield), "both hands are on the haft");
-            Assert.IsTrue(ItemSystem.CanCarry(g, oneHanded), "swapping weapons is still fine");
-
-            g.Weapon = WeaponType.None;
-            g.HasShield = true;
-            Assert.IsFalse(ItemSystem.CanCarry(g, twoHanded), "the same impossible pair, arrived at backwards");
-            Assert.IsTrue(ItemSystem.CanCarry(g, oneHanded), "sword and board is the whole point");
-        }
-
-        [Test]
-        public void AnItemHeCannotCarryIsLeftOnTheSand()
-        {
-            // Not merely "not equipped": TryPickup has to decline it, or ApplyPickup would consume
-            // the shield and respawn it elsewhere for nothing, and the player would watch a pickup
-            // vanish with no effect and no explanation.
-            var items = new ItemSystem(new System.Random(7));
-            items.SpawnInitial();
-
-            var shield = items.Items.Find(i => i.Kind == ItemKind.Shield);
-            var g = new GladiatorInstance(GladiatorDef.Brutius)
-            {
-                Weapon = WeaponType.TwoHanded,
-                Pos = shield.Pos,
-            };
-
-            Assert.AreNotSame(shield, items.TryPickup(g), "a two-hander should walk straight over a shield");
-            CollectionAssert.Contains(items.Items, shield, "and it should still be lying there");
         }
 
         [Test]
@@ -190,7 +190,7 @@ namespace ColosseumDuel.Tests
             }
         }
 
-        private static int CountOf(ItemSystem items, ItemKind kind)
+        private static int CountOf(ItemSystem items, WeaponKind kind)
             => items.Items.FindAll(i => i.Kind == kind).Count;
     }
 }

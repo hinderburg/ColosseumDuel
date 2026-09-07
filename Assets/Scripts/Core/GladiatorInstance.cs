@@ -26,8 +26,36 @@ namespace ColosseumDuel.Core
         /// while defending (per the design doc), along the run direction while moving.</summary>
         public Vector2 Facing = Vector2.right;
 
-        public WeaponType Weapon = WeaponType.None;
-        public bool HasShield = false;
+        /// <summary>
+        /// What he is fighting with. Set from his training when the round starts and replaced by
+        /// anything he picks up off the sand - never emptied. A weapon is what a gladiator is, not
+        /// a charge he spends.
+        /// </summary>
+        public WeaponKind Weapon = WeaponKind.None;
+
+        /// <summary>
+        /// True for a weapon taken off the arena floor rather than brought in.
+        ///
+        /// The gilded copies lying on the sand are the same three weapons, better made. It is the
+        /// only reason to break off and cross the arena for one, and the gold is the whole of how
+        /// the player is told so.
+        /// </summary>
+        public bool WeaponIsGilded;
+
+        public WeaponDef WeaponDef => WeaponDef.Get(Weapon);
+
+        /// <summary>Whether he is behind a shield. A property of the weapon now, not a slot.</summary>
+        public bool HasShield => Weapon == WeaponKind.SwordAndShield;
+
+        /// <summary>Arms him with the weapon he trained on. Called when he enters the arena.</summary>
+        public void EquipTrainedWeapon()
+        {
+            Weapon = Def.SkilledWith;
+            WeaponIsGilded = false;
+        }
+
+        /// <summary>True when he is holding something he was never trained to hold.</summary>
+        public bool IsUntrained => Weapon != WeaponKind.None && Weapon != Def.SkilledWith;
 
         public float Rage = 0f;
         public int AbilityLockedCycles = 0;
@@ -45,12 +73,25 @@ namespace ColosseumDuel.Core
         // Read and decremented by GameManager when a collision or a pass-by resolves.
         public int AttacksRemainingThisCycle = 1;
 
-        public int AttacksPerCycle => Buff.IsActive && Buff.Key == AbilityKey.Mongoose ? 2 : 1;
+        /// <summary>
+        /// Blows he lands per exchange: what the weapon swings, doubled while Mongoose is up.
+        ///
+        /// Multiplied rather than overridden, so Hilius on twin swords gets four light blows and not
+        /// two - the ability says "twice as many attacks", and a weapon that already attacks twice
+        /// should not quietly cancel half of it.
+        /// </summary>
+        public int AttacksPerCycle
+            => WeaponDef.Attacks * (Buff.IsActive && Buff.Key == AbilityKey.Mongoose ? 2 : 1);
 
         public GladiatorInstance(GladiatorDef def)
         {
             Def = def;
             Hp = def.MaxHp;
+
+            // Armed from the moment he exists. He is never without a weapon in a match, and an
+            // instance that started empty-handed only meant every caller had to remember to arm
+            // him - which is a rule that gets forgotten rather than a state that happens.
+            EquipTrainedWeapon();
         }
 
         public bool IsDefending => PlannedAction == ActionType.Defend;
@@ -139,7 +180,12 @@ namespace ColosseumDuel.Core
             AbilityArmed = false;
             Buff = default;
             AbilityLockedCycles = 0;
-            AttacksRemainingThisCycle = 1;
+
+            // Back to his own weapon each round. A gilded one is the reward for crossing the arena
+            // under fire during a round; carrying it into the next one for free would make the
+            // first round the only one worth taking that risk in.
+            EquipTrainedWeapon();
+            AttacksRemainingThisCycle = AttacksPerCycle;
         }
     }
 }

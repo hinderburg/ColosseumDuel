@@ -68,9 +68,10 @@ namespace ColosseumDuel.Tests
             // reports has to be the amount actually applied, which is the whole point of the test.
             var attacker = new GladiatorInstance(GladiatorDef.Brutius);
             var victim = new GladiatorInstance(GladiatorDef.Brutius);
-            float dealt = CombatResolver.DealDamage(attacker, victim, isCollision: true);
+            float dealt = CombatResolver.DealDamage(attacker, victim);
 
-            Assert.AreEqual(GladiatorDef.Brutius.Damage, dealt, 0.001f);
+            Assert.AreEqual(GladiatorDef.Brutius.Damage * WeaponDef.TwoHandedMace.DamageMultiplier,
+                dealt, 0.001f, "Brutius comes armed with the mace he trained on");
             Assert.AreEqual(GladiatorDef.Brutius.MaxHp - dealt, victim.Hp, 0.001f,
                 "the amount reported must be the amount actually applied");
         }

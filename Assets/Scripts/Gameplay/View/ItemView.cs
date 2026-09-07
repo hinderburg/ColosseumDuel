@@ -4,22 +4,23 @@ using UnityEngine;
 namespace ColosseumDuel.Gameplay.View
 {
     /// <summary>
-    /// One pickup on the arena floor. ItemSystem keeps a fixed-size list and replaces entries in
-    /// place, so a fixed pool of these views maps one-to-one onto it by index - no spawning or
+    /// One weapon lying on the arena floor. ItemSystem keeps a fixed-size list and replaces entries
+    /// in place, so a fixed pool of these views maps one-to-one onto it by index - no spawning or
     /// destroying during a match.
+    ///
+    /// All three kinds are built up front and toggled, because there are only three and swapping a
+    /// mesh at runtime would allocate. Which one is showing is the whole of what the player reads
+    /// off the sand: a pair of swords, a sword behind a shield, or a hammer.
     /// </summary>
     public sealed class ItemView : MonoBehaviour
     {
-        /// <summary>How far above the sand a dropped weapon or shield floats, so it is not in it.</summary>
+        /// <summary>How far above the sand a dropped weapon floats, so it is not in it.</summary>
         private const float LieHeight = 0.04f;
 
         private ArenaView _arena;
-        private GameObject _weapon;
-        private Transform _weaponHolder;
-        private GameObject _sword;
-        private GameObject _greatsword;
-        private GameObject _shield;
-        private GameObject _random;
+        private GameObject _dualSwords;
+        private GameObject _swordAndShield;
+        private GameObject _mace;
 
         public static ItemView Create(string name, Transform parent, ArenaView arena)
         {
@@ -32,54 +33,74 @@ namespace ColosseumDuel.Gameplay.View
 
             float radius = arena.ScaleLength(GameConstants.ItemRadius);
 
-            // One shape per kind, all pre-built and toggled - swapping meshes at runtime would
-            // allocate, and there are only three kinds.
             if (palette.SwordModel != null)
             {
-                view._weapon = new GameObject("Weapon");
-                view._weapon.transform.SetParent(root.transform, false);
-                view._weapon.transform.localPosition = new Vector3(0f, LieHeight, 0f);
-                view._weaponHolder = view._weapon.transform;
-
-                // Both weapons under one holder, and the holder scaled to whichever is showing. The
-                // pool never changes size, and the test that a two-hander lies there visibly bigger
-                // has one number to read.
-                view._sword = Lay(palette.SwordModel, view._weapon.transform, "Sword");
-                view._greatsword = palette.GreatswordModel != null
-                    ? Lay(palette.GreatswordModel, view._weapon.transform, "Greatsword")
-                    : null;
+                view._dualSwords = BuildDualSwords(palette, root.transform);
+                view._swordAndShield = BuildSwordAndShield(palette, root.transform);
+                view._mace = BuildMace(palette, root.transform);
             }
             else
             {
-                view._weapon = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Cube), "Weapon",
-                    root.transform, palette.Weapon);
-                view._weapon.transform.localScale = new Vector3(radius * 0.8f, radius * 1.5f, radius * 0.5f);
-                view._weapon.transform.localPosition = new Vector3(0f, radius * 0.9f, 0f);
+                // No model pack: three primitives that at least differ from each other.
+                view._dualSwords = Primitive(palette, "DualSwords", root.transform, palette.Weapon,
+                    new Vector3(radius * 1.6f, radius * 0.3f, radius * 0.4f), radius * 0.4f);
+                view._swordAndShield = Primitive(palette, "SwordAndShield", root.transform, palette.Shield,
+                    new Vector3(radius * 1.4f, radius * 0.3f, radius * 1.4f), radius * 0.4f);
+                view._mace = Primitive(palette, "Mace", root.transform, palette.RandomItem,
+                    new Vector3(radius * 0.8f, radius * 0.5f, radius * 2f), radius * 0.5f);
             }
-
-            if (palette.ShieldModel != null)
-            {
-                view._shield = new GameObject("Shield");
-                view._shield.transform.SetParent(root.transform, false);
-                view._shield.transform.localPosition = new Vector3(0f, LieHeight, 0f);
-                view._shield.transform.localScale = Vector3.one * GearSizes.ShieldHeight;
-                Lay(palette.ShieldModel, view._shield.transform, "Model");
-            }
-            else
-            {
-                view._shield = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Cylinder), "Shield",
-                    root.transform, palette.Shield);
-                view._shield.transform.localScale = new Vector3(radius * 1.8f, radius * 0.2f, radius * 1.8f);
-                view._shield.transform.localPosition = new Vector3(0f, radius * 0.3f, 0f);
-            }
-
-            view._random = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Sphere), "Random",
-                root.transform, palette.RandomItem);
-            view._random.transform.localScale = Vector3.one * (radius * 1.4f);
-            view._random.transform.localPosition = new Vector3(0f, radius * 0.7f, 0f);
 
             root.SetActive(false);
             return view;
+        }
+
+        /// <summary>Two blades side by side - the pair reads as a pair only if they are apart.</summary>
+        private static GameObject BuildDualSwords(ViewPalette palette, Transform parent)
+        {
+            var holder = Holder("DualSwords", parent, GearSizes.SwordLength);
+            var left = Lay(palette.SwordModel, holder.transform, "Left");
+            var right = Lay(palette.SwordModel, holder.transform, "Right");
+
+            // Offset across the blades rather than along them, in the holder's own unit space.
+            left.transform.localPosition = new Vector3(0f, 0f, -GearSizes.PairSpread);
+            right.transform.localPosition = new Vector3(0f, 0f, GearSizes.PairSpread);
+            return holder;
+        }
+
+        private static GameObject BuildSwordAndShield(ViewPalette palette, Transform parent)
+        {
+            var holder = Holder("SwordAndShield", parent, GearSizes.SwordLength);
+            var sword = Lay(palette.SwordModel, holder.transform, "Sword");
+            sword.transform.localPosition = new Vector3(0f, 0f, -GearSizes.PairSpread);
+
+            if (palette.ShieldModel != null)
+            {
+                var shield = Lay(palette.ShieldModel, holder.transform, "Shield");
+
+                // The shield is sized against itself, not against the sword the holder is scaled to,
+                // so the pair on the sand is the same pair the gladiator ends up carrying.
+                float relative = GearSizes.ShieldHeight / GearSizes.SwordLength;
+                shield.transform.localScale = Vector3.one * relative;
+                shield.transform.localPosition = new Vector3(0f, 0f, GearSizes.PairSpread * 1.4f);
+            }
+            return holder;
+        }
+
+        private static GameObject BuildMace(ViewPalette palette, Transform parent)
+        {
+            var holder = Holder("Mace", parent, GearSizes.MaceLength);
+            var model = palette.MaceModel != null ? palette.MaceModel : palette.SwordModel;
+            Lay(model, holder.transform, "Model");
+            return holder;
+        }
+
+        private static GameObject Holder(string name, Transform parent, float length)
+        {
+            var holder = new GameObject(name);
+            holder.transform.SetParent(parent, false);
+            holder.transform.localPosition = new Vector3(0f, LieHeight, 0f);
+            holder.transform.localScale = Vector3.one * length;
+            return holder;
         }
 
         /// <summary>Drops one model on the sand, broad side up. The prefab is unit-sized already.</summary>
@@ -92,6 +113,15 @@ namespace ColosseumDuel.Gameplay.View
             return instance;
         }
 
+        private static GameObject Primitive(ViewPalette palette, string name, Transform parent,
+            Material material, Vector3 scale, float height)
+        {
+            var go = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Cube), name, parent, material);
+            go.transform.localScale = scale;
+            go.transform.localPosition = new Vector3(0f, height, 0f);
+            return go;
+        }
+
         public void Sync(ArenaItem item)
         {
             bool visible = item != null;
@@ -100,29 +130,14 @@ namespace ColosseumDuel.Gameplay.View
 
             transform.localPosition = _arena.ToWorld(item.Pos);
 
-            // Anything that hands over a weapon is drawn as one, which includes the third "random"
-            // slot: it rolls a weapon type and grants it on pickup, but used to sit there as a
-            // featureless sphere. Half the two-handers on the arena were therefore invisible as
-            // such, and running onto one destroyed the shield the player was carrying with no
-            // warning that it would.
-            bool armsHim = item.WeaponType != WeaponType.None
-                           && (item.Kind == ItemKind.Weapon || item.Kind == ItemKind.Random);
+            SetActive(_dualSwords, item.Kind == WeaponKind.DualSwords);
+            SetActive(_swordAndShield, item.Kind == WeaponKind.SwordAndShield);
+            SetActive(_mace, item.Kind == WeaponKind.TwoHandedMace);
+        }
 
-            _weapon.SetActive(armsHim);
-            _shield.SetActive(item.Kind == ItemKind.Shield);
-            _random.SetActive(item.Kind == ItemKind.Random && !armsHim);
-
-            // Which weapon is on the sand, and how big. Both are the same reading for the player:
-            // the longer blade is the two-hander, and picking it up costs them their shield.
-            if (_weaponHolder != null && armsHim)
-            {
-                bool twoHanded = item.WeaponType == WeaponType.TwoHanded && _greatsword != null;
-                if (_sword.activeSelf == twoHanded) _sword.SetActive(!twoHanded);
-                if (_greatsword != null && _greatsword.activeSelf != twoHanded)
-                    _greatsword.SetActive(twoHanded);
-
-                _weaponHolder.localScale = Vector3.one * GearSizes.WeaponLength(item.WeaponType);
-            }
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go != null && go.activeSelf != active) go.SetActive(active);
         }
     }
 }

@@ -68,12 +68,13 @@ namespace ColosseumDuel.Gameplay.View
             // Carried gear, in the hands. Falls back to tags beside the head when the model pack is
             // not imported and there are no hands to put anything in.
             view.BuildCarriedGear(palette);
-            if (view._heldWeapon == null)
+            if (view._mainHand == null)
+            {
                 view._weaponMarker = MakeMarker(palette, "WeaponMarker", model.transform, palette.Weapon,
                     new Vector3(radius * 1.3f, bodyHeight * 0.75f, 0f), radius * 0.55f).transform;
-            if (view._heldShield == null)
                 view._shieldMarker = MakeMarker(palette, "ShieldMarker", model.transform, palette.Shield,
                     new Vector3(-radius * 1.3f, bodyHeight * 0.75f, 0f), radius * 0.55f).transform;
+            }
 
             // A ring at the feet while an ability buff is running.
             var ability = new GameObject("AbilityRing");
@@ -193,67 +194,62 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         private const float GripAlongBlade = 0.34f;
 
-        private Transform _heldWeapon;
-        private Transform _heldSword;
-        private Transform _heldGreatsword;
-        private Transform _heldShield;
-        private WeaponType? _shownWeapon;
+        private Transform _mainHand;      // holder, on the right hand
+        private Transform _mainSword;
+        private Transform _mainMace;
+        private Transform _offHand;       // holder, on the left hand
+        private Transform _offSword;
+        private Transform _offShield;
+        private WeaponKind? _shownWeapon;
 
         /// <summary>
         /// The gear a gladiator carries, built once and re-parented to whichever archetype is
         /// currently on the arena.
         ///
         /// Re-parented rather than built per figure: there are three figures and a side only ever
-        /// fields one at a time, so a couple of objects moved on a pick beats a pile sitting
-        /// disabled - and it keeps the carried gear from having three copies of its state to keep
-        /// in step.
+        /// fields one at a time, so a few objects moved on a pick beats a pile sitting disabled -
+        /// and it keeps the carried gear from having three copies of its state to keep in step.
         ///
-        /// Each weapon sits in a holder rather than being parented to the hand itself, so the grip
+        /// Two hands, and everything a hand can hold is built into it. Which of them shows is the
+        /// whole of how the three weapons read apart on the arena: a blade in each fist, a blade and
+        /// a shield, or one hammer.
+        ///
+        /// Each piece sits in a holder rather than being parented to the hand itself, so the grip
         /// offset and the world size are set on the holder and the model inside it is left exactly
         /// as GearPrefabs made it.
         /// </summary>
         private void BuildCarriedGear(ViewPalette palette)
         {
-            if (palette == null) return;
+            if (palette == null || palette.SwordModel == null) return;
 
-            if (palette.SwordModel != null)
-            {
-                var holder = new GameObject("HeldWeapon");
-                holder.transform.SetParent(_model, false);
-                _heldWeapon = holder.transform;
+            var main = new GameObject("HeldWeapon");
+            main.transform.SetParent(_model, false);
+            _mainHand = main.transform;
+            _mainSword = Grip(palette.SwordModel, _mainHand, "Sword");
+            _mainMace = palette.MaceModel != null ? Grip(palette.MaceModel, _mainHand, "Mace") : null;
+            _mainHand.gameObject.SetActive(false);
 
-                _heldSword = Grip(palette.SwordModel, _heldWeapon, "Sword");
-                _heldGreatsword = palette.GreatswordModel != null
-                    ? Grip(palette.GreatswordModel, _heldWeapon, "Greatsword")
-                    : null;
-
-                _heldWeapon.gameObject.SetActive(false);
-            }
-
-            if (palette.ShieldModel != null)
-            {
-                var holder = new GameObject("HeldShield");
-                holder.transform.SetParent(_model, false);
-                _heldShield = holder.transform;
-
-                var shield = Instantiate(palette.ShieldModel, _heldShield).transform;
-                shield.name = "Model";
-                _heldShield.gameObject.SetActive(false);
-            }
+            var off = new GameObject("HeldOffHand");
+            off.transform.SetParent(_model, false);
+            _offHand = off.transform;
+            _offSword = Grip(palette.SwordModel, _offHand, "Sword");
+            _offShield = palette.ShieldModel != null ? Grip(palette.ShieldModel, _offHand, "Shield", 0f) : null;
+            _offHand.gameObject.SetActive(false);
         }
 
-        /// <summary>One weapon inside its holder, pushed along its blade so the fist is at the hilt.</summary>
-        private static Transform Grip(GameObject model, Transform holder, string name)
+        /// <summary>One piece inside its holder, pushed along its length so the fist is at the grip.</summary>
+        private static Transform Grip(GameObject model, Transform holder, string name, float alongLength = GripAlongBlade)
         {
             var instance = Instantiate(model, holder).transform;
             instance.name = name;
-            instance.localPosition = new Vector3(0f, GripAlongBlade, 0f);
+            instance.localPosition = new Vector3(0f, alongLength, 0f);
+            instance.gameObject.SetActive(false);
             return instance;
         }
 
         /// <summary>
-        /// Hangs the carried gear off the current figure's hand bones: shield in the left, weapon in
-        /// the right.
+        /// Hangs the carried gear off the current figure's hand bones: weapon in the right, whatever
+        /// the off hand carries in the left.
         ///
         /// Reached through the humanoid rig rather than by looking for bones by name - the avatar is
         /// what maps a rig's own naming onto LeftHand and RightHand, and hunting for "Hand_L" works
@@ -263,44 +259,47 @@ namespace ColosseumDuel.Gameplay.View
         {
             if (animator == null || !animator.isHuman) return;
 
-            Reparent(_heldWeapon, animator.GetBoneTransform(HumanBodyBones.RightHand), WeaponGrip);
-            Reparent(_heldShield, animator.GetBoneTransform(HumanBodyBones.LeftHand), ShieldGrip);
+            Reparent(_mainHand, animator.GetBoneTransform(HumanBodyBones.RightHand), WeaponGrip);
+            Reparent(_offHand, animator.GetBoneTransform(HumanBodyBones.LeftHand), OffHandGrip);
 
             // A new figure's bones carry a different scale, so the sizes are recomputed against
             // them rather than settled once at build time.
-            SetWorldSize(_heldShield, GearSizes.ShieldHeight);
             _shownWeapon = null;
         }
 
         /// <summary>Shows what the gladiator is actually carrying, at the size it was on the sand.</summary>
         private void SyncCarriedGear(GladiatorInstance g)
         {
-            if (_heldWeapon != null)
+            if (_mainHand == null) return;
+
+            bool armed = g.Weapon != WeaponKind.None;
+            if (_mainHand.gameObject.activeSelf != armed) _mainHand.gameObject.SetActive(armed);
+
+            bool offHanded = g.Weapon == WeaponKind.DualSwords || g.Weapon == WeaponKind.SwordAndShield;
+            if (_offHand != null && _offHand.gameObject.activeSelf != offHanded)
+                _offHand.gameObject.SetActive(offHanded);
+
+            if (armed && _shownWeapon != g.Weapon)
             {
-                bool armed = g.Weapon != WeaponType.None;
-                if (_heldWeapon.gameObject.activeSelf != armed) _heldWeapon.gameObject.SetActive(armed);
+                _shownWeapon = g.Weapon;
 
-                if (armed && _shownWeapon != g.Weapon)
-                {
-                    _shownWeapon = g.Weapon;
+                bool mace = GearSizes.UsesMace(g.Weapon) && _mainMace != null;
+                SetActive(_mainSword, !mace);
+                SetActive(_mainMace, mace);
 
-                    bool twoHanded = g.Weapon == WeaponType.TwoHanded && _heldGreatsword != null;
-                    SetActive(_heldSword, !twoHanded);
-                    SetActive(_heldGreatsword, twoHanded);
+                bool shield = g.Weapon == WeaponKind.SwordAndShield && _offShield != null;
+                SetActive(_offSword, offHanded && !shield);
+                SetActive(_offShield, shield);
 
-                    // The same length it had lying on the sand. It used to be shortened in the fist
-                    // by a factor of its own, so the weapon the player crossed the arena for arrived
-                    // visibly smaller than the one they had been looking at.
-                    SetWorldSize(_heldWeapon, GearSizes.WeaponLength(g.Weapon));
-                }
-
-                if (armed) TurnBladeFlatUpwards(_heldWeapon);
+                // The same length it had lying on the sand. It used to be shortened in the fist
+                // by a factor of its own, so the weapon the player crossed the arena for arrived
+                // visibly smaller than the one they had been looking at.
+                SetWorldSize(_mainHand, GearSizes.MainHandLength(g.Weapon));
+                SetWorldSize(_offHand, shield ? GearSizes.ShieldHeight : GearSizes.SwordLength);
             }
 
-            // Nobody carries a shield and a two-hander at once - ItemSystem refuses the pickup that
-            // would make the pair - so this is a report, not a rule.
-            if (_heldShield != null && _heldShield.gameObject.activeSelf != g.HasShield)
-                _heldShield.gameObject.SetActive(g.HasShield);
+            if (armed) TurnBladeFlatUpwards(_mainHand);
+            if (offHanded && !g.HasShield) TurnBladeFlatUpwards(_offHand);
         }
 
         /// <summary>
@@ -362,7 +361,7 @@ namespace ColosseumDuel.Gameplay.View
         // face round from +X to where the last pack's shield had it. Left at identity, both lay flat
         // across the chest, which is exactly what the first attempt rendered.
         private static readonly Quaternion WeaponGrip = Quaternion.Euler(0f, 0f, 90f);
-        private static readonly Quaternion ShieldGrip =
+        private static readonly Quaternion OffHandGrip =
             Quaternion.Euler(-90f, 0f, 0f) * Quaternion.Euler(0f, -90f, 0f);
 
         private static void Reparent(Transform gear, Transform hand, Quaternion grip)
@@ -515,7 +514,7 @@ namespace ColosseumDuel.Gameplay.View
             SetFill(_hpFill, g.Def.MaxHp > 0f ? g.Hp / g.Def.MaxHp : 0f);
             SetFill(_rageFill, g.Rage / GameConstants.RageMax);
 
-            SetActive(_weaponMarker, g.Weapon != WeaponType.None);
+            SetActive(_weaponMarker, g.Weapon != WeaponKind.None);
             SetActive(_shieldMarker, g.HasShield);
             SetActive(_abilityMarker, g.Buff.IsActive);
             SyncCarriedGear(g);

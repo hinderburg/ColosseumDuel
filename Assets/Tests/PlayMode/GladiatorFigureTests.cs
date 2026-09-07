@@ -109,18 +109,18 @@ namespace ColosseumDuel.Tests
 
             var g = _controller.Manager.State.P1.Active;
 
-            g.Weapon = WeaponType.OneHanded;
+            g.Weapon = WeaponKind.DualSwords;
             yield return null;
             Assert.AreEqual(GearSizes.SwordLength, held.lossyScale.y, 0.02f,
                 "a carried sword should be exactly as long as the one lying on the sand");
 
-            g.Weapon = WeaponType.TwoHanded;
+            g.Weapon = WeaponKind.TwoHandedMace;
             yield return null;
-            Assert.AreEqual(GearSizes.GreatswordLength, held.lossyScale.y, 0.02f,
-                "a carried two-hander should be exactly as long as the one lying on the sand");
+            Assert.AreEqual(GearSizes.MaceLength, held.lossyScale.y, 0.02f,
+                "a carried mace should be exactly as long as the one lying on the sand");
 
-            Assert.Greater(GearSizes.GreatswordLength, GearSizes.SwordLength,
-                "the two-hander has to be the bigger of the pair or nothing distinguishes them");
+            Assert.Greater(GearSizes.MaceLength, GearSizes.SwordLength,
+                "the mace has to be the bigger of the two or nothing distinguishes them");
         }
 
         [UnityTest]
@@ -187,48 +187,52 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            var weapon = FindIn("Player", "HeldWeapon");
-            var shield = FindIn("Player", "HeldShield");
-            if (weapon == null || shield == null)
+            var main = FindIn("Player", "HeldWeapon");
+            var off = FindIn("Player", "HeldOffHand");
+            if (main == null || off == null)
             {
-                Assert.Ignore("No gear models - the DoubleL pack is not imported here.");
+                Assert.Ignore("No gear models - the weapon pack is not imported here.");
                 yield break;
             }
 
-            Assert.IsFalse(weapon.gameObject.activeSelf, "he is carrying nothing yet");
-            Assert.IsFalse(shield.gameObject.activeSelf);
-
             var animator = FindIn("Player", $"Figure_{GladiatorId.Brutius}")
                 .GetComponentInChildren<Animator>(true);
-            Assert.AreSame(animator.GetBoneTransform(HumanBodyBones.RightHand), weapon.parent,
+            Assert.AreSame(animator.GetBoneTransform(HumanBodyBones.RightHand), main.parent,
                 "the weapon belongs in the right hand");
-            Assert.AreSame(animator.GetBoneTransform(HumanBodyBones.LeftHand), shield.parent,
-                "the shield belongs in the left");
+            Assert.AreSame(animator.GetBoneTransform(HumanBodyBones.LeftHand), off.parent,
+                "the off hand belongs in the left");
 
             var g = _controller.Manager.State.P1.Active;
-            g.Weapon = WeaponType.OneHanded;
-            g.HasShield = true;
+
+            // Each weapon fills the hands differently, and that is most of how the three read apart
+            // on the arena: a blade in each fist, a blade and a shield, or one hammer in both.
+            g.Weapon = WeaponKind.DualSwords;
             yield return null;
+            Assert.IsTrue(main.gameObject.activeSelf);
+            Assert.IsTrue(off.gameObject.activeSelf, "the second sword goes in the off hand");
+            Assert.IsTrue(off.Find("Sword").gameObject.activeSelf);
+            Assert.IsFalse(off.Find("Shield").gameObject.activeSelf);
+            float bladeLength = main.lossyScale.y;
 
-            Assert.IsTrue(weapon.gameObject.activeSelf);
-            Assert.IsTrue(shield.gameObject.activeSelf);
-            float oneHandedLength = weapon.localScale.y;
-
-            g.Weapon = WeaponType.TwoHanded;
+            g.Weapon = WeaponKind.SwordAndShield;
             yield return null;
+            Assert.IsTrue(off.Find("Shield").gameObject.activeSelf, "the shield goes in the off hand");
+            Assert.IsFalse(off.Find("Sword").gameObject.activeSelf);
 
-            // The difference between the two weapons is size and nothing else - it is the same model
-            // - so if the scale does not change there is no way to tell them apart on screen.
-            Assert.Greater(weapon.localScale.y, oneHandedLength,
-                "a two-hander should be visibly bigger than a one-hander");
-
-            g.Weapon = WeaponType.None;
-            g.HasShield = false;
+            g.Weapon = WeaponKind.TwoHandedMace;
             yield return null;
+            Assert.IsFalse(off.gameObject.activeSelf, "both hands are on the haft");
+            Assert.IsTrue(main.Find("Mace").gameObject.activeSelf);
+            Assert.IsFalse(main.Find("Sword").gameObject.activeSelf);
+            Assert.Greater(main.lossyScale.y, bladeLength,
+                "the mace has to read as the big weapon in the hand as well as on the sand");
 
-            Assert.IsFalse(weapon.gameObject.activeSelf, "a broken weapon should leave his hand");
-            Assert.IsFalse(shield.gameObject.activeSelf);
+            g.Weapon = WeaponKind.None;
+            yield return null;
+            Assert.IsFalse(main.gameObject.activeSelf, "empty hands are empty");
+            Assert.IsFalse(off.gameObject.activeSelf);
         }
+
 
         private static IEnumerator RunUntil(System.Func<bool> done, float maxSeconds)
         {

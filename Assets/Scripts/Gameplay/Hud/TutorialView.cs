@@ -159,10 +159,13 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>What a pickup is worth, in as few words as will fit above it.</summary>
         private static string DescribeItem(ArenaItem item)
         {
-            if (item.Kind == ItemKind.Shield) return "Shield: half the damage";
-            return item.WeaponType == WeaponType.TwoHanded
-                ? "Two-handed: hits in passing"
-                : "Sword: half again the damage";
+            switch (item.Kind)
+            {
+                case WeaponKind.SwordAndShield: return "Sword and shield: half the damage taken";
+                case WeaponKind.TwoHandedMace: return "Mace: one heavy blow, knocks back";
+                case WeaponKind.DualSwords: return "Twin swords: two blows, and bleeding";
+                default: return "A weapon";
+            }
         }
 
         public void Sync(MatchState state)
@@ -315,11 +318,11 @@ namespace ColosseumDuel.Gameplay.Hud
         private void SyncInstruction(MatchState state)
         {
             var player = state.P1.Active;
-            bool armed = player != null && player.Weapon != WeaponType.None;
+            bool armed = player != null && player.WeaponIsGilded;
 
             _instruction.SetText(armed
-                ? "Sword in hand - tap toward the enemy and swing"
-                : "Tap just past the sword - you pick it up on the way");
+                ? "Gilded and stronger - tap toward the enemy and swing"
+                : "Tap just past the gold weapon - you take it on the way");
 
             // The ring marks the spot only while it is still the thing to do.
             bool marking = !armed && state.Phase == MatchPhase.Planning

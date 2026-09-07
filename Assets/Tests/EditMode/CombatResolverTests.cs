@@ -1,136 +1,178 @@
+using System.Linq;
 using ColosseumDuel.Core;
 using NUnit.Framework;
 
 namespace ColosseumDuel.Tests
 {
     /// <summary>
-    /// Pins the damage table from the design doc (GDD sections 6 and 7) so a refactor of
-    /// CombatResolver cannot silently change the feel of a fight.
+    /// Pins the damage table so a refactor of CombatResolver cannot silently change the feel of a
+    /// fight. A blow is now the fighter's own stat put through his weapon, so both halves are here.
     /// </summary>
     public class CombatResolverTests
     {
         private const float Tol = 0.0001f;
 
-        private static GladiatorInstance Brutius() => new GladiatorInstance(GladiatorDef.Brutius);
+        /// <summary>Brutius with nothing in his hands, whatever he is trained in.</summary>
+        private static GladiatorInstance Bare()
+            => new GladiatorInstance(GladiatorDef.Brutius) { Weapon = WeaponKind.None };
+
+        private static GladiatorInstance With(WeaponKind kind, bool gilded = false)
+        {
+            var g = new GladiatorInstance(GladiatorDef.Brutius) { Weapon = kind, WeaponIsGilded = gilded };
+            return g;
+        }
 
         /// <summary>
         /// Expectations below are fractions of this rather than absolute numbers.
         ///
-        /// What CombatResolver decides is the multipliers - half on a pass-by, 0.7 while guarding,
-        /// 0.5 behind a shield - and those are what these tests are for. Restating the stat block in
-        /// every assertion only meant that a balance pass on the damage numbers broke ten tests that
-        /// had nothing to say about it. The stat block itself is pinned once, in TheDamageTable.
+        /// What CombatResolver decides is the multipliers, and those are what these tests are for.
+        /// Restating the stat block in every assertion only meant that a balance pass on the damage
+        /// numbers broke ten tests that had nothing to say about it. The stat block is pinned once,
+        /// in TheStatTable.
         /// </summary>
         private static float Base => GladiatorDef.Brutius.Damage;
 
         [Test]
-        public void TheDamageTable()
+        public void TheStatTable()
         {
-            // The one place the actual numbers are stated. Doubled in one balance pass and raised
-            // another quarter in the next; everything else in this file checks the multipliers
-            // applied on top of them, so a future pass touches this test alone.
-            Assert.AreEqual(25f, GladiatorDef.Brutius.Damage, Tol);
-            Assert.AreEqual(32.5f, GladiatorDef.Barbarius.Damage, Tol);
-            Assert.AreEqual(17.5f, GladiatorDef.Hilius.Damage, Tol);
+            // The one place the actual numbers are stated. They dropped by a factor of ten when the
+            // weapon started carrying a multiplier of its own; everything else in this file checks
+            // what is applied on top, so a future balance pass touches this test alone.
+            Assert.AreEqual(200f, GladiatorDef.Brutius.MaxHp, Tol);
+            Assert.AreEqual(10f, GladiatorDef.Brutius.Damage, Tol);
+            Assert.AreEqual(10f, GladiatorDef.Brutius.Speed, Tol);
+
+            Assert.AreEqual(100f, GladiatorDef.Barbarius.MaxHp, Tol);
+            Assert.AreEqual(13f, GladiatorDef.Barbarius.Damage, Tol);
+            Assert.AreEqual(15f, GladiatorDef.Barbarius.Speed, Tol);
+
+            Assert.AreEqual(150f, GladiatorDef.Hilius.MaxHp, Tol);
+            Assert.AreEqual(7f, GladiatorDef.Hilius.Damage, Tol);
+            Assert.AreEqual(20f, GladiatorDef.Hilius.Speed, Tol);
         }
 
         [Test]
-        public void Collision_Unarmed_DealsFullBaseDamage()
+        public void EachArchetypeIsTrainedInADifferentWeapon()
         {
-            var a = Brutius();
-            var b = Brutius();
-            float dealt = CombatResolver.DealDamage(a, b, isCollision: true);
-            Assert.AreEqual(Base, dealt, Tol);
-            Assert.AreEqual(GladiatorDef.Brutius.MaxHp - Base, b.Hp, Tol);
+            // Not decoration: it is what makes the three roster slots a composition rather than a
+            // preference, and it is the only thing the green weapon badge on a card is reporting.
+            var skills = GladiatorDef.All.Select(d => d.SkilledWith).ToList();
+            CollectionAssert.AllItemsAreUnique(skills);
+            CollectionAssert.AreEquivalent(WeaponDef.All.Select(w => w.Kind).ToList(), skills);
         }
 
         [Test]
-        public void PassBy_Unarmed_DealsHalfDamage()
+        public void TheWeaponTable()
         {
-            var a = Brutius();
-            var b = Brutius();
-            Assert.AreEqual(Base * 0.5f, CombatResolver.DealDamage(a, b, isCollision: false), Tol);
+            Assert.AreEqual(0.7f, WeaponDef.DualSwords.DamageMultiplier, Tol);
+            Assert.AreEqual(2, WeaponDef.DualSwords.Attacks);
+            Assert.IsTrue(WeaponDef.DualSwords.Bleeds);
+
+            Assert.AreEqual(1f, WeaponDef.SwordAndShield.DamageMultiplier, Tol);
+            Assert.AreEqual(1, WeaponDef.SwordAndShield.Attacks);
+            Assert.AreEqual(0.5f, WeaponDef.SwordAndShield.IncomingDamageMultiplier, Tol);
+
+            Assert.AreEqual(1.5f, WeaponDef.TwoHandedMace.DamageMultiplier, Tol);
+            Assert.AreEqual(1, WeaponDef.TwoHandedMace.Attacks);
+            Assert.Greater(WeaponDef.TwoHandedMace.Knockback, 0f);
+
+            // The three have to trade against each other, or two of the roster slots are decoration.
+            // Twin swords land less per blow than the mace but twice as often; the shield gives up
+            // the mace's weight for the only damage reduction any weapon carries.
+            Assert.Less(WeaponDef.DualSwords.DamageMultiplier, WeaponDef.TwoHandedMace.DamageMultiplier);
+            Assert.Greater(WeaponDef.DualSwords.Attacks * WeaponDef.DualSwords.DamageMultiplier,
+                WeaponDef.SwordAndShield.Attacks * WeaponDef.SwordAndShield.DamageMultiplier);
+            Assert.Less(WeaponDef.SwordAndShield.IncomingDamageMultiplier, 1f);
         }
 
         [Test]
-        public void OneHandedAxe_Multiplies15x_OnBothCollisionAndPassBy()
+        public void AWeaponMultipliesTheWieldersOwnDamage()
         {
-            var a = Brutius();
-            a.Weapon = WeaponType.OneHanded;
-            Assert.AreEqual(Base * 1.5f, CombatResolver.DealDamage(a, Brutius(), isCollision: true), Tol);
-
-            var c = Brutius();
-            c.Weapon = WeaponType.OneHanded;
-            Assert.AreEqual(Base * 0.75f, CombatResolver.DealDamage(c, Brutius(), isCollision: false), Tol);
+            Assert.AreEqual(Base * 0.7f, CombatResolver.DealDamage(With(WeaponKind.DualSwords), Bare()), Tol);
+            Assert.AreEqual(Base, CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), Bare()), Tol);
+            Assert.AreEqual(Base * 1.5f, CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace), Bare()), Tol);
         }
 
         [Test]
-        public void TwoHandedTrident_TurnsAPassByIntoFullDamage_ButDoesNotBoostCollisions()
+        public void AGildedWeaponHitsHarderThanTheOneHeWalkedInWith()
         {
-            var passer = Brutius();
-            passer.Weapon = WeaponType.TwoHanded;
-            Assert.AreEqual(Base, CombatResolver.DealDamage(passer, Brutius(), isCollision: false), Tol,
-                "a trident pass-by should land the full 100%, not the usual 50%");
+            // The whole reason to break off and cross a mined arena for one.
+            float plain = CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace), Bare());
+            float gilded = CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace, gilded: true), Bare());
 
-            var crasher = Brutius();
-            crasher.Weapon = WeaponType.TwoHanded;
-            Assert.AreEqual(Base, CombatResolver.DealDamage(crasher, Brutius(), isCollision: true), Tol,
-                "a trident gives no bonus on a head-on collision");
+            Assert.AreEqual(plain * GameConstants.GildedWeaponMult, gilded, Tol);
+            Assert.Greater(gilded, plain);
         }
 
         [Test]
         public void Defending_Reduces30Percent()
         {
-            var d = Brutius();
+            var d = Bare();
             d.PlannedAction = ActionType.Defend;
-            Assert.AreEqual(Base * 0.7f, CombatResolver.DealDamage(Brutius(), d, isCollision: true), Tol);
+            Assert.AreEqual(Base * 0.7f, CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), d), Tol);
         }
 
         [Test]
-        public void Shield_Reduces50Percent_AndStacksMultiplicativelyWithDefend()
+        public void AShieldHalvesWhatItsCarrierTakes_AndStacksWithDefending()
         {
-            var shielded = Brutius();
-            shielded.HasShield = true;
-            Assert.AreEqual(Base * 0.5f, CombatResolver.DealDamage(Brutius(), shielded, isCollision: true), Tol);
+            var shielded = With(WeaponKind.SwordAndShield);
+            Assert.AreEqual(Base * 0.5f,
+                CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), shielded), Tol);
 
-            var both = Brutius();
-            both.HasShield = true;
+            var both = With(WeaponKind.SwordAndShield);
             both.PlannedAction = ActionType.Defend;
-            Assert.AreEqual(Base * 0.35f, CombatResolver.DealDamage(Brutius(), both, isCollision: true), Tol,
+            Assert.AreEqual(Base * 0.35f,
+                CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), both), Tol,
                 "0.5 shield x 0.7 defend = 0.35");
         }
 
         [Test]
         public void FuryBuff_Reduces25PercentOfIncomingDamage()
         {
-            var furious = new GladiatorInstance(GladiatorDef.Barbarius);
+            var furious = Bare();
             furious.Buff = new ActiveBuff { Key = AbilityKey.Fury, CyclesLeft = 2 };
-            Assert.AreEqual(Base * 0.75f, CombatResolver.DealDamage(Brutius(), furious, isCollision: true), Tol);
+            Assert.AreEqual(Base * 0.75f,
+                CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), furious), Tol);
         }
 
         [Test]
-        public void WeaponAndShield_AreSingleUse()
+        public void AWeaponSurvivesTheBlowItLands()
         {
-            var attacker = Brutius();
-            attacker.Weapon = WeaponType.OneHanded;
-            var defender = Brutius();
-            defender.HasShield = true;
+            // It used to break after one hit, which made sense while a weapon was a bonus lying on
+            // the floor. Now it is half of who a gladiator is: one that vanished after a single
+            // exchange would leave him fighting the rest of the match as nobody in particular.
+            var attacker = With(WeaponKind.TwoHandedMace, gilded: true);
+            var defender = With(WeaponKind.SwordAndShield);
 
-            CombatResolver.DealDamage(attacker, defender, isCollision: true);
+            CombatResolver.DealDamage(attacker, defender);
 
-            Assert.AreEqual(WeaponType.None, attacker.Weapon, "the axe should break after one hit");
-            Assert.IsFalse(defender.HasShield, "the shield should break after one block");
+            Assert.AreEqual(WeaponKind.TwoHandedMace, attacker.Weapon);
+            Assert.IsTrue(attacker.WeaponIsGilded);
+            Assert.IsTrue(defender.HasShield, "a shield is not spent by being hit");
+        }
 
-            Assert.AreEqual(Base, CombatResolver.DealDamage(attacker, defender, isCollision: true), Tol,
-                "the second hit is unarmed against an unshielded target");
+        [Test]
+        public void MongooseDoublesWhateverTheWeaponAlreadySwings()
+        {
+            // Multiplied, not overridden: the ability says "twice as many attacks", and a weapon
+            // that already strikes twice should not have half of it quietly cancelled.
+            var single = With(WeaponKind.TwoHandedMace);
+            var pair = With(WeaponKind.DualSwords);
+            Assert.AreEqual(1, single.AttacksPerCycle);
+            Assert.AreEqual(2, pair.AttacksPerCycle);
+
+            single.Buff = new ActiveBuff { Key = AbilityKey.Mongoose, CyclesLeft = 2 };
+            pair.Buff = new ActiveBuff { Key = AbilityKey.Mongoose, CyclesLeft = 2 };
+            Assert.AreEqual(2, single.AttacksPerCycle);
+            Assert.AreEqual(4, pair.AttacksPerCycle);
         }
 
         [Test]
         public void LethalDamage_ClampsHpAtZero_AndMarksDead()
         {
-            var victim = Brutius();
+            var victim = Bare();
             victim.Hp = 3f;
-            CombatResolver.DealDamage(Brutius(), victim, isCollision: true);
+            CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace), victim);
             Assert.AreEqual(0f, victim.Hp, Tol);
             Assert.IsFalse(victim.Alive);
         }

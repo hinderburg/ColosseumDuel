@@ -383,7 +383,7 @@ namespace ColosseumDuel.EditorTools
             // built-in Standard shader, which under URP draws magenta.
             GearPrefabs.EnsureAll();
             palette.SwordModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.SwordPath);
-            palette.GreatswordModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.GreatswordPath);
+            palette.MaceModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.MacePath);
             palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.ShieldPath);
             palette.HelmetModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.HelmetPath);
             if (palette.SwordModel == null)

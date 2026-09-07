@@ -28,20 +28,19 @@ namespace ColosseumDuel.EditorTools
         private const string MaterialsDir = "Assets/Materials";
 
         public const string SwordPath = PrefabDir + "/Gear_Sword.prefab";
-        public const string GreatswordPath = PrefabDir + "/Gear_Greatsword.prefab";
+        public const string MacePath = PrefabDir + "/Gear_Mace.prefab";
         public const string ShieldPath = PrefabDir + "/Gear_Shield.prefab";
         public const string HelmetPath = PrefabDir + "/Gear_Helmet.prefab";
 
         /// <summary>
         /// Which of the pack's models each piece of gear is.
         ///
-        /// A short blade for the one-handed sword and a long one for the two-hander, rather than one
-        /// model at two scales the way the previous pack forced. The size difference still carries -
-        /// it is what tells the player, from above, which weapon they are running at and whether
-        /// picking it up will cost them their shield - but now the silhouettes differ too.
+        /// One model per thing a gladiator can be holding. The twin-sword fighter carries two of
+        /// the sword, so there is no separate model for the pair - what the player reads is one in
+        /// each hand, and a single mesh reused is also a smaller build.
         /// </summary>
         private const string SwordModel = "Shortsword_01";
-        private const string GreatswordModel = "Longsword_02";
+        private const string MaceModel = "Battle_Hammer_01";
         private const string ShieldModel = "Heater_Shield_01";
         private const string HelmetModel = "Tophelm";
 
@@ -75,7 +74,7 @@ namespace ColosseumDuel.EditorTools
             var helmet = HelmetMaterial("Gear_Helmet", Color.white);
 
             bool ok = Build(SwordModel, SwordPath, steel)
-                      & Build(GreatswordModel, GreatswordPath, steel)
+                      & Build(MaceModel, MacePath, steel)
                       & Build(ShieldModel, ShieldPath, shield)
                       & Build(HelmetModel, HelmetPath, helmet);
 

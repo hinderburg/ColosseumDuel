@@ -124,7 +124,7 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         [Header("Gear")]
         public GameObject SwordModel;
-        public GameObject GreatswordModel;
+        public GameObject MaceModel;
         public GameObject ShieldModel;
 
         /// <summary>Worn on the head, tinted with the owning side's colour.</summary>

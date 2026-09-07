@@ -168,15 +168,12 @@ namespace ColosseumDuel.Core
             float reach = player.DashReach();
             var forward = player.Facing.sqrMagnitude > 0.0001f ? player.Facing.normalized : Vector2.up;
 
-            var sword = State.Items.Items.FirstOrDefault(i => i.Kind == ItemKind.Weapon);
-            if (sword != null)
-            {
-                sword.Pos = player.Pos + forward * (reach * 0.55f);
-
-                // One-handed on purpose. A trident would refuse a shield later and turn the first
-                // thing the player is ever told to do into a rule they have not been taught yet.
-                sword.WeaponType = WeaponType.OneHanded;
-            }
+            // The gilded copy of his own weapon, so the first thing the player is ever told to do
+            // hands them a straight upgrade rather than a different way of fighting they have not
+            // been taught yet - and so the lesson is the same lesson whoever they picked.
+            var sword = State.Items.Items.FirstOrDefault(i => i.Kind == player.Def.SkilledWith)
+                        ?? State.Items.Items.FirstOrDefault();
+            if (sword != null) sword.Pos = player.Pos + forward * (reach * 0.55f);
 
             State.TutorialTapPoint = player.Pos + forward * (reach * 0.85f);
 
@@ -476,7 +473,7 @@ namespace ColosseumDuel.Core
 
             // Both land every attack they still have this cycle - Mongoose (Hilius) gets two.
             // Weapons are single-use, so a second swing is always unarmed.
-            ExchangeBlows(a, b, isCollision: true);
+            ExchangeBlows(a, b);
 
             // knock the two apart along the line between them so they can disengage next cycle
             Vector2 mid = (a.Pos + b.Pos) * 0.5f;
@@ -499,7 +496,7 @@ namespace ColosseumDuel.Core
 
         private void ResolvePassBy(GladiatorInstance a, GladiatorInstance b)
         {
-            ExchangeBlows(a, b, isCollision: false);
+            ExchangeBlows(a, b);
         }
 
         /// <summary>
@@ -510,7 +507,7 @@ namespace ColosseumDuel.Core
         /// </summary>
         /// <param name="a">Always the player's active gladiator.</param>
         /// <param name="b">Always the bot's.</param>
-        private void ExchangeBlows(GladiatorInstance a, GladiatorInstance b, bool isCollision)
+        private void ExchangeBlows(GladiatorInstance a, GladiatorInstance b)
         {
             for (int exchange = 0; a.AttacksRemainingThisCycle > 0 || b.AttacksRemainingThisCycle > 0; exchange++)
             {
@@ -525,15 +522,40 @@ namespace ColosseumDuel.Core
                 // evaluated - so nobody watching would mean nobody taking damage.
                 if (aSwings)
                 {
-                    float dealt = CombatResolver.DealDamage(a, b, isCollision);
+                    float dealt = CombatResolver.DealDamage(a, b);
                     Damaged?.Invoke(PlayerSide.Bot, dealt);
                 }
                 if (bSwings)
                 {
-                    float dealt = CombatResolver.DealDamage(b, a, isCollision);
+                    float dealt = CombatResolver.DealDamage(b, a);
                     Damaged?.Invoke(PlayerSide.P1, dealt);
                 }
+
+                // After the exchange, not between the two halves of it: shoving the defender out of
+                // reach mid-exchange would rob him of the return blow he is owed for standing there.
+                if (aSwings) Shove(a, b);
+                if (bSwings) Shove(b, a);
             }
+        }
+
+        /// <summary>
+        /// Throws the target back along the line between the pair, if the weapon does that.
+        ///
+        /// The mace's whole character. Bounced off the wall here rather than left to the next step,
+        /// for the same reason a collision is: a shove that lands as the phase ends would otherwise
+        /// leave a gladiator standing outside the arena for the length of a planning phase.
+        /// </summary>
+        private static void Shove(GladiatorInstance attacker, GladiatorInstance target)
+        {
+            float distance = attacker.WeaponDef.Knockback;
+            if (distance <= 0f || !target.Alive) return;
+
+            var away = target.Pos - attacker.Pos;
+            if (away.sqrMagnitude < 0.0001f) away = Vector2.up;
+
+            target.Pos += away.normalized * distance;
+            var still = Vector2.zero;
+            ArenaShape.Bounce(ref target.Pos, ref still, GameConstants.GladiatorRadius);
         }
 
         private void EndActionPhase()

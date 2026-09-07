@@ -255,8 +255,8 @@ namespace ColosseumDuel.Tests
             var p1 = m.State.P1.Active;
             p1.Rage = GameConstants.RageMax;
             p1.ActivateAbility();
-            p1.Weapon = WeaponType.TwoHanded;
-            p1.HasShield = true;
+            p1.Weapon = WeaponKind.TwoHandedMace;
+            p1.WeaponIsGilded = true;
             p1.Hp = 5f;
             m.State.Cycle = 9;
 
@@ -276,8 +276,8 @@ namespace ColosseumDuel.Tests
                 Assert.AreEqual(g.Def.MaxHp, g.Hp, Tol);
                 Assert.AreEqual(0f, g.Rage, Tol, $"{g.Def.Name} carried rage into a fresh match");
                 Assert.IsFalse(g.Buff.IsActive, $"{g.Def.Name} carried a running ability into a fresh match");
-                Assert.AreEqual(WeaponType.None, g.Weapon);
-                Assert.IsFalse(g.HasShield);
+                Assert.IsFalse(g.WeaponIsGilded,
+                    $"{g.Def.Name} carried a gilded weapon into a fresh match");
             }
         }
 
@@ -294,13 +294,11 @@ namespace ColosseumDuel.Tests
                 m.SubmitPick(PlayerSide.P1, def.Id);
 
                 var player = m.State.P1.Active;
-                var sword = m.State.Items.Items.Find(i => i.Kind == ItemKind.Weapon);
+                var sword = m.State.Items.Items.Find(i => i.Kind == def.SkilledWith);
 
                 Assert.IsNotNull(sword);
                 Assert.Less(Vector2.Distance(player.Pos, sword.Pos), player.DashReach(),
-                    $"{def.Name} cannot reach the sword the tutorial tells him to run through");
-                Assert.AreEqual(WeaponType.OneHanded, sword.WeaponType,
-                    "a trident would refuse a shield later, by a rule nobody has been taught yet");
+                    $"{def.Name} cannot reach the weapon the tutorial tells him to run through");
 
                 // And the tap point has to be past it, or running to it stops short of the pickup.
                 float toSword = Vector2.Distance(player.Pos, sword.Pos);
@@ -433,10 +431,16 @@ namespace ColosseumDuel.Tests
             while (attacker.AttacksRemainingThisCycle > 0)
             {
                 attacker.AttacksRemainingThisCycle--;
-                CombatResolver.DealDamage(attacker, victim, isCollision: true);
+                CombatResolver.DealDamage(attacker, victim);
             }
 
-            Assert.AreEqual(GladiatorDef.Brutius.MaxHp - GladiatorDef.Hilius.Damage * 2f, victim.Hp, Tol,
+            // Hilius fights with sword and shield, so his own blow is his flat stat - and Mongoose
+            // doubles the one attack his weapon swings. Against a defender who is also behind a
+            // shield, each blow lands at half.
+            float perHit = GladiatorDef.Hilius.Damage
+                           * WeaponDef.SwordAndShield.DamageMultiplier
+                           * WeaponDef.Get(GladiatorDef.Brutius.SkilledWith).IncomingDamageMultiplier;
+            Assert.AreEqual(GladiatorDef.Brutius.MaxHp - perHit * 2f, victim.Hp, Tol,
                 "two swings should land two full hits");
         }
 

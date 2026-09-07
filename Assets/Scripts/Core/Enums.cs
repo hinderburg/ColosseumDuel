@@ -18,18 +18,16 @@ namespace ColosseumDuel.Core
         Defend
     }
 
-    public enum WeaponType
+    /// <summary>
+    /// The three ways to fight. See WeaponDef for what each one does; every gladiator is trained in
+    /// exactly one of them and starts the match holding it.
+    /// </summary>
+    public enum WeaponKind
     {
         None,
-        OneHanded, // axe: 1.5x damage
-        TwoHanded  // trident: full damage on a pass-by hit instead of the usual 50%
-    }
-
-    public enum ItemKind
-    {
-        Weapon,
-        Shield,
-        Random // a "random" pickup slot - resolve to whichever bonus items the design calls for
+        DualSwords,
+        SwordAndShield,
+        TwoHandedMace
     }
 
     public enum PlayerSide

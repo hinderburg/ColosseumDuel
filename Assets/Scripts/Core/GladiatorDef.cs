@@ -19,6 +19,23 @@ namespace ColosseumDuel.Core
         public readonly string AbilityDescription;
 
         /// <summary>
+        /// The weapon he is trained in. He starts the match holding it, and anything else he picks
+        /// up off the sand is marked in the HUD as outside his training.
+        /// </summary>
+        public readonly WeaponKind SkilledWith;
+
+        /// <summary>
+        /// How wide and how tall he is against an ordinary figure.
+        ///
+        /// Three archetypes that fought differently and looked identical was the standing complaint:
+        /// on an arena this size the only thing separating them was the colour of a body, and colour
+        /// is also what the danger rings and the hazard use. Silhouette reads first and reads from
+        /// further away - a broad one is the heavy, a small thin one is the fast one.
+        /// </summary>
+        public readonly float BuildWidth;
+        public readonly float BuildHeight;
+
+        /// <summary>
         /// Shown on the roster cards. Nothing consumes it yet - progression between matches is a
         /// design question the doc leaves open - so every archetype starts at 1 and the HUD simply
         /// reports whatever is here.
@@ -26,7 +43,8 @@ namespace ColosseumDuel.Core
         public readonly int Level;
 
         public GladiatorDef(GladiatorId id, string name, float maxHp, float damage, float speed,
-            AbilityKey ability, string abilityName, string abilityDescription, int level = 1)
+            AbilityKey ability, string abilityName, string abilityDescription,
+            WeaponKind skilledWith, float buildWidth = 1f, float buildHeight = 1f, int level = 1)
         {
             Id = id;
             Name = name;
@@ -36,23 +54,34 @@ namespace ColosseumDuel.Core
             Ability = ability;
             AbilityName = abilityName;
             AbilityDescription = abilityDescription;
+            SkilledWith = skilledWith;
+            BuildWidth = buildWidth;
+            BuildHeight = buildHeight;
             Level = level;
         }
 
+        // The stat line is deliberately low against the old one - a tenth of what it was. Damage is
+        // now multiplied by the weapon rather than standing on its own, and the weapons range from
+        // seven tenths to one and a half, so the numbers here are what a fighter is worth before
+        // anyone hands him anything.
+
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Brutius", maxHp: 200f, damage: 25f, speed: 10f,
+            GladiatorId.Brutius, "Brutius", maxHp: 200f, damage: 10f, speed: 10f,
             ability: AbilityKey.Spirit, abilityName: "Spirit",
-            abilityDescription: "+50% speed for 2 cycles");
+            abilityDescription: "+50% speed for 2 cycles",
+            skilledWith: WeaponKind.TwoHandedMace, buildWidth: 1.2f);
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Barbarius", maxHp: 100f, damage: 32.5f, speed: 15f,
+            GladiatorId.Barbarius, "Barbarius", maxHp: 100f, damage: 13f, speed: 15f,
             ability: AbilityKey.Fury, abilityName: "Fury",
-            abilityDescription: "-25% damage taken for 2 cycles");
+            abilityDescription: "-25% damage taken for 2 cycles",
+            skilledWith: WeaponKind.DualSwords);
 
         public static readonly GladiatorDef Hilius = new GladiatorDef(
-            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 17.5f, speed: 20f,
+            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 7f, speed: 20f,
             ability: AbilityKey.Mongoose, abilityName: "Mongoose",
-            abilityDescription: "2 attacks per cycle, for 2 cycles");
+            abilityDescription: "2 attacks per cycle, for 2 cycles",
+            skilledWith: WeaponKind.SwordAndShield, buildWidth: 0.85f, buildHeight: 0.85f);
 
         public static readonly IReadOnlyList<GladiatorDef> All = new List<GladiatorDef>
         {
