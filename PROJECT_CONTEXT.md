@@ -1053,6 +1053,7 @@ Attack» проходит в обоих случаях — замах всегд
 | `Matthew Guz / Status and Auras FREE` | Ауры и статусы (резерв) |
 | `Crusader_Castle` (Crusader Weapon) | Мечи, щиты и шлемы: из них собираются gear-префабы |
 | `Low Poly Trim Sheet Asset Collection` | Декор (резерв) |
+| `ExplosiveLLC` (RPG Character Mecanim Animation Pack FREE) | Анимации: бег во все стороны, падение, отброс назад |
 
 ---
 
