@@ -45,8 +45,10 @@ MonoBehaviour:
   GallerySlab: {fileID: 1506131158205574518, guid: eef496009fed37a4ab7f99fd9defacf2, type: 3}
   GalleryRail: {fileID: 3071055550126371973, guid: b178953fcd2b0ec44be67c9b6dd8f930, type: 3}
   WallStone: {fileID: 2100000, guid: fda53a19301cca049b57f93ba5929efd, type: 2}
-  SwordModel: {fileID: 919132149155446097, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
-  ShieldModel: {fileID: 919132149155446097, guid: 08aecb816b6b4194a9c2897afa4f9148, type: 3}
+  SwordModel: {fileID: 8355507498074448756, guid: 3803e291bcc87d64e850c759e73d0275, type: 3}
+  GreatswordModel: {fileID: 3465342437680790557, guid: e65fa52a3ddc6ae4dbacfe1eb24d5321, type: 3}
+  ShieldModel: {fileID: 8736053284591058948, guid: e046966197c3f7c4cbf49c2a615a71de, type: 3}
+  HelmetModel: {fileID: 4097255080222555793, guid: 4af2d004a52a4e745a543a2c1cc3ed35, type: 3}
   Vignette: {fileID: 21300000, guid: e6483163c415f7e4983af56901dba18e, type: 3}
   GladiatorFigures:
   - {fileID: 2668578167718699114, guid: 9168f9738c480124fadf9ac585529992, type: 3}

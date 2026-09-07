@@ -62,9 +62,14 @@ namespace ColosseumDuel.Tests
 
             foreach (var def in GladiatorDef.All)
             {
-                var body = FindIn("Player", $"Figure_{def.Id}")
-                    .GetComponentsInChildren<Renderer>(true)
-                    .First(r => r.name != "Helmet");
+                var figure = FindIn("Player", $"Figure_{def.Id}");
+
+                // Everything outside the helmet. Picked by where it sits rather than by its name:
+                // the helmet is a model now and its renderer is a child called something else, so
+                // "not the one called Helmet" quietly started matching the helmet.
+                var helmetRoot = figure.transform.Find("Helmet");
+                var body = figure.GetComponentsInChildren<Renderer>(true)
+                    .First(r => helmetRoot == null || !r.transform.IsChildOf(helmetRoot));
 
                 Assert.AreSame(palette.BodyMaterialFor(def.Id), body.sharedMaterial,
                     $"{def.Name}'s body should carry his own archetype colour");
@@ -72,12 +77,50 @@ namespace ColosseumDuel.Tests
 
             // Helmets say who owns the gladiator, which is what keeps two of the same archetype
             // apart when both sides field one.
-            var playerHelmet = FindIn("Player", "Helmet").GetComponent<Renderer>();
-            var botHelmet = FindIn("Bot", "Helmet").GetComponent<Renderer>();
+            var playerHelmet = FindIn("Player", "Helmet").GetComponentInChildren<Renderer>(true);
+            var botHelmet = FindIn("Bot", "Helmet").GetComponentInChildren<Renderer>(true);
+            Assert.IsNotNull(playerHelmet, "the helmet has no renderer - nothing would be drawn");
 
             Assert.AreSame(palette.PlayerHelmet, playerHelmet.sharedMaterial);
             Assert.AreSame(palette.BotHelmet, botHelmet.sharedMaterial);
             Assert.AreNotSame(playerHelmet.sharedMaterial, botHelmet.sharedMaterial);
+        }
+
+        /// <summary>
+        /// A weapon is the same size in the fist as it was on the sand.
+        ///
+        /// It used to shrink: the carried copy was scaled by a factor of its own on top of whatever
+        /// the hand bone inherited, so the two-hander the player crossed the arena for arrived
+        /// visibly smaller than the thing they had been looking at, and the one signal that said
+        /// which weapon they were carrying was gone the moment they had it.
+        ///
+        /// Measured off the holder's world scale rather than off a bounding box: every gear prefab
+        /// is one unit along its blade, so the scale is the length, and a bounding box on a sword
+        /// held at an angle measures the diagonal instead.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ACarriedWeaponIsTheSizeItWasOnTheSand()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Hilius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var held = FindIn("Player", "HeldWeapon");
+            if (held == null) Assert.Ignore("No gear models imported; nothing is carried.");
+
+            var g = _controller.Manager.State.P1.Active;
+
+            g.Weapon = WeaponType.OneHanded;
+            yield return null;
+            Assert.AreEqual(GearSizes.SwordLength, held.lossyScale.y, 0.02f,
+                "a carried sword should be exactly as long as the one lying on the sand");
+
+            g.Weapon = WeaponType.TwoHanded;
+            yield return null;
+            Assert.AreEqual(GearSizes.GreatswordLength, held.lossyScale.y, 0.02f,
+                "a carried two-hander should be exactly as long as the one lying on the sand");
+
+            Assert.Greater(GearSizes.GreatswordLength, GearSizes.SwordLength,
+                "the two-hander has to be the bigger of the pair or nothing distinguishes them");
         }
 
         [UnityTest]

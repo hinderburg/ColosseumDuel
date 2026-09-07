@@ -26,10 +26,24 @@ namespace ColosseumDuel.EditorTools
         /// </summary>
         public const float TargetHeight = 3.75f;
 
+        /// <summary>Where the helmet's centre sits up the figure, as a fraction of its height.</summary>
+        private const float HelmetHeightFraction = 0.885f;
+
+        /// <summary>
+        /// How tall the helmet is, as a fraction of the figure.
+        ///
+        /// Big enough to swallow the model's own head rather than to match it: the helm is hollow,
+        /// and one sized to the head leaves the head showing through the eye slit and over the top.
+        /// </summary>
+        private const float HelmetSizeFraction = 0.135f;
+
+        /// <summary>How far up its own height the helmet rides above the head bone.</summary>
+        private const float HelmetLiftFromNeck = 0.28f;
+
         public static string PathFor(GladiatorId id) => $"{PrefabDir}/Gladiator_{id}.prefab";
 
         /// <summary>Builds or rebuilds all three. Returns false if the model is not imported.</summary>
-        public static bool EnsureAll(Mesh helmetMesh)
+        public static bool EnsureAll(GameObject helmetModel, Mesh fallbackHelmetMesh)
         {
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(ModelPath);
             if (model == null)
@@ -49,7 +63,7 @@ namespace ColosseumDuel.EditorTools
             var controller = GladiatorAnimation.EnsureController();
 
             foreach (var def in GladiatorDef.All)
-                Build(def, model, helmetMesh, controller);
+                Build(def, model, helmetModel, fallbackHelmetMesh, controller);
 
             AssetDatabase.SaveAssets();
             return true;
@@ -73,8 +87,8 @@ namespace ColosseumDuel.EditorTools
             Debug.Log("[Colosseum] Gladiator model re-imported with calculated normals.");
         }
 
-        private static void Build(GladiatorDef def, GameObject model, Mesh helmetMesh,
-                                 RuntimeAnimatorController controller)
+        private static void Build(GladiatorDef def, GameObject model, GameObject helmetModel,
+                                 Mesh fallbackHelmetMesh, RuntimeAnimatorController controller)
         {
             var root = new GameObject($"Gladiator_{def.Id}");
             try
@@ -111,14 +125,32 @@ namespace ColosseumDuel.EditorTools
                 figure.transform.localScale = Vector3.one * scale;
 
                 // The model has no helmet, and the design needs one to carry the owning side's
-                // colour. Its material is left alone here and assigned per side at runtime - the
-                // prefab is shared by both players.
+                // colour - it is the only thing on the arena that says which of two identical
+                // archetypes is yours. Its material is left alone here and assigned per side at
+                // runtime, since the prefab is shared by both players.
+                //
+                // A child of the prefab root rather than of the head bone: at this height it reads
+                // as the head, and the model's own head sits inside it. Hung off the bone it would
+                // inherit every animation's neck movement, which on a figure this small on screen
+                // buys nothing and costs the certainty that it is always where it should be.
                 var helmet = new GameObject("Helmet");
                 helmet.transform.SetParent(root.transform, false);
-                helmet.transform.localPosition = new Vector3(0f, TargetHeight * 0.885f, 0f);
-                helmet.transform.localScale = Vector3.one * (TargetHeight * 0.135f);
-                helmet.AddComponent<MeshFilter>().sharedMesh = helmetMesh;
-                helmet.AddComponent<MeshRenderer>();
+                helmet.transform.localPosition = MeasureHeadCentre(root.transform, animator);
+                helmet.transform.localScale = Vector3.one * (TargetHeight * HelmetSizeFraction);
+
+                if (helmetModel != null)
+                {
+                    // GearPrefabs hands over a model one unit on its longest side, so the scale is
+                    // the height in world units and nothing here has to know how big a Tophelm is.
+                    var worn = (GameObject)PrefabUtility.InstantiatePrefab(helmetModel);
+                    worn.name = "Model";
+                    worn.transform.SetParent(helmet.transform, false);
+                }
+                else
+                {
+                    helmet.AddComponent<MeshFilter>().sharedMesh = fallbackHelmetMesh;
+                    helmet.AddComponent<MeshRenderer>();
+                }
 
                 PrefabUtility.SaveAsPrefabAsset(root, PathFor(def.Id));
             }
@@ -126,6 +158,39 @@ namespace ColosseumDuel.EditorTools
             {
                 Object.DestroyImmediate(root);
             }
+        }
+
+        /// <summary>
+        /// Where the helmet goes, in the prefab root's own space.
+        ///
+        /// Off the rig's head bone rather than at a fraction of the figure's height. The fraction
+        /// was right for a sphere, which is round and forgiving; a great helm sitting a few
+        /// hundredths too low or too far back leaves the model's own head poking out of the top of
+        /// it, which is exactly how the first attempt rendered - a hood behind a bare head.
+        ///
+        /// The bone sits at the base of the skull, so the helm is lifted by most of its own height
+        /// to sit over the head rather than around the neck.
+        /// </summary>
+        private static Vector3 MeasureHeadCentre(Transform root, Animator animator)
+        {
+            float fallback = TargetHeight * HelmetHeightFraction;
+
+            var head = animator != null && animator.isHuman
+                ? animator.GetBoneTransform(HumanBodyBones.Head)
+                : null;
+            if (head == null)
+            {
+                Debug.LogWarning("[Colosseum] No head bone on the gladiator rig - the helmet is " +
+                                 "placed by proportion instead, and may not sit right.");
+                return new Vector3(0f, fallback, 0f);
+            }
+
+            var local = root.InverseTransformPoint(head.position);
+            local.y += TargetHeight * HelmetSizeFraction * HelmetLiftFromNeck;
+
+            Debug.Log($"[Colosseum] Helmet placed at {local} (head bone), " +
+                      $"proportion would have said {fallback:0.###}.");
+            return local;
         }
 
         /// <summary>Height of the renderers, which is what actually shows - not the transform.</summary>

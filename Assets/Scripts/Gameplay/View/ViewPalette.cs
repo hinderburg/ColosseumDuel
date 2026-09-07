@@ -111,14 +111,24 @@ namespace ColosseumDuel.Gameplay.View
         public Material WallStone;
 
         /// <summary>
-        /// The sword and shield models, used both for the pickups lying on the sand and for the gear
-        /// a gladiator is carrying. One model each: a two-handed weapon is the same sword at a
-        /// larger scale, which is what makes the two read as the same object at a glance.
+        /// The gear models, used both for the pickups lying on the sand and for what a gladiator is
+        /// carrying or wearing. Built by GearPrefabs from the imported weapon pack, and normalised
+        /// there: each is centred on its own geometry and one unit on its longest side, so the views
+        /// can ask for a size in world units instead of carrying a measurement per model.
+        ///
+        /// A one-handed and a two-handed weapon are separate models rather than one at two scales -
+        /// the silhouettes differ as well as the size, which is what the player is reading when they
+        /// decide whether running at it will cost them their shield.
+        ///
         /// Null in a clean clone, where ItemView falls back to primitives.
         /// </summary>
         [Header("Gear")]
         public GameObject SwordModel;
+        public GameObject GreatswordModel;
         public GameObject ShieldModel;
+
+        /// <summary>Worn on the head, tinted with the owning side's colour.</summary>
+        public GameObject HelmetModel;
 
         /// <summary>
         /// Screen-edge tint for the planning phase, transparent in the middle. Generated, so it is

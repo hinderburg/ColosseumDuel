@@ -43,9 +43,6 @@ namespace ColosseumDuel.EditorTools
         private const string BloodPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
 
-        // Gear models, from the same pack the gladiator model comes from.
-        private const string SwordModelPath = "Assets/DoubleL/Model/SM_Wep_Sword_03.fbx";
-        private const string ShieldModelPath = "Assets/DoubleL/Model/SM_Wep_Shield_01.fbx";
 
         // Modular stone kit (LoafbrrAssets/ModularArena), used to dress the arena.
         private const string ArenaKitDir = "Assets/LoafbrrAssets/ModularArena/Prefabs";
@@ -305,8 +302,11 @@ namespace ColosseumDuel.EditorTools
             // coloured helmet on a grey body was not enough to tell the two fighters apart.
             palette.PlayerBody = Lit("BodyPlayer", new Color(0.18f, 0.42f, 0.92f));
             palette.BotBody = Lit("BodyBot", new Color(0.86f, 0.20f, 0.18f));
-            palette.PlayerHelmet = Lit("HelmetPlayer", new Color(0.58f, 0.76f, 1.00f));
-            palette.BotHelmet = Lit("HelmetBot", new Color(1.00f, 0.60f, 0.55f));
+            // The helmet is the pack's steel, tinted rather than painted over: the tint carries the
+            // side and the texture keeps it looking like a helmet. Darker than the old flat colours,
+            // because a base map multiplies them down and a pale tint came out white.
+            palette.PlayerHelmet = GearPrefabs.HelmetMaterial("HelmetPlayer", new Color(0.42f, 0.62f, 1.00f));
+            palette.BotHelmet = GearPrefabs.HelmetMaterial("HelmetBot", new Color(1.00f, 0.40f, 0.34f));
 
             palette.Weapon = Lit("ItemWeapon", new Color(0.85f, 0.80f, 0.35f));
             palette.Shield = Lit("ItemShield", new Color(0.55f, 0.60f, 0.70f));
@@ -378,10 +378,16 @@ namespace ColosseumDuel.EditorTools
                          ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
                          new Vector2(2f, 1f));
 
-            palette.SwordModel = AssetDatabase.LoadAssetAtPath<GameObject>(SwordModelPath);
-            palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(ShieldModelPath);
+            // Built from the imported weapon pack rather than loaded from it: the pack's own prefabs
+            // carry LOD groups and colliders this game has no use for, and its materials are on the
+            // built-in Standard shader, which under URP draws magenta.
+            GearPrefabs.EnsureAll();
+            palette.SwordModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.SwordPath);
+            palette.GreatswordModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.GreatswordPath);
+            palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.ShieldPath);
+            palette.HelmetModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.HelmetPath);
             if (palette.SwordModel == null)
-                Debug.LogWarning($"[Colosseum] Gear models not found at {SwordModelPath} - pickups " +
+                Debug.LogWarning($"[Colosseum] Gear prefabs missing at {GearPrefabs.SwordPath} - pickups " +
                                  "will be primitives and nobody will carry anything visible.");
 
             palette.Vignette = ProceduralTextures.EnsureVignette(TexturesDir + "/Vignette.png");
@@ -409,7 +415,7 @@ namespace ColosseumDuel.EditorTools
                 palette.ArchetypeBodies[i] = Lit($"Body{def.Id}", palette.ArchetypeColor(def.Id));
             }
 
-            if (GladiatorPrefabs.EnsureAll(palette.Sphere))
+            if (GladiatorPrefabs.EnsureAll(palette.HelmetModel, palette.Sphere))
             {
                 palette.GladiatorFigures = new GameObject[GladiatorDef.All.Count];
                 for (int i = 0; i < GladiatorDef.All.Count; i++)
