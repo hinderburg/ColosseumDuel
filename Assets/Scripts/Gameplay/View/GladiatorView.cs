@@ -588,13 +588,64 @@ namespace ColosseumDuel.Gameplay.View
             // The squash stays alongside the recoil animation rather than being replaced by it. The
             // clip reads at a standstill; at a sprint, with the two fighters crossing in a few
             // frames, the squash is what actually registers as a hit landing.
+            //
+            // The recoil itself waits if he is in the middle of his own swing. See _swingHoldLeft.
+            if (_swingHoldLeft > 0f)
+            {
+                _hitWaiting = true;
+                return;
+            }
+
             if (_animator != null) _animator.SetTrigger(AnimatorParams.HitId);
+            _hitThisFrame = true;
         }
+
+        /// <summary>
+        /// Seconds a swing is protected from being cut short by the recoil of the blow coming back.
+        ///
+        /// An exchange is simultaneous: both sides are struck and both sides swing, on the same
+        /// frame. The controller enters Attack and Hit from Any State, and a transition consumes
+        /// only its own trigger - so the attack was entered, the hit trigger was still standing, and
+        /// the swing was replaced by the recoil one frame later. The visible result was two
+        /// gladiators who flinched at each other and never appeared to attack at all.
+        ///
+        /// Long enough for the swing to read, short enough that the recoil still belongs to the
+        /// blow that caused it.
+        /// </summary>
+        private const float SwingHoldsOffTheRecoil = 0.22f;
+
+        private float _swingHoldLeft;
+        private bool _hitWaiting;
+        private bool _hitThisFrame;
 
         /// <summary>This gladiator just dealt a blow.</summary>
         public void PlaySwing()
         {
+            // A blow he was taking arrived earlier in this same frame - which half of the exchange
+            // is announced first is an implementation detail of the loop, and without this the
+            // fighter who happened to be struck first was the only one whose swing got cut off.
+            // The trigger has not been consumed yet, so it can be taken back and re-fired after.
+            if (_hitThisFrame && _animator != null)
+            {
+                _animator.ResetTrigger(AnimatorParams.HitId);
+                _hitWaiting = true;
+            }
+
             if (_animator != null) _animator.SetTrigger(AnimatorParams.AttackId);
+            _swingHoldLeft = SwingHoldsOffTheRecoil;
+        }
+
+        /// <summary>Lets a held-back recoil through once the swing has had its moment.</summary>
+        private void AdvanceSwingHold(float dt)
+        {
+            _hitThisFrame = false;
+            if (_swingHoldLeft <= 0f) return;
+
+            _swingHoldLeft = Mathf.Max(0f, _swingHoldLeft - dt);
+            if (_swingHoldLeft > 0f || !_hitWaiting) return;
+
+            _hitWaiting = false;
+            if (_animator != null) _animator.SetTrigger(AnimatorParams.HitId);
         }
 
         /// <summary>This gladiator's ability just fired.</summary>
@@ -732,6 +783,7 @@ namespace ColosseumDuel.Gameplay.View
         private void AdvanceEffects(float dt)
         {
             AdvanceBleedFlash(dt);
+            AdvanceSwingHold(dt);
 
             // Hit reaction: a quick squash-and-recover on the model only, so the bars above the head
             // stay put and readable while it plays.

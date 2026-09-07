@@ -273,6 +273,63 @@ namespace ColosseumDuel.Tests
                 "a gladiator at full sprint should be past the run threshold");
         }
 
+        /// <summary>
+        /// A blow is actually animated as a swing, on both sides of the exchange.
+        ///
+        /// It was not. An exchange is simultaneous, so both fighters are struck and both swing on
+        /// the same frame; the controller enters Attack and Hit from Any State, a transition
+        /// consumes only its own trigger, and the standing Hit trigger replaced the swing one frame
+        /// after it started. What played was two gladiators flinching at each other and never
+        /// appearing to attack at all - which is exactly what a swing that was never triggered
+        /// would have looked like, so this is worth a test rather than an eye.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BothSidesActuallyPlayASwingWhenBlowsAreExchanged()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var player = FindIn("Player", $"Figure_{GladiatorId.Brutius}")?.GetComponentInChildren<Animator>(true);
+            if (player == null || player.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            var state = _controller.Manager.State;
+            var bot = FindIn("Bot", $"Figure_{state.Bot.Active.Def.Id}").GetComponentInChildren<Animator>(true);
+
+            // Standing inside each other's reach, so the exchange happens on the first substep of
+            // the action phase rather than after a charge across the arena.
+            float gap = Mathf.Min(state.P1.Active.WeaponDef.Reach, state.Bot.Active.WeaponDef.Reach) * 0.7f;
+            state.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
+            state.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
+
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Action, 6f);
+
+            // How long the swing is on screen, not merely whether it was entered. "Did it ever
+            // reach Attack" passes either way - the swing was always triggered, it was just cut
+            // off. Measured: a quarter of a second with the recoil held back, an eighth without,
+            // so the threshold sits between the two and the test can actually fail.
+            float playerSwing = 0f, botSwing = 0f;
+            for (float t = 0f; t < 0.6f; t += Time.unscaledDeltaTime)
+            {
+                if (InAttack(player)) playerSwing += Time.unscaledDeltaTime;
+                if (InAttack(bot)) botSwing += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            Assert.Greater(playerSwing, 0.2f,
+                $"the player's swing was on screen for {playerSwing:0.###}s - it was cut short");
+            Assert.Greater(botSwing, 0.2f,
+                $"the opponent's swing was on screen for {botSwing:0.###}s - it was cut short");
+        }
+
+        private static bool InAttack(Animator animator)
+        {
+            if (animator.GetCurrentAnimatorStateInfo(0).IsName("Attack")) return true;
+            return animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Attack");
+        }
+
         [UnityTest]
         public IEnumerator AFallenGladiatorStaysOnTheSand()
         {
