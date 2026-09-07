@@ -249,6 +249,20 @@ namespace ColosseumDuel.Gameplay.Hud
         public void StartMatch() => Current = Screen.Closed;
 
         /// <summary>
+        /// Raises the curtain again, from inside a match.
+        ///
+        /// The match is thrown away rather than paused. The menu's own button says "start match",
+        /// and a player who came back here and pressed it should get a match that starts - not one
+        /// resumed at whatever half-dead round he walked out of, which is what leaving the state
+        /// alone would hand him. Nothing is lost that the game keeps between matches anyway.
+        /// </summary>
+        public void ReturnToMainMenu()
+        {
+            _controller.RestartMatch();
+            Current = Screen.Main;
+        }
+
+        /// <summary>
         /// Opens the roster screen with the squad already in it.
         ///
         /// Starting from what they have rather than from nothing: a player who came here to swap one

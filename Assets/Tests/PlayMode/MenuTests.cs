@@ -193,6 +193,56 @@ namespace ColosseumDuel.Tests
                 "a fourth fighter should be refused while three are already chosen");
         }
 
+        [UnityTest]
+        public IEnumerator TheCornerButtonTakesAMatchInProgressBackToTheMenu()
+        {
+            FindButton("StartMatch").onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(MenuView.Screen.Closed, _menu.Current, "the match should be running");
+
+            var button = FindButton("MenuButton");
+            Assert.IsNotNull(button, "the match HUD needs a way out of a match");
+
+            // Top left, which is the corner neither squad strip uses. Asserted as a corner rather
+            // than as coordinates: the anchor is what keeps it there on any screen, and a button
+            // pinned to the right anchor with the wrong pivot still reads as top left in the editor
+            // and drifts off the edge in a build.
+            var rect = (RectTransform)button.transform;
+            Assert.AreEqual(new Vector2(0f, 1f), rect.anchorMin);
+            Assert.AreEqual(new Vector2(0f, 1f), rect.anchorMax);
+            Assert.AreEqual(new Vector2(0f, 1f), rect.pivot);
+
+            // Deep enough into the match that going back cannot be mistaken for never having left:
+            // a pick is in, the round is under way, and somebody has taken damage.
+            _controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+            _controller.Manager.State.P1.Active.Hp -= 40f;
+            Assert.AreNotEqual(MatchPhase.Pick, _controller.Manager.State.Phase);
+
+            button.onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(MenuView.Screen.Main, _menu.Current);
+            Assert.IsTrue(Find("MenuMain").activeInHierarchy);
+            Assert.IsFalse(Find("MenuButton").activeInHierarchy,
+                "the way out should not still be sitting on top of the menu it led to");
+
+            // The match behind the curtain is a fresh one, not the wounded one he walked out of.
+            Assert.AreEqual(MatchPhase.Pick, _controller.Manager.State.Phase);
+            foreach (var g in _controller.Manager.State.P1.Roster)
+                Assert.AreEqual(g.Def.MaxHp, g.Hp, $"{g.Def.Name} should have come back whole");
+        }
+
+        private static IEnumerator RunSeconds(float seconds)
+        {
+            float t = 0f;
+            while (t < seconds)
+            {
+                yield return null;
+                t += Time.unscaledDeltaTime;
+            }
+        }
+
         private System.Collections.Generic.IEnumerable<int> OffersOf(GladiatorId id)
         {
             for (int i = 0; i < GladiatorDef.All.Count * MenuView.CopiesPerArchetype; i++)

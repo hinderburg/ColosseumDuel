@@ -43,6 +43,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private MenuView _menu;
         private GameObject _playerCorner;
         private GameObject _botCorner;
+        private Button _menuButton;
 
         private bool _built;
 
@@ -123,6 +124,18 @@ namespace ColosseumDuel.Gameplay.Hud
             // it and read as part of the menu.
             _playerCorner = playerCorner.gameObject;
             _botCorner = botCorner.gameObject;
+
+            // The way out, in the one corner the HUD leaves empty: the opponent's squad is top
+            // right and the player's is bottom left, so top left is the only place a button can sit
+            // without either shrinking a squad strip or floating over the sand the player taps.
+            _menuButton = HudFactory.CreateButton("MenuButton", root, "Menu", 16);
+            var menuRect = (RectTransform)_menuButton.transform;
+            menuRect.anchorMin = new Vector2(0f, 1f);
+            menuRect.anchorMax = new Vector2(0f, 1f);
+            menuRect.pivot = new Vector2(0f, 1f);
+            menuRect.sizeDelta = new Vector2(78f, 38f);
+            menuRect.anchoredPosition = new Vector2(10f, -10f);
+            _menuButton.onClick.AddListener(() => _menu?.ReturnToMainMenu());
 
             // Below the opponent's corner, not beside it: at this width a phase line long enough to
             // be useful runs straight into the squad tiles.
@@ -342,6 +355,7 @@ namespace ColosseumDuel.Gameplay.Hud
             SetActive(_phaseLabel.gameObject, !menuUp);
             SetActive(_playerCorner, !menuUp);
             SetActive(_botCorner, !menuUp);
+            SetActive(_menuButton.gameObject, !menuUp);
             _actionButtons.SetHidden(menuUp);
             if (menuUp) _hint.enabled = false;
         }
