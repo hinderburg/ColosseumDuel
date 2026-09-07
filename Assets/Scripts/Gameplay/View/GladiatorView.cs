@@ -255,18 +255,8 @@ namespace ColosseumDuel.Gameplay.View
 
         // --- carried gear ---
 
-        /// <summary>
-        /// Where along its own length a weapon is held.
-        ///
-        /// The models are centred on their geometry, so parenting one straight to a hand puts the
-        /// middle of the blade in the fist and half the sword out through the wrist. Shifted along
-        /// the blade by about a third, which lands the fist just above the pommel.
-        ///
-        /// Negative, because the pack builds a blade running up its own +Y from the grip: pushing it
-        /// the other way put the fist round the point and the crossguard out at the far end, so
-        /// every gladiator on the arena was holding his sword by the sharp bit.
-        /// </summary>
-        private const float GripAlongBlade = -0.34f;
+        /// <summary>Where along its own length a weapon is held. See GearSizes.GripAlong.</summary>
+        private static float GripAlongBlade => GearSizes.GripAlong(WeaponKind.DualSwords);
 
         private Transform _mainHand;      // holder, on the right hand
         private Transform _mainSword;
@@ -301,7 +291,9 @@ namespace ColosseumDuel.Gameplay.View
             main.transform.SetParent(_model, false);
             _mainHand = main.transform;
             _mainSword = Grip(palette.SwordModel, _mainHand, "Sword");
-            _mainMace = palette.MaceModel != null ? Grip(palette.MaceModel, _mainHand, "Mace") : null;
+            _mainMace = palette.MaceModel != null
+                ? Grip(palette.MaceModel, _mainHand, "Mace", GearSizes.GripAlong(WeaponKind.TwoHandedMace))
+                : null;
             _mainHand.gameObject.SetActive(false);
 
             var off = new GameObject("HeldOffHand");
@@ -324,11 +316,11 @@ namespace ColosseumDuel.Gameplay.View
         /// gladiator runs over the wrong weapon is a hitch exactly when the player is watching.
         /// </summary>
         private Transform Grip(GameObject model, Transform holder, string name,
-            float alongLength = GripAlongBlade)
+            float? alongLength = null)
         {
             var instance = Instantiate(model, holder).transform;
             instance.name = name;
-            instance.localPosition = new Vector3(0f, alongLength, 0f);
+            instance.localPosition = new Vector3(0f, alongLength ?? GripAlongBlade, 0f);
             ItemView.Tint(instance.gameObject, GearSizes.CarriedTint);
 
             var untrained = _palette != null ? _palette.GearUntrained : null;

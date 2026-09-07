@@ -31,6 +31,21 @@ namespace ColosseumDuel.Gameplay.View
         public static bool UsesMace(WeaponKind kind) => kind == WeaponKind.TwoHandedMace;
 
         /// <summary>
+        /// How far along its own length a weapon is pushed so the fist closes on the grip.
+        ///
+        /// The models are centred on their geometry, so parenting one straight to a hand puts the
+        /// middle of it in the fist and half of it out through the wrist. Which way to push depends
+        /// on the model: the pack builds a blade running up from its grip, and the hammer the other
+        /// way up. One sign for both left the gladiator holding the mace by its head with the haft
+        /// trailing back over his shoulder.
+        /// </summary>
+        public static float GripAlong(WeaponKind kind)
+            => kind == WeaponKind.TwoHandedMace ? GripFromEnd : -GripFromEnd;
+
+        /// <summary>How far from the middle the fist sits, as a share of the weapon's length.</summary>
+        public const float GripFromEnd = 0.34f;
+
+        /// <summary>
         /// Cool steel for what a gladiator brought with him, gold for the better copies on the sand.
         ///
         /// Tinted through a property block rather than built as two sets of materials: the models

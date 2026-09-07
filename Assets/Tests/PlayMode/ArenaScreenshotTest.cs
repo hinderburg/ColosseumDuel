@@ -123,7 +123,9 @@ namespace ColosseumDuel.Tests
                 var bot = controller.Manager.State.Bot.Active;
                 player.Pos = new Vector2(-46f, -30f);
                 bot.Pos = new Vector2(46f, -30f);
-                player.Weapon = WeaponKind.DualSwords;
+                // Each in the weapon he trained on, so the three frames between them cover all
+                // three loadouts rather than showing the same pair three times.
+                player.Weapon = def.SkilledWith;
                 bot.Weapon = WeaponKind.SwordAndShield;
                 yield return null;
 
