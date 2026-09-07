@@ -22,6 +22,9 @@ namespace ColosseumDuel.Gameplay.View
         private ArenaView _arena;
         private Transform _model;
         private Transform _bars;
+
+        /// <summary>Where the bars sit above a figure of ordinary height.</summary>
+        private float _barHeight;
         private Transform _burst;
         private MeshRenderer _burstRenderer;
         private MaterialPropertyBlock _burstProperties;
@@ -93,7 +96,8 @@ namespace ColosseumDuel.Gameplay.View
             var bars = new GameObject("Bars");
             bars.transform.SetParent(root.transform, false);
             // Generous, because a tilted camera foreshortens vertical offsets by roughly half.
-            bars.transform.localPosition = new Vector3(0f, bodyHeight * 3.4f, 0f);
+            view._barHeight = bodyHeight * 3.4f;
+            bars.transform.localPosition = new Vector3(0f, view._barHeight, 0f);
             view._bars = bars.transform;
 
             // An expanding ring for one-shot moments (a hit landing, an ability firing). Kept as a
@@ -145,6 +149,14 @@ namespace ColosseumDuel.Gameplay.View
 
                 figure.name = $"Figure_{def.Id}";
                 figure.SetActive(false);
+
+                // Build, so the three read apart by shape and not only by colour. Colour is also
+                // what the danger rings, the hazard and the two side helmets are using; a broad
+                // figure and a small thin one are legible past all of that, and from further away.
+                // Width goes on both ground axes, since the camera can see him from any angle he
+                // happens to be facing.
+                figure.transform.localScale =
+                    new Vector3(def.BuildWidth, def.BuildHeight, def.BuildWidth);
 
                 // Replace the imported materials outright rather than tinting them. Tinting left
                 // three figures that cast shadows and drew nothing: whatever the model ships with
@@ -452,9 +464,19 @@ namespace ColosseumDuel.Gameplay.View
 
             for (int i = 0; i < _figures.Length; i++)
             {
-                bool isThisOne = GladiatorDef.All[i].Id == id;
+                var def = GladiatorDef.All[i];
+                bool isThisOne = def.Id == id;
                 if (_figures[i].activeSelf != isThisOne) _figures[i].SetActive(isThisOne);
-                if (isThisOne) _animator = _figureAnimators[i];
+                if (!isThisOne) continue;
+
+                _animator = _figureAnimators[i];
+
+                // The bars ride on the root rather than on the figure, so they have to be told
+                // about a shorter one - otherwise Hilius fights under a health bar floating a head
+                // above where his head actually is.
+                var barPos = _bars.localPosition;
+                barPos.y = _barHeight * def.BuildHeight;
+                _bars.localPosition = barPos;
             }
 
             AttachGearTo(_animator);

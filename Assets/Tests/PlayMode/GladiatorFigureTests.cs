@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay;
@@ -121,6 +122,54 @@ namespace ColosseumDuel.Tests
 
             Assert.Greater(GearSizes.MaceLength, GearSizes.SwordLength,
                 "the mace has to be the bigger of the two or nothing distinguishes them");
+        }
+
+        [UnityTest]
+        public IEnumerator TheThreeArchetypesHaveDifferentBuilds()
+        {
+            // Colour alone was doing this job, and colour is also what the danger rings, the hazard
+            // and the two side helmets are using. A broad figure and a small thin one are legible
+            // past all of that, and from further away.
+            _controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var widths = new List<float>();
+            var heights = new List<float>();
+
+            foreach (var def in GladiatorDef.All)
+            {
+                var figure = FindIn("Player", $"Figure_{def.Id}");
+                Assert.IsNotNull(figure, $"no figure for {def.Name}");
+                Assert.AreEqual(def.BuildWidth, figure.localScale.x, 0.001f, $"{def.Name} width");
+                Assert.AreEqual(def.BuildHeight, figure.localScale.y, 0.001f, $"{def.Name} height");
+                Assert.AreEqual(def.BuildWidth, figure.localScale.z, 0.001f,
+                    $"{def.Name} is only broad from one side, which is not how a camera works");
+
+                widths.Add(figure.localScale.x);
+                heights.Add(figure.localScale.y);
+            }
+
+            // Three builds, not three copies of one. Checked here rather than in the stat table
+            // because it is a claim about what shows on the arena.
+            CollectionAssert.AllItemsAreUnique(widths.Zip(heights, (w, h) => $"{w}x{h}").ToList());
+        }
+
+        [UnityTest]
+        public IEnumerator AFighterIsThePaintedColourOfHisOwnIcon()
+        {
+            // The card the player chose from and the figure that walks out have to be the same
+            // colour, or the pick screen is teaching them a code the arena does not use.
+            _controller.SubmitPlayerPick(GladiatorId.Hilius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var palette = _controller.Arena.Palette;
+            foreach (var def in GladiatorDef.All)
+            {
+                var body = palette.BodyMaterialFor(def.Id);
+                Assert.IsNotNull(body, $"{def.Name} has no body material");
+                Assert.AreEqual(palette.ArchetypeColor(def.Id), body.color,
+                    $"{def.Name}'s figure is not the colour of his own icon");
+            }
         }
 
         /// <summary>
