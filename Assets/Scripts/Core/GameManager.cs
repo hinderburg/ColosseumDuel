@@ -32,6 +32,14 @@ namespace ColosseumDuel.Core
         /// <summary>A side's ability just fired.</summary>
         public event Action<PlayerSide> AbilityFired;
 
+        /// <summary>
+        /// An open wound cost a side health at the top of a cycle.
+        ///
+        /// Its own event rather than Damaged, because it should not read as a blow: nobody swung,
+        /// so there is no recoil to play and nobody to swing back. What it wants is a red flicker.
+        /// </summary>
+        public event Action<PlayerSide, float> Bled;
+
         private readonly System.Random _rng;
 
         public GameManager(System.Random rng = null)
@@ -367,10 +375,24 @@ namespace ColosseumDuel.Core
             State.WasNear = false;
             State.CollisionEndTimer = null;
 
+            // Wounds settle up before anyone moves, which is the whole shape of a bleed: it is the
+            // cost of having started the cycle already cut, and a fighter it kills does not get to
+            // spend that cycle as though he were whole.
+            Bleed(PlayerSide.P1, State.P1.Active);
+            Bleed(PlayerSide.Bot, State.Bot.Active);
+
             ApplyPlannedAction(PlayerSide.P1, State.P1.Active, State.Bot.Active);
             ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
 
             SetPhase(MatchPhase.Action);
+        }
+
+        private void Bleed(PlayerSide side, GladiatorInstance g)
+        {
+            if (g == null || !g.Alive) return;
+
+            float amount = g.TickBleed();
+            if (amount > 0f) Bled?.Invoke(side, amount);
         }
 
         private void ApplyPlannedAction(PlayerSide side, GladiatorInstance g, GladiatorInstance opponent)

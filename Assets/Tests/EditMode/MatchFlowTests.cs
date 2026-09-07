@@ -445,6 +445,34 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void ABleedIsPaidAtTheTopOfTheCycle_BeforeAnybodyMoves()
+        {
+            // Where it lands in the cycle is the whole shape of it. Settled at the end instead, a
+            // fighter it was about to kill would get one more full cycle to fight in first - and
+            // the player would watch him die from nothing after the exchange was over.
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            p1.ApplyBleed(40f);
+            float before = p1.Hp;
+
+            float bled = 0f;
+            m.Bled += (side, amount) => { if (side == PlayerSide.P1) bled += amount; };
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+
+            // One tick into the action phase - long before anything could have reached him.
+            Assert.AreEqual(MatchPhase.Action, m.State.Phase);
+            Assert.AreEqual(40f * GameConstants.BleedFraction, bled, Tol,
+                "the wound should have been paid the moment the action phase opened");
+            Assert.AreEqual(before - bled, p1.Hp, Tol);
+            Assert.AreEqual(GameConstants.BleedCycles - 1, p1.BleedCyclesLeft);
+        }
+
+        [Test]
         public void ARoundWinner_StaysOnTheArenaWithTheHpTheyEndedOn()
         {
             var m = StartedRound();

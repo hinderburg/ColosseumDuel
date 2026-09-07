@@ -101,6 +101,19 @@ namespace ColosseumDuel.Core
         /// <summary>How far one mace blow throws its target, in virtual units - most of a body.</summary>
         public const float MaceKnockback = GladiatorRadius * 1.6f;
 
+        /// <summary>
+        /// Share of the blow that opened it which a bleed deals, each cycle, for BleedCycles.
+        ///
+        /// Taken off the raw blow rather than off what landed: a wound is a wound, and the shield
+        /// that softened the hit is not still in the way of it afterwards. Over its two cycles a
+        /// bleed is therefore worth half of one more blow - enough that the twin swords' lower
+        /// damage per hit is a trade rather than a straight loss.
+        /// </summary>
+        public const float BleedFraction = 0.25f;
+
+        /// <summary>How many cycles a bleed runs for. A fresh one starts the count again.</summary>
+        public const int BleedCycles = 2;
+
         // --- items ---
         // One of each weapon kind, always on the floor. See ItemSystem.
         public const int ItemCountOnArena = 3;

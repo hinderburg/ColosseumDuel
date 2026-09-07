@@ -26,7 +26,12 @@ namespace ColosseumDuel.Core
             return rawDamage * mult;
         }
 
-        /// <summary>Resolves one attacker-&gt;defender blow and returns the damage that landed.</summary>
+        /// <summary>
+        /// Resolves one attacker-&gt;defender blow and returns the damage that landed.
+        ///
+        /// The bleeding a weapon leaves is opened here rather than by the caller: it is a property
+        /// of the blow, and every place a blow can happen would otherwise have to remember to do it.
+        /// </summary>
         public static float DealDamage(GladiatorInstance attacker, GladiatorInstance defender)
         {
             float raw = ComputeAttackDamage(attacker);
@@ -34,6 +39,8 @@ namespace ColosseumDuel.Core
 
             defender.TakeDamage(final);
             attacker.DealtDamageThisCycle = true;
+
+            if (attacker.WeaponDef.Bleeds) defender.ApplyBleed(raw);
             return final;
         }
     }

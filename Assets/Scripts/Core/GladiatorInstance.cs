@@ -57,6 +57,45 @@ namespace ColosseumDuel.Core
         /// <summary>True when he is holding something he was never trained to hold.</summary>
         public bool IsUntrained => Weapon != WeaponKind.None && Weapon != Def.SkilledWith;
 
+        /// <summary>Cycles of bleeding still to come. Zero means the wound has closed.</summary>
+        public int BleedCyclesLeft;
+
+        /// <summary>What one cycle of the current bleed costs.</summary>
+        public float BleedPerCycle;
+
+        public bool IsBleeding => BleedCyclesLeft > 0;
+
+        /// <summary>
+        /// Opens a wound, or re-opens the one already there.
+        ///
+        /// A fresh cut restarts the count, which is the point of twin swords: keep landing and the
+        /// bleed never runs out. It takes the worse of the two rates rather than the newer one - a
+        /// light blow arriving after a heavy one should not talk the wound down.
+        /// </summary>
+        public void ApplyBleed(float rawAttackDamage)
+        {
+            BleedPerCycle = Mathf.Max(BleedPerCycle, rawAttackDamage * GameConstants.BleedFraction);
+            BleedCyclesLeft = GameConstants.BleedCycles;
+        }
+
+        /// <summary>
+        /// Bleeds him for one cycle and returns what it cost. Zero when there is no wound.
+        ///
+        /// Called at the top of the action phase, before anyone moves: a wound that only settled up
+        /// at the end of a cycle would let a dying fighter spend that cycle as though he were whole.
+        /// </summary>
+        public float TickBleed()
+        {
+            if (BleedCyclesLeft <= 0) return 0f;
+
+            BleedCyclesLeft--;
+            float amount = BleedPerCycle;
+            if (BleedCyclesLeft == 0) BleedPerCycle = 0f;
+
+            TakeDamage(amount);
+            return amount;
+        }
+
         public float Rage = 0f;
         public int AbilityLockedCycles = 0;
         public ActiveBuff Buff;
@@ -186,6 +225,11 @@ namespace ColosseumDuel.Core
             // first round the only one worth taking that risk in.
             EquipTrainedWeapon();
             AttacksRemainingThisCycle = AttacksPerCycle;
+
+            // Wounds close between rounds. A bleed that survived would go on draining a fighter
+            // through a round he was not in when it was opened.
+            BleedCyclesLeft = 0;
+            BleedPerCycle = 0f;
         }
     }
 }

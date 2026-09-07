@@ -176,5 +176,77 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(0f, victim.Hp, Tol);
             Assert.IsFalse(victim.Alive);
         }
+
+        // ------------------------------------------------------------------
+        // bleeding
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void OnlyTheTwinSwordsOpenAWound()
+        {
+            foreach (var weapon in WeaponDef.All)
+            {
+                var victim = Bare();
+                CombatResolver.DealDamage(With(weapon.Kind), victim);
+                Assert.AreEqual(weapon.Bleeds, victim.IsBleeding,
+                    $"{weapon.Name} should {(weapon.Bleeds ? "" : "not ")}leave the target bleeding");
+            }
+        }
+
+        [Test]
+        public void ABleedCostsAQuarterOfTheBlowThatOpenedIt_ForTwoCycles()
+        {
+            var victim = Bare();
+            var swordsman = With(WeaponKind.DualSwords);
+            CombatResolver.DealDamage(swordsman, victim);
+
+            float raw = CombatResolver.ComputeAttackDamage(swordsman);
+            float expected = raw * GameConstants.BleedFraction;
+            float afterBlow = victim.Hp;
+
+            Assert.AreEqual(GameConstants.BleedCycles, victim.BleedCyclesLeft);
+            Assert.AreEqual(expected, victim.TickBleed(), Tol);
+            Assert.AreEqual(afterBlow - expected, victim.Hp, Tol);
+
+            Assert.AreEqual(expected, victim.TickBleed(), Tol, "and once more on the second cycle");
+            Assert.AreEqual(0f, victim.TickBleed(), Tol, "then the wound is closed");
+            Assert.IsFalse(victim.IsBleeding);
+        }
+
+        [Test]
+        public void TheBleedIsTakenOffTheRawBlow_NotOffWhatGotThroughTheShield()
+        {
+            // A wound is a wound: the shield that softened the hit is not still in the way of the
+            // bleeding afterwards. Without this, sword and shield would shrug off the twin swords'
+            // whole reason for existing rather than only half of it.
+            var shielded = With(WeaponKind.SwordAndShield);
+            var swordsman = With(WeaponKind.DualSwords);
+
+            float landed = CombatResolver.DealDamage(swordsman, shielded);
+            float raw = CombatResolver.ComputeAttackDamage(swordsman);
+
+            Assert.Less(landed, raw, "the shield should have taken half the blow");
+            Assert.AreEqual(raw * GameConstants.BleedFraction, shielded.TickBleed(), Tol);
+        }
+
+        [Test]
+        public void AFreshCutRestartsTheCount_AndNeverTalksTheWoundDown()
+        {
+            var victim = Bare();
+            var heavy = With(WeaponKind.DualSwords, gilded: true);
+            var light = With(WeaponKind.DualSwords);
+
+            CombatResolver.DealDamage(heavy, victim);
+            float strong = victim.BleedPerCycle;
+
+            victim.TickBleed();
+            Assert.AreEqual(GameConstants.BleedCycles - 1, victim.BleedCyclesLeft);
+
+            // Keep landing and the bleed never runs out - that is what the pair of swords buys.
+            CombatResolver.DealDamage(light, victim);
+            Assert.AreEqual(GameConstants.BleedCycles, victim.BleedCyclesLeft, "the count starts again");
+            Assert.AreEqual(strong, victim.BleedPerCycle, Tol,
+                "a light blow arriving after a heavy one must not talk the wound down");
+        }
     }
 }

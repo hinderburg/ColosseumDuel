@@ -538,8 +538,65 @@ namespace ColosseumDuel.Gameplay.View
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
         }
 
+        /// <summary>
+        /// Seconds the red flicker of a bleed lasts. Longer than a hit reaction and much softer:
+        /// nobody swung, so it should read as something happening to him rather than to him from
+        /// someone else.
+        /// </summary>
+        private const float BleedFlashTime = 0.55f;
+
+        private static readonly Color BleedColor = new Color(0.75f, 0.05f, 0.05f);
+        private float _bleedFlashLeft;
+        private MaterialPropertyBlock _figureProperties;
+
+        /// <summary>A wound just cost this gladiator health at the top of a cycle.</summary>
+        public void PlayBleed()
+        {
+            _bleedFlashLeft = BleedFlashTime;
+        }
+
+        /// <summary>
+        /// Washes the figure towards red and back.
+        ///
+        /// Through a property block rather than by touching the material: the three archetype
+        /// materials are shared assets, and tinting one would turn both sides' Brutius red at once -
+        /// including the one who is not bleeding.
+        /// </summary>
+        private void AdvanceBleedFlash(float dt)
+        {
+            if (_shownFigure == null) return;
+
+            Renderer renderer = null;
+            for (int i = 0; i < GladiatorDef.All.Count; i++)
+                if (GladiatorDef.All[i].Id == _shownFigure.Value) renderer = _figureRenderers[i];
+            if (renderer == null) return;
+
+            if (_bleedFlashLeft <= 0f)
+            {
+                if (_figureProperties != null)
+                {
+                    renderer.SetPropertyBlock(null);
+                    _figureProperties = null;
+                }
+                return;
+            }
+
+            _bleedFlashLeft = Mathf.Max(0f, _bleedFlashLeft - dt);
+
+            // In and back out over the life of the flash, so it pulses once rather than snapping on
+            // and fading - a snap at this size reads as a rendering glitch.
+            float t = Mathf.Sin((1f - _bleedFlashLeft / BleedFlashTime) * Mathf.PI);
+            var baseColor = _palette != null ? _palette.ArchetypeColor(_shownFigure.Value) : Color.white;
+
+            _figureProperties = _figureProperties ?? new MaterialPropertyBlock();
+            _figureProperties.SetColor(BaseColorId, Color.Lerp(baseColor, BleedColor, t * 0.75f));
+            renderer.SetPropertyBlock(_figureProperties);
+        }
+
         private void AdvanceEffects(float dt)
         {
+            AdvanceBleedFlash(dt);
+
             // Hit reaction: a quick squash-and-recover on the model only, so the bars above the head
             // stay put and readable while it plays.
             if (_hitPunchLeft > 0f)

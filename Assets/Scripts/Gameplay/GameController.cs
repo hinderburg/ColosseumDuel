@@ -60,6 +60,7 @@ namespace ColosseumDuel.Gameplay
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
             Manager.Damaged += OnDamaged;
+            Manager.Bled += OnBled;
             Manager.AbilityFired += OnAbilityFired;
 
             if (AutoStartOnPlay) RestartMatch();
@@ -177,6 +178,21 @@ namespace ColosseumDuel.Gameplay
             if (victim != null) Arena.PlayBlood(victim.Pos);
         }
 
+
+        /// <summary>
+        /// A wound opened up at the top of a cycle.
+        ///
+        /// Deliberately quieter than a blow: no recoil animation and no swing on the other side,
+        /// because nobody swung. A red flicker and a small spot of blood is the whole of it.
+        /// </summary>
+        private void OnBled(PlayerSide side, float amount)
+        {
+            if (amount <= 0f) return;
+            ViewFor(side).PlayBleed();
+
+            var victim = Manager.State.Get(side).Active;
+            if (victim != null) Arena.PlayBlood(victim.Pos);
+        }
 
         private void OnAbilityFired(PlayerSide side)
         {
