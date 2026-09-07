@@ -66,6 +66,16 @@ namespace ColosseumDuel.Gameplay.View
         public Sprite Ring;
 
         /// <summary>
+        /// Rounded rectangle, nine-sliced: the shape every panel, button and bar in the HUD is cut
+        /// to. One sprite for all of them rather than a radius per widget, so the corners match
+        /// across the whole interface without anything having to agree on a number.
+        ///
+        /// Null is survivable - a widget without it falls back to a square quad, which is what the
+        /// HUD was before - so a palette from an older bootstrap run still renders.
+        /// </summary>
+        public Sprite RoundedPanel;
+
+        /// <summary>
         /// One silhouette per archetype, indexed by GladiatorId. Left white so the UI can tint each
         /// with its archetype colour - the same one the body carries on the arena, so the card and
         /// the fighter read as the same character.

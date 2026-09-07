@@ -187,7 +187,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
                 var icon = HudFactory.CreatePanel($"OfferIcon_{i}", button.transform,
                     _palette != null ? _palette.ArchetypeColor(def.Id) : Color.white);
-                icon.sprite = _palette != null ? _palette.IconFor(def.Id) : null;
+                HudFactory.UseSprite(icon, _palette != null ? _palette.IconFor(def.Id) : null);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
                 icon.enabled = icon.sprite != null;
@@ -217,7 +217,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 skillText.rectTransform.offsetMax = new Vector2(-62f, 0f);
 
                 var skill = HudFactory.CreatePanel($"OfferSkillIcon_{i}", button.transform, SkillGreen);
-                skill.sprite = _palette != null ? _palette.IconFor(def.SkilledWith) : null;
+                HudFactory.UseSprite(skill, _palette != null ? _palette.IconFor(def.SkilledWith) : null);
                 skill.preserveAspect = true;
                 skill.raycastTarget = false;
                 skill.enabled = skill.sprite != null;
@@ -226,7 +226,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 // The frame and the number are the whole of "this one is in your squad, third".
                 var frame = HudFactory.CreatePanel($"OfferFrame_{i}", button.transform,
                     HudFactory.ActiveOutline);
-                frame.sprite = _palette != null ? _palette.Ring : null;
+                HudFactory.UseSprite(frame, _palette != null ? _palette.Ring : null);
                 frame.raycastTarget = false;
                 Anchor(frame.rectTransform, new Vector2(1f, 1f), new Vector2(30f, 30f), new Vector2(-8f, -8f));
 
@@ -320,10 +320,10 @@ namespace ColosseumDuel.Gameplay.Hud
 
                 var def = GladiatorDef.Get(_controller.Squad[slot]);
                 tile.Name.text = $"{def.Name}   ·   {WeaponDef.Get(def.SkilledWith).Name}";
-                tile.Icon.sprite = _palette != null ? _palette.IconFor(def.Id) : null;
+                HudFactory.UseSprite(tile.Icon, _palette != null ? _palette.IconFor(def.Id) : null);
                 tile.Icon.color = _palette != null ? _palette.ArchetypeColor(def.Id) : Color.white;
                 tile.Icon.enabled = tile.Icon.sprite != null;
-                tile.Skill.sprite = _palette != null ? _palette.IconFor(def.SkilledWith) : null;
+                HudFactory.UseSprite(tile.Skill, _palette != null ? _palette.IconFor(def.SkilledWith) : null);
                 tile.Skill.enabled = tile.Skill.sprite != null;
             }
         }

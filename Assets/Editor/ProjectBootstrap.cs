@@ -333,6 +333,7 @@ namespace ColosseumDuel.EditorTools
             palette.Skull = ProceduralTextures.EnsureSkull(TexturesDir + "/Skull.png");
             palette.Disc = ProceduralTextures.EnsureDisc(TexturesDir + "/Disc.png");
             palette.Ring = ProceduralTextures.EnsureDisc(TexturesDir + "/Ring.png", innerFraction: 0.78f);
+            palette.RoundedPanel = ProceduralTextures.EnsureRoundedRect(TexturesDir + "/RoundedPanel.png");
 
             palette.ArchetypeIcons = new Sprite[GladiatorDef.All.Count];
             for (int i = 0; i < GladiatorDef.All.Count; i++)

@@ -119,7 +119,7 @@ namespace ColosseumDuel.Gameplay.Hud
             // because it has to sit on top of the spikes and the sand alike, and because it is
             // instruction rather than scenery.
             view._tapMark = HudFactory.CreatePanel("TutorialTapMark", root, new Color(1f, 0.9f, 0.4f, 0.9f));
-            view._tapMark.sprite = palette != null ? palette.Ring : null;
+            HudFactory.UseSprite(view._tapMark, palette != null ? palette.Ring : null);
             view._tapMark.raycastTarget = false;
             var markRect = view._tapMark.rectTransform;
             markRect.anchorMin = markRect.anchorMax = new Vector2(0.5f, 0.5f);

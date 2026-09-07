@@ -82,7 +82,7 @@ namespace ColosseumDuel.Gameplay.Hud
             // leave nothing behind, so there was no way to tell a guard from a phase where nothing
             // had been touched at all.
             view._defendGlow = HudFactory.CreatePanel("DefendGlow", view._defendRect, HudFactory.PlayerColor);
-            view._defendGlow.sprite = palette != null ? palette.Disc : null;
+            HudFactory.UseSprite(view._defendGlow, palette != null ? palette.Disc : null);
             view._defendGlow.raycastTarget = false;
             view._defendGlow.transform.SetAsFirstSibling();
             HudFactory.Stretch(view._defendGlow.rectTransform, -14f);
@@ -95,7 +95,7 @@ namespace ColosseumDuel.Gameplay.Hud
             // The rage gauge rides on the ability button as a ring, so charge is read in the same
             // glance as the button itself rather than from a bar elsewhere on screen.
             view._rageGauge = HudFactory.CreatePanel("RageGauge", view._abilityRect, HudFactory.RageColor);
-            view._rageGauge.sprite = palette != null ? palette.Ring : null;
+            HudFactory.UseSprite(view._rageGauge, palette != null ? palette.Ring : null);
             view._rageGauge.type = Image.Type.Filled;
             view._rageGauge.fillMethod = Image.FillMethod.Radial360;
             view._rageGauge.fillOrigin = (int)Image.Origin360.Top;
@@ -105,7 +105,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             // A soft halo under the button, pulsed only when the ability is actually available.
             view._abilityGlow = HudFactory.CreatePanel("ReadyGlow", view._abilityRect, HudFactory.RageColor);
-            view._abilityGlow.sprite = palette != null ? palette.Disc : null;
+            HudFactory.UseSprite(view._abilityGlow, palette != null ? palette.Disc : null);
             view._abilityGlow.raycastTarget = false;
             view._abilityGlow.transform.SetAsFirstSibling();
             HudFactory.Stretch(view._abilityGlow.rectTransform, -14f);
@@ -137,7 +137,7 @@ namespace ColosseumDuel.Gameplay.Hud
             Color accent, out RectTransform rect, out CanvasGroup group)
         {
             var image = HudFactory.CreatePanel(name, parent, new Color(0.10f, 0.10f, 0.13f, 0.92f));
-            image.sprite = palette != null ? palette.Disc : null;
+            HudFactory.UseSprite(image, palette != null ? palette.Disc : null);
 
             rect = image.rectTransform;
             rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -148,7 +148,7 @@ namespace ColosseumDuel.Gameplay.Hud
             button.targetGraphic = image;
 
             var edge = HudFactory.CreatePanel("Edge", rect, accent);
-            edge.sprite = palette != null ? palette.Ring : null;
+            HudFactory.UseSprite(edge, palette != null ? palette.Ring : null);
             edge.raycastTarget = false;
             HudFactory.Stretch(edge.rectTransform);
 

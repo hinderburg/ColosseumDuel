@@ -471,6 +471,90 @@ namespace ColosseumDuel.EditorTools
         /// fillAmount is ignored outright on an Image with no sprite - it draws full and says
         /// nothing about it.
         /// </summary>
+        /// <summary>
+        /// A white rounded rectangle set up for nine-slicing, which is what gives the HUD its
+        /// corners.
+        ///
+        /// Nine-sliced rather than stretched: a HUD panel is anything from a 40-pixel square button
+        /// to a full-width bar, and one stretched sprite would give each of them a differently
+        /// shaped corner - an oval on the wide ones. The border is set to the corner radius so the
+        /// four corners are carried through at their own size and only the flat middle stretches.
+        ///
+        /// Drawn at four samples per pixel rather than with a one-pixel alpha ramp. A corner this
+        /// size is a long shallow curve, and a single-pixel ramp on it reads as a staircase; the
+        /// disc above gets away with it because a small circle's edge is steep everywhere.
+        /// </summary>
+        public static Sprite EnsureRoundedRect(string path, int size = 48, int radius = 14)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (existing != null) return existing;
+
+            radius = Mathf.Clamp(radius, 1, size / 2);
+            var pixels = new Color32[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float covered = 0f;
+                    for (int sy = 0; sy < 2; sy++)
+                    {
+                        for (int sx = 0; sx < 2; sx++)
+                        {
+                            float px = x + 0.25f + sx * 0.5f;
+                            float py = y + 0.25f + sy * 0.5f;
+                            if (InsideRoundedRect(px, py, size, radius)) covered += 0.25f;
+                        }
+                    }
+
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(covered * 255f));
+                }
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.alphaIsTransparency = true;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = false;
+
+            // The border has to go through TextureImporterSettings; TextureImporter has no
+            // spriteBorder of its own, and setting it anywhere else is silently dropped - which
+            // leaves a sprite that looks right in the inspector and stretches its corners in game.
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteBorder = new Vector4(radius, radius, radius, radius);
+            settings.spriteMeshType = SpriteMeshType.FullRect;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        private static bool InsideRoundedRect(float x, float y, int size, int radius)
+        {
+            float near = radius;
+            float far = size - radius;
+
+            float cx = x < near ? near : (x > far ? far : x);
+            float cy = y < near ? near : (y > far ? far : y);
+
+            // Straight edges and the flat middle are inside by definition; only the four corner
+            // squares actually need the distance test.
+            if (cx == x && cy == y) return true;
+            return (x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius;
+        }
+
         public static Sprite EnsureDisc(string path, float innerFraction = 0f)
         {
             var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);

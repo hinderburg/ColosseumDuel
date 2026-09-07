@@ -52,6 +52,7 @@ namespace ColosseumDuel.Gameplay.Hud
             if (Input == null) Input = FindFirstObjectByType<PlayerInputController>();
 
             var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
+            HudFactory.RoundedSprite = palette != null ? palette.RoundedPanel : null;
             if (palette != null && palette.HudFont != null)
                 HudFactory.ActiveFont = palette.HudFont;
             else
@@ -181,7 +182,7 @@ namespace ColosseumDuel.Gameplay.Hud
             var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
 
             _planningVignette = HudFactory.CreatePanel("PlanningVignette", root, Color.clear);
-            _planningVignette.sprite = palette != null ? palette.Vignette : null;
+            HudFactory.UseSprite(_planningVignette, palette != null ? palette.Vignette : null);
             _planningVignette.raycastTarget = false;
             _planningVignette.transform.SetAsFirstSibling();
             HudFactory.Stretch(_planningVignette.rectTransform);
@@ -455,7 +456,7 @@ namespace ColosseumDuel.Gameplay.Hud
                     var def = instance.Def;
                     _pickButtons[i].interactable = alive;
 
-                    _pickIcons[i].sprite = palette != null ? palette.IconFor(def.Id) : null;
+                    HudFactory.UseSprite(_pickIcons[i], palette != null ? palette.IconFor(def.Id) : null);
                     _pickIcons[i].color = palette != null ? palette.ArchetypeColor(def.Id) : Color.white;
                     _pickIcons[i].enabled = _pickIcons[i].sprite != null;
 

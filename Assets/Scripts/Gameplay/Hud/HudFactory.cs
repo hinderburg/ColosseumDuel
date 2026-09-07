@@ -36,6 +36,29 @@ namespace ColosseumDuel.Gameplay.Hud
         /// </summary>
         public static Font ActiveFont { get; set; }
 
+        /// <summary>
+        /// The nine-sliced rounded rectangle every panel, button and bar is cut to. MatchHud sets
+        /// it from ViewPalette before building the HUD; null leaves square corners, which is what
+        /// the HUD looked like before and is still better than not drawing.
+        /// </summary>
+        public static Sprite RoundedSprite { get; set; }
+
+        /// <summary>
+        /// Puts a sprite on an image and sets the draw mode that goes with it.
+        ///
+        /// The two belong together. A nine-sliced sprite drawn Simple stretches its corners into
+        /// ovals; a borderless one drawn Sliced warns once per instance and falls back. Leaving
+        /// the mode behind is the bug: an image built rounded and then given an icon keeps Sliced
+        /// and complains about a sprite that never asked to be sliced.
+        /// </summary>
+        public static void UseSprite(Image image, Sprite sprite)
+        {
+            image.sprite = sprite;
+            image.type = sprite != null && sprite.border != Vector4.zero
+                ? Image.Type.Sliced
+                : Image.Type.Simple;
+        }
+
         public static Font DefaultFont
         {
             get
@@ -65,6 +88,7 @@ namespace ColosseumDuel.Gameplay.Hud
             var rect = CreateRect(name, parent);
             var image = rect.gameObject.AddComponent<Image>();
             image.color = color;
+            UseSprite(image, RoundedSprite);
             return image;
         }
 

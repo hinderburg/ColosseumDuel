@@ -63,9 +63,12 @@ namespace ColosseumDuel.Gameplay.Hud
 
             // Frame marking the gladiator currently fighting. A separate outline object rather than
             // a colour change on the tile, so "on the arena" and "still alive" stay independent.
+            //
+            // It keeps the panel's rounded sprite even though the panel itself is transparent: the
+            // outline is drawn from the graphic's own mesh, so the sprite is what decides whether
+            // the marker traces the tile's corners or cuts across them.
             var frame = HudFactory.CreatePanel("ActiveFrame", rect, Color.clear);
             HudFactory.Stretch(frame.rectTransform);
-            frame.sprite = null;
             var outline = frame.gameObject.AddComponent<Outline>();
             outline.effectColor = HudFactory.ActiveOutline;
             outline.effectDistance = new Vector2(3f, 3f);
@@ -73,7 +76,7 @@ namespace ColosseumDuel.Gameplay.Hud
             view._frame = frame;
 
             view._skull = HudFactory.CreatePanel("Skull", rect, Color.white);
-            view._skull.sprite = skullSprite;
+            HudFactory.UseSprite(view._skull, skullSprite);
             view._skull.preserveAspect = true;
             var skullRect = view._skull.rectTransform;
             skullRect.anchorMin = new Vector2(0.5f, 1f);
@@ -125,7 +128,7 @@ namespace ColosseumDuel.Gameplay.Hud
             // arena, so a card and a fighter are matched by colour rather than by reading a name.
             if (_icon != null)
             {
-                _icon.sprite = _palette != null ? _palette.IconFor(g.Def.Id) : null;
+                HudFactory.UseSprite(_icon, _palette != null ? _palette.IconFor(g.Def.Id) : null);
                 _icon.enabled = _icon.sprite != null && alive;
                 if (_palette != null) _icon.color = _palette.ArchetypeColor(g.Def.Id);
             }
