@@ -193,6 +193,40 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void ARunStraightPastSomebodyStillCosts()
+        {
+            // Passing through reach and stopping inside it are the same event to a man with a
+            // weapon in his hand. Resolved only at the end of the cycle, a charge clean through the
+            // opponent cost nothing at all - the one approach in the game that most obviously
+            // should - and at full speed a fighter crosses most of a body length per substep, so
+            // the crossing has to be measured over the step rather than sampled at its ends.
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            p1.Weapon = WeaponKind.DualSwords;   // the shortest reach in the game
+            bot.Weapon = WeaponKind.DualSwords;
+
+            // Side by side across his path, far enough apart that they never collide, and he runs
+            // the length of the arena past her.
+            float miss = (GameConstants.CollideDistance + WeaponDef.DualSwords.Reach) * 0.5f;
+            p1.Pos = new Vector2(-miss, -120f);
+            bot.Pos = new Vector2(0f, 0f);
+            float botHp = bot.Hp;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.up, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            Assert.IsFalse(m.State.Collided, "they passed, they did not crash");
+            Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), WeaponDef.DualSwords.Reach,
+                "he should have run clean past and be out of reach again by the end");
+            Assert.Less(bot.Hp, botHp, "and he should have struck her on the way through");
+        }
+
+        [Test]
         public void AMoveThatEndsOutOfRange_LandsNothing()
         {
             // The other half of the same rule, and the half that makes reach worth reading: stop

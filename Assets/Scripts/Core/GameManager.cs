@@ -474,6 +474,9 @@ namespace ColosseumDuel.Core
             var a = State.P1.Active;
             var b = State.Bot.Active;
 
+            var wasA = a?.Pos ?? Vector2.zero;
+            var wasB = b?.Pos ?? Vector2.zero;
+
             StepGladiator(a, dt);
             StepGladiator(b, dt);
             FaceOpponents();
@@ -483,7 +486,36 @@ namespace ColosseumDuel.Core
             if (State.Collided) return;
 
             if (Vector2.Distance(a.Pos, b.Pos) <= GameConstants.CollideDistance)
+            {
                 ResolveCollision(a, b);
+                return;
+            }
+
+            ResolveReachAttacks(a, b, ClosestApproach(wasA, a.Pos, wasB, b.Pos));
+        }
+
+        /// <summary>
+        /// How near the two came at any point during this substep, not merely where they ended it.
+        ///
+        /// A gladiator at full speed covers most of a body length per substep, so two running past
+        /// each other can start the substep out of reach and end it out of reach on the other side,
+        /// having crossed. Sampling the endpoints alone misses exactly the case this is for - a
+        /// blow struck in passing - and misses it more often the faster the fighter, which is the
+        /// wrong way round.
+        ///
+        /// Both move at a constant velocity across a substep, so the distance between them is a
+        /// quadratic in time and its minimum is one division.
+        /// </summary>
+        private static float ClosestApproach(Vector2 fromA, Vector2 toA, Vector2 fromB, Vector2 toB)
+        {
+            var separation = fromA - fromB;
+            var closing = (toA - fromA) - (toB - fromB);
+
+            float speedSq = closing.sqrMagnitude;
+            if (speedSq < 0.000001f) return separation.magnitude;
+
+            float t = Mathf.Clamp01(-Vector2.Dot(separation, closing) / speedSq);
+            return (separation + closing * t).magnitude;
         }
 
         private void StepGladiator(GladiatorInstance g, float dt)
@@ -546,31 +578,28 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// The blow at the end of a run: whoever finishes the cycle with the other inside his own
-        /// weapon's reach swings at him.
+        /// A blow the moment the other one comes inside your weapon's reach - running past him, or
+        /// standing your ground while he runs past you, or simply ending the cycle next to him.
         ///
-        /// This replaces the old pass-by, which fired mid-flight the moment the two crossed a single
-        /// fixed band and separated again. Two things were wrong with it. It ignored the weapon -
-        /// everybody's reach was the same 66 units, so the mace's whole point had nowhere to live.
-        /// And it fired on approach rather than on arrival, which meant a move that ended next to
-        /// somebody and a move that merely brushed past them at speed were the same event.
+        /// Checked every substep rather than only when the phase ends. Ending in range and passing
+        /// through range are the same event to a fighter with a weapon in his hand, and resolving
+        /// only at the end meant a charge straight through somebody cost nothing at all - the one
+        /// approach in the game that most obviously should.
         ///
-        /// Ordinary movement can now finish in an attack, which is the point: closing to exactly the
-        /// edge of your reach and no further is a real decision, and the answer differs per weapon.
+        /// Nothing needs a "have they attacked yet" flag: an attack is spent out of
+        /// AttacksRemainingThisCycle, so a gladiator who swings on the substep he comes into range
+        /// has nothing left to swing again with while he is still there. The budget is the cooldown.
         ///
         /// Each side is checked against its own reach, so a mace user really can land a blow from a
         /// distance a pair of short blades cannot answer from. That asymmetry is the reason reach is
         /// a stat rather than a constant.
         /// </summary>
-        private void ResolveReachAttacks()
+        private void ResolveReachAttacks(GladiatorInstance a, GladiatorInstance b, float distance)
         {
-            var a = State.P1.Active;
-            var b = State.Bot.Active;
             if (a == null || b == null || !a.Alive || !b.Alive) return;
 
-            float distance = Vector2.Distance(a.Pos, b.Pos);
-            bool aReaches = distance <= a.WeaponDef.Reach;
-            bool bReaches = distance <= b.WeaponDef.Reach;
+            bool aReaches = a.AttacksRemainingThisCycle > 0 && distance <= a.WeaponDef.Reach;
+            bool bReaches = b.AttacksRemainingThisCycle > 0 && distance <= b.WeaponDef.Reach;
             if (!aReaches && !bReaches) return;
 
             ExchangeBlows(a, b, aReaches, bReaches);
@@ -643,9 +672,9 @@ namespace ColosseumDuel.Core
 
         private void EndActionPhase()
         {
-            // A collision already resolved its own exchange and threw the two apart, so it does not
-            // also get the end-of-run blow: one approach, one exchange.
-            if (!State.Collided) ResolveReachAttacks();
+            // Nothing to resolve here any more. Blows land during the phase, on the substep the two
+            // come within reach of each other, so a cycle that ends with them standing together has
+            // already been paid for - on the substep they arrived.
 
             State.P1.Active?.ResolveCycleRage();
             State.Bot.Active?.ResolveCycleRage();
