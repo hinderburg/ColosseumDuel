@@ -75,10 +75,20 @@ namespace ColosseumDuel.Gameplay
         public void RestartMatch()
         {
             if (Manager == null) return;
+
+            // Only the first fight of a session is taught. Counting here rather than storing it
+            // anywhere: a player who reloads the page is starting over in every sense, and one who
+            // presses "again" has just played a match and does not need the labels back.
+            bool tutorial = _matchesStarted == 0;
+            _matchesStarted++;
+
             Manager.StartMatch(
                 new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius },
-                new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius });
+                new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius },
+                tutorial);
         }
+
+        private int _matchesStarted;
 
         private void BuildViews()
         {

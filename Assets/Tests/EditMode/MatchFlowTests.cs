@@ -282,6 +282,80 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
+        public void TheTutorialRoundPutsASwordWithinOneDashOfWhoeverWasPicked()
+        {
+            // Whoever was picked is the point. Hilius covers twice the ground Brutius does, so a
+            // sword at any fixed distance would be a stroll for one and out of reach for another -
+            // and the tutorial's one sentence would be wrong for two players out of three.
+            foreach (var def in GladiatorDef.All)
+            {
+                var m = new GameManager(new System.Random(def.Id.GetHashCode()));
+                m.StartMatch(Squad, Squad, tutorial: true);
+                m.SubmitPick(PlayerSide.P1, def.Id);
+
+                var player = m.State.P1.Active;
+                var sword = m.State.Items.Items.Find(i => i.Kind == ItemKind.Weapon);
+
+                Assert.IsNotNull(sword);
+                Assert.Less(Vector2.Distance(player.Pos, sword.Pos), player.DashReach(),
+                    $"{def.Name} cannot reach the sword the tutorial tells him to run through");
+                Assert.AreEqual(WeaponType.OneHanded, sword.WeaponType,
+                    "a trident would refuse a shield later, by a rule nobody has been taught yet");
+
+                // And the tap point has to be past it, or running to it stops short of the pickup.
+                float toSword = Vector2.Distance(player.Pos, sword.Pos);
+                float toTap = Vector2.Distance(player.Pos, m.State.TutorialTapPoint);
+                Assert.Greater(toTap, toSword, "the tap has to be beyond the sword, not on it");
+                Assert.Less(toTap, player.DashReach(), "and still inside one dash");
+            }
+        }
+
+        [Test]
+        public void TheTutorialPathIsClearOfTraps()
+        {
+            // Being stopped and bitten by scenery on the one move a tutorial asked for teaches the
+            // wrong lesson entirely. Checked over many layouts, since a clear path by luck proves
+            // nothing about the one the next player gets.
+            for (int seed = 0; seed < 40; seed++)
+            {
+                var m = new GameManager(new System.Random(seed));
+                m.StartMatch(Squad, Squad, tutorial: true);
+                m.SubmitPick(PlayerSide.P1, GladiatorId.Hilius); // the longest run, so the widest path
+
+                var from = m.State.P1.Active.Pos;
+                var to = m.State.TutorialTapPoint;
+
+                foreach (var trap in m.State.Traps.Traps)
+                    Assert.GreaterOrEqual(DistanceToSegment(trap.Pos, from, to), TrapSystem.TriggerDistance,
+                        $"seed {seed}: a trap sits on the path the tutorial points at");
+            }
+        }
+
+        [Test]
+        public void AnOrdinaryMatchIsNotRearranged()
+        {
+            // The teaching layout is a first-fight thing. A later match that quietly kept the free
+            // sword and the swept path would be an easier game wearing the same clothes.
+            var m = NewMatch();
+            m.SubmitPick(PlayerSide.P1, GladiatorId.Brutius);
+
+            Assert.IsFalse(m.State.Tutorial);
+            Assert.AreEqual(Vector2.zero, m.State.TutorialTapPoint);
+            Assert.AreEqual(GameConstants.TrapCount, m.State.Traps.Traps.Count,
+                "no traps should have been swept off a path nobody is being pointed down");
+        }
+
+        private static float DistanceToSegment(Vector2 point, Vector2 a, Vector2 b)
+        {
+            var ab = b - a;
+            float lengthSq = ab.sqrMagnitude;
+            if (lengthSq < 0.0001f) return Vector2.Distance(point, a);
+
+            float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / lengthSq);
+            return Vector2.Distance(point, a + ab * t);
+        }
+
+        [Test]
         public void DashCarriesTheSameGround()
         {
             // The reach of one dash is Speed * SpeedScale * ActionTime, and the two constants have

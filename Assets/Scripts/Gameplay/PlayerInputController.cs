@@ -21,8 +21,9 @@ namespace ColosseumDuel.Gameplay
         public GameController Controller;
         public Camera ArenaCamera;
 
-        [Tooltip("Which control the player is using. Set from the pick screen; drag is the default.")]
-        public ControlScheme Scheme = ControlScheme.Drag;
+        [Tooltip("Which control the player is using. Tapping is the default and the only one the " +
+                 "game offers; dragging is still here and still works, from the inspector.")]
+        public ControlScheme Scheme = ControlScheme.Tap;
 
         [Tooltip("How far from the gladiator, in virtual units, a press still counts as grabbing " +
                  "them. Only used by the simulation-space entry point; real presses are measured " +

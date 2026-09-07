@@ -53,7 +53,7 @@ namespace ColosseumDuel.Core
         // full power close the gap between them at twice their own speed, and at this distance the
         // slowest pair (two Brutius, 75/s each) needs two action phases to meet where they used to
         // need one. The fastest still meets inside a single phase. Lower this if the wait shows.
-        public const float SpawnDistanceFraction = 0.45f;
+        public const float SpawnDistanceFraction = 0.55f;
 
         // Virtual units per second per point of a gladiator's Speed stat.
         //

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace ColosseumDuel.Core
 {
@@ -26,6 +27,19 @@ namespace ColosseumDuel.Core
         public TrapSystem Traps;
 
         public PlayerSide? WinnerSide;
+
+        /// <summary>
+        /// True for a player's very first fight, which is laid out to teach rather than to be fair:
+        /// a sword within one dash of whoever they picked, no traps on the way to it, and labels on
+        /// everything. Every later match runs on the ordinary rules.
+        /// </summary>
+        public bool Tutorial;
+
+        /// <summary>
+        /// Where the tutorial is telling the player to tap - just past the sword, so the run picks
+        /// it up on the way through. Zero when no tutorial is running.
+        /// </summary>
+        public Vector2 TutorialTapPoint;
 
         // action-phase collision/pass-by bookkeeping for the current cycle
         public bool Collided;

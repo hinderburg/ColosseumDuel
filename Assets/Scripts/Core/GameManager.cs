@@ -43,8 +43,12 @@ namespace ColosseumDuel.Core
         // match lifecycle
         // ------------------------------------------------------------------
 
-        public void StartMatch(IEnumerable<GladiatorDef> p1Squad, IEnumerable<GladiatorDef> botSquad)
+        public void StartMatch(IEnumerable<GladiatorDef> p1Squad, IEnumerable<GladiatorDef> botSquad,
+                               bool tutorial = false)
         {
+            State.Tutorial = tutorial;
+            State.TutorialTapPoint = Vector2.zero;
+
             State.P1.Roster = p1Squad.Select(d => new GladiatorInstance(d)).ToList();
             State.Bot.Roster = botSquad.Select(d => new GladiatorInstance(d)).ToList();
 
@@ -118,6 +122,8 @@ namespace ColosseumDuel.Core
             // Fresh traps every round. Left from the last one they would all be sprung by the time
             // the third round started, and the arena would quietly stop having a hazard in it.
             State.Traps?.SpawnForRound();
+
+            if (State.Tutorial && State.Round == 1) ArrangeTutorialRound();
             // Reveal is a real phase with a duration (see Tick) so the UI can show both picks
             // before planning opens - it used to be skipped in the same frame it was entered.
             SetPhase(MatchPhase.Reveal);
@@ -141,6 +147,61 @@ namespace ColosseumDuel.Core
             float d = ArenaShape.RadiusY * GameConstants.SpawnDistanceFraction;
             Place(State.P1.Active, new Vector2(0f, -d), Vector2.up);
             Place(State.Bot.Active, new Vector2(0f, d), Vector2.down);
+        }
+
+        /// <summary>
+        /// Rearranges the opening round of a first match into something that can be taught from.
+        ///
+        /// The lesson is one sentence - tap past a thing and you run through it - so the round has
+        /// to be able to deliver that sentence whoever the player picked. Everything here exists to
+        /// remove the ways it could fail to.
+        /// </summary>
+        private void ArrangeTutorialRound()
+        {
+            var player = State.P1.Active;
+            if (player == null || State.Items == null) return;
+
+            // Measured against this gladiator's own dash, not a fixed distance: Hilius covers twice
+            // the ground Brutius does, so any single number would be a comfortable stroll for one of
+            // them and out of reach for another. At 0.55 of his reach the sword is inside one move
+            // for all three, with room to tap past it.
+            float reach = player.DashReach();
+            var forward = player.Facing.sqrMagnitude > 0.0001f ? player.Facing.normalized : Vector2.up;
+
+            var sword = State.Items.Items.FirstOrDefault(i => i.Kind == ItemKind.Weapon);
+            if (sword != null)
+            {
+                sword.Pos = player.Pos + forward * (reach * 0.55f);
+
+                // One-handed on purpose. A trident would refuse a shield later and turn the first
+                // thing the player is ever told to do into a rule they have not been taught yet.
+                sword.WeaponType = WeaponType.OneHanded;
+            }
+
+            State.TutorialTapPoint = player.Pos + forward * (reach * 0.85f);
+
+            // Nothing on the path the player is being told to run. Being stopped and bitten by
+            // scenery on the one move a tutorial asked for teaches the wrong lesson entirely.
+            ClearTrapsBetween(player.Pos, State.TutorialTapPoint);
+        }
+
+        private void ClearTrapsBetween(Vector2 from, Vector2 to)
+        {
+            var traps = State.Traps?.Traps;
+            if (traps == null) return;
+
+            float clearance = TrapSystem.TriggerDistance + GameConstants.TrapRadius;
+            traps.RemoveAll(t => DistanceToSegment(t.Pos, from, to) < clearance);
+        }
+
+        private static float DistanceToSegment(Vector2 point, Vector2 a, Vector2 b)
+        {
+            var ab = b - a;
+            float lengthSq = ab.sqrMagnitude;
+            if (lengthSq < 0.0001f) return Vector2.Distance(point, a);
+
+            float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / lengthSq);
+            return Vector2.Distance(point, a + ab * t);
         }
 
         /// <summary>Which side a gladiator is fighting for, for events that carry the victim.</summary>

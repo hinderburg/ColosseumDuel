@@ -24,7 +24,6 @@ namespace ColosseumDuel.Gameplay.Hud
         private readonly List<Button> _pickButtons = new List<Button>();
         private readonly List<Text> _pickButtonLabels = new List<Text>();
         private readonly List<Text> _pickAbilityLabels = new List<Text>();
-        private readonly List<Button> _controlButtons = new List<Button>();
 
         private Text _phaseLabel;
         private Text _hint;
@@ -36,8 +35,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private Text _overlayTitle;
         private Text _overlaySubtitle;
         private RectTransform _pickRow;
-        private RectTransform _controlRow;
-        private Text _controlCaption;
+        private TutorialView _tutorial;
         private Image _planningVignette;
         private float _vignetteStrength;
         private Button _restartButton;
@@ -129,6 +127,7 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
             _actionButtons = ActionButtonsView.Create(root, palette, Controller != null ? Controller.Arena : null);
+            _tutorial = TutorialView.Create(root, palette, Controller != null ? Controller.Arena : null);
 
             _abilityButton = _actionButtons.Ability;
             _defendButton = _actionButtons.Defend;
@@ -211,57 +210,6 @@ namespace ColosseumDuel.Gameplay.Hud
         /// state you are in, not what the other one is, and "pull" versus "tap" is a choice a
         /// first-time player has to be able to see before making.
         /// </summary>
-        private void BuildControlSwitch(Transform parent)
-        {
-            _controlRow = HudFactory.CreateRect("ControlSwitch", parent);
-            _controlRow.anchorMin = _controlRow.anchorMax = new Vector2(0.5f, 0.5f);
-            _controlRow.sizeDelta = new Vector2(380f, 44f);
-            // Below the cards, and clear of them: three cards of 96 plus their spacing run to about
-            // 162 below centre, which is further down than the row rect claims to be.
-            _controlRow.anchoredPosition = new Vector2(0f, -228f);
-            HudFactory.AddRow(_controlRow, 8f, TextAnchor.MiddleCenter, new RectOffset(0, 0, 0, 0));
-
-            var caption = HudFactory.CreateLabel("ControlCaption", parent, "Управление", 15,
-                TextAnchor.MiddleCenter, HudFactory.MutedTextColor);
-            caption.rectTransform.anchorMin = caption.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            caption.rectTransform.sizeDelta = new Vector2(380f, 20f);
-            caption.rectTransform.anchoredPosition = new Vector2(0f, -196f);
-            _controlCaption = caption;
-
-            foreach (var scheme in new[] { ControlScheme.Drag, ControlScheme.Tap })
-            {
-                var chosen = scheme;
-                var button = HudFactory.CreateButton($"Control_{scheme}", _controlRow,
-                    scheme == ControlScheme.Drag ? "Оттяжка" : "Тап", 16);
-                button.GetComponent<RectTransform>().sizeDelta = new Vector2(184f, 40f);
-                button.onClick.AddListener(() => { if (Input != null) Input.Scheme = chosen; });
-                _controlButtons.Add(button);
-            }
-        }
-
-        private void SyncControlSwitch(MatchState state)
-        {
-            if (_controlRow == null) return;
-
-            // The opening pick only. From round two the pick screen belongs to whoever just lost a
-            // gladiator, and that is no moment to be re-learning the controls.
-            bool offered = state.P1.NeedsPick && state.Round == 0;
-            if (_controlRow.gameObject.activeSelf != offered)
-            {
-                _controlRow.gameObject.SetActive(offered);
-                _controlCaption.gameObject.SetActive(offered);
-            }
-            if (!offered) return;
-
-            var scheme = Input != null ? Input.Scheme : ControlScheme.Drag;
-            for (int i = 0; i < _controlButtons.Count; i++)
-            {
-                bool selected = (ControlScheme)i == scheme;
-                var background = (Image)_controlButtons[i].targetGraphic;
-                background.color = selected ? HudFactory.PlayerColor : HudFactory.PanelColor;
-            }
-        }
-
         private void BuildOverlay(RectTransform root)
         {
             var panel = HudFactory.CreatePanel("Overlay", root, HudFactory.OverlayColor);
@@ -343,8 +291,6 @@ namespace ColosseumDuel.Gameplay.Hud
                 _pickAbilityLabels.Add(ability);
             }
 
-            BuildControlSwitch(panel.transform);
-
             _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Ещё раз", 24);
             _restartButton.GetComponent<RectTransform>().anchorMin = new Vector2(0.5f, 0.5f);
             _restartButton.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
@@ -369,8 +315,8 @@ namespace ColosseumDuel.Gameplay.Hud
             SyncActions(state);
             SyncPhaseLabel(state);
             SyncPlanningVignette(state);
+            _tutorial.Sync(state);
             SyncOverlay(state);
-            SyncControlSwitch(state);
         }
 
         private void SyncRoster(MatchState state)
@@ -401,7 +347,11 @@ namespace ColosseumDuel.Gameplay.Hud
                 Mathf.Max(0f, GameConstants.PlanningTime - state.PhaseTimer));
 
             _defendButton.interactable = canAct;
-            _hint.enabled = canAct;
+
+            // The generic hint stands down while the tutorial is talking: during the first round the
+            // tutorial line is the hint, and two lines saying near enough the same thing a few pixels
+            // apart read as clutter rather than as help.
+            _hint.enabled = canAct && !(state.Tutorial && state.Round == 1);
 
             // The hint has to say what the chosen control actually is; a line about pulling back is
             // worse than no line at all for a player who picked tapping.
