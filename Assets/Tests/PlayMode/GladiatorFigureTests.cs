@@ -67,8 +67,10 @@ namespace ColosseumDuel.Tests
 
                 // Everything outside the helmet. Picked by where it sits rather than by its name:
                 // the helmet is a model now and its renderer is a child called something else, so
-                // "not the one called Helmet" quietly started matching the helmet.
-                var helmetRoot = figure.transform.Find("Helmet");
+                // "not the one called Helmet" quietly started matching the helmet. Searched through
+                // the whole figure because the helmet is worn on the head bone, several levels down.
+                var helmetRoot = figure.GetComponentsInChildren<Transform>(true)
+                    .First(t => t.name == "Helmet");
                 var body = figure.GetComponentsInChildren<Renderer>(true)
                     .First(r => helmetRoot == null || !r.transform.IsChildOf(helmetRoot));
 
@@ -328,6 +330,56 @@ namespace ColosseumDuel.Tests
         {
             if (animator.GetCurrentAnimatorStateInfo(0).IsName("Attack")) return true;
             return animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Attack");
+        }
+
+        /// <summary>
+        /// The helmet stays on the head through an animation, and through the death in particular.
+        ///
+        /// It was a child of the figure root, so it never followed the animation at all: it hung at
+        /// the spot the head occupies in the bind pose while the model moved underneath it. Dying
+        /// made that unmissable, the body going down and the helmet staying in mid-air above
+        /// nobody - which is also the moment the camera comes in for a close look at it.
+        ///
+        /// Measured against the head bone rather than by eye, and across the whole fall rather than
+        /// at one instant: a helmet that is right at the start and wrong by the end is exactly the
+        /// failure being guarded against.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheHelmetRidesTheHeadThroughTheDeathAnimation()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var figure = FindIn("Player", $"Figure_{GladiatorId.Brutius}");
+            var animator = figure?.GetComponentInChildren<Animator>(true);
+            if (animator == null || animator.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            var head = animator.GetBoneTransform(HumanBodyBones.Head);
+            var helmet = figure.GetComponentsInChildren<Transform>(true).First(t => t.name == "Helmet");
+            Assert.IsNotNull(head, "the rig has no head bone");
+
+            float atRest = Vector3.Distance(helmet.position, head.position);
+
+            // Down he goes.
+            _controller.Manager.State.P1.Active.Hp = 0f;
+            _controller.Manager.State.P1.Active.Alive = false;
+            yield return null;
+
+            float furthest = 0f;
+            for (float t = 0f; t < 1.2f; t += Time.unscaledDeltaTime)
+            {
+                furthest = Mathf.Max(furthest, Vector3.Distance(helmet.position, head.position));
+                yield return null;
+            }
+
+            // The helmet sits a little proud of the bone, so the gap is never zero - what matters
+            // is that it does not grow while the head moves away underneath it.
+            Assert.Less(furthest, atRest + 0.05f,
+                $"the helmet drifted {furthest - atRest:0.###} units off the head as he fell");
+
+            // And he really did move, so the check had something to catch.
+            Assert.IsTrue(animator.GetBool(AnimatorParams.Dead), "the animator was never told he fell");
         }
 
         [UnityTest]

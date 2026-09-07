@@ -162,6 +162,10 @@ namespace ColosseumDuel.Gameplay.View
                 // scale 1 it slid off both the broad archetype and the small one.
                 SeatHelmet(figure);
 
+                var animator = figure.GetComponentInChildren<Animator>(true);
+                _figureAnimators[i] = animator;
+                WearHelmet(figure, animator);
+
                 // Hidden only after it has been measured: a renderer reports the bounds it was
                 // authored with either way, but measuring what is on screen means having it there.
                 figure.SetActive(false);
@@ -186,7 +190,7 @@ namespace ColosseumDuel.Gameplay.View
                 // Through the children, not off the object itself: the helmet is now a model with
                 // its renderer one level down, and reading only the top level left every helmet in
                 // the game wearing the pack's own material - which is to say, neither side's colour.
-                var helmet = figure.transform.Find("Helmet");
+                var helmet = FindHelmet(figure);
                 if (helmet != null && helmetMaterial != null)
                 {
                     foreach (var helmetRenderer in helmet.GetComponentsInChildren<Renderer>(true))
@@ -197,7 +201,6 @@ namespace ColosseumDuel.Gameplay.View
                     }
                 }
 
-                _figureAnimators[i] = figure.GetComponentInChildren<Animator>(true);
 
                 _figures[i] = figure;
             }
@@ -218,9 +221,48 @@ namespace ColosseumDuel.Gameplay.View
         /// - and a seat measured at scale 1 is only correct at scale 1: on the others the helm rode
         /// clear of the head with the whole face in the open.
         /// </summary>
+        /// <summary>
+        /// Puts the seated helmet on the head bone, so it goes wherever the head goes.
+        ///
+        /// It was a child of the figure root, which meant it never followed the animation at all:
+        /// it hung in the air at the spot the head occupies in the bind pose while the model bobbed
+        /// through a run underneath it. The death clip made that unmissable - the body falls over
+        /// and the helmet stays exactly where it was, in mid-air, above nobody.
+        ///
+        /// Reparented keeping its world pose rather than by working out an offset in bone space.
+        /// A bone's axes have nothing to do with the figure's - this rig's right hand has -X running
+        /// up the body - so any offset written by hand is a guess to be corrected by eye. Seating it
+        /// against the figure first and letting the reparent preserve that is the same answer with
+        /// no guess in it.
+        /// </summary>
+        private static void WearHelmet(GameObject figure, Animator animator)
+        {
+            if (animator == null || !animator.isHuman) return;
+
+            var head = animator.GetBoneTransform(HumanBodyBones.Head);
+            var helmet = FindHelmet(figure);
+            if (head == null || helmet == null) return;
+
+            helmet.SetParent(head, worldPositionStays: true);
+        }
+
+        /// <summary>
+        /// The helmet, wherever it has ended up.
+        ///
+        /// By name through the whole figure rather than as a direct child, because once it is worn
+        /// it is several bones deep. A direct-child lookup silently returned nothing, which is the
+        /// quiet kind of wrong: the helmet simply stopped being painted the side's colour.
+        /// </summary>
+        private static Transform FindHelmet(GameObject figure)
+        {
+            foreach (var t in figure.GetComponentsInChildren<Transform>(true))
+                if (t.name == "Helmet") return t;
+            return null;
+        }
+
         private static void SeatHelmet(GameObject figure)
         {
-            var helmet = figure.transform.Find("Helmet");
+            var helmet = FindHelmet(figure);
             if (helmet == null) return;
 
             var head = WorldBounds(helmet.gameObject, null);
