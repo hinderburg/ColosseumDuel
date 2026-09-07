@@ -51,6 +51,39 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
+        public IEnumerator ALandedBlowKnocksTheCameraAndItSettlesBack()
+        {
+            // A hit should be felt as well as seen. Both halves are asserted: a shake that never
+            // stopped would leave the arena permanently off its centre, and the fixed frame is what
+            // every distance in this game is read against.
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var state = _controller.Manager.State;
+            float gap = Mathf.Min(state.P1.Active.WeaponDef.Reach, state.Bot.Active.WeaponDef.Reach) * 0.7f;
+            state.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
+            state.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
+
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Action, 6f);
+
+            float furthest = 0f;
+            for (float t = 0f; t < 0.3f; t += Time.unscaledDeltaTime)
+            {
+                furthest = Mathf.Max(furthest, Vector3.Distance(_home, _camera.position));
+                yield return null;
+            }
+
+            Assert.Greater(furthest, 0.02f, "the camera never moved when the blows landed");
+            Assert.Less(furthest, 1f, "a shake this big would cost the player the fight they are watching");
+
+            yield return RunSeconds(0.6f);
+            Assert.AreEqual(0f, Vector3.Distance(_home, _camera.position), 0.005f,
+                "the shake left the camera off centre");
+        }
+
+        [UnityTest]
         public IEnumerator ItClosesInOnAKnockoutAndComesBackForTheNextRound()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);

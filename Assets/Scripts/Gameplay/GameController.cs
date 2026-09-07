@@ -43,6 +43,9 @@ namespace ColosseumDuel.Gameplay
 
         private GladiatorView _playerView;
         private GladiatorView _botView;
+
+        /// <summary>The one thing that moves the camera; it takes the shake as well.</summary>
+        private DeathCameraView _deathCamera;
         private readonly List<ItemView> _itemViews = new List<ItemView>();
 
         private void Start()
@@ -62,6 +65,7 @@ namespace ColosseumDuel.Gameplay
             }
 
             BuildViews();
+            _deathCamera = FindFirstObjectByType<DeathCameraView>();
 
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
@@ -215,6 +219,10 @@ namespace ColosseumDuel.Gameplay
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             var victim = Manager.State.Get(side).Active;
             if (victim != null) Arena.PlayBlood(victim.Pos);
+
+            // And a knock on the camera, so a blow is felt and not only seen. Only for blows: a
+            // trap and a bleed go through their own events and leave the frame alone.
+            if (_deathCamera != null) _deathCamera.Shake();
         }
 
 

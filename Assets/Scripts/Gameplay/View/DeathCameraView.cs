@@ -36,14 +36,29 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Closest the camera will ever come, in world units, whatever the maths says.</summary>
         public float MinDistance = 4f;
 
+        /// <summary>
+        /// How far a landed blow throws the camera, in world units, and for how long.
+        ///
+        /// Small: the arena is read at a fixed distance and the player is tracking two figures a few
+        /// dozen pixels tall, so a shake big enough to be exciting on its own would cost them the
+        /// thing they are watching. This is enough to feel a hit land and gone before the next
+        /// decision.
+        /// </summary>
+        public float ShakeStrength = 0.16f;
+        public float ShakeTime = 0.22f;
+
         private Camera _camera;
         private Vector3 _home;
         private float _homeDistance;
+        private Vector3 _settled;
+        private float _shakeLeft;
+        private Vector3 _shakeSeed;
 
         private void Awake()
         {
             _camera = GetComponent<Camera>();
             _home = transform.position;
+            _settled = _home;
 
             // Distance from the point the camera is aimed at, measured along its own forward axis at
             // the height the fighters stand on. Everything below moves along that same line.
@@ -51,6 +66,22 @@ namespace ColosseumDuel.Gameplay.View
             _homeDistance = plane.Raycast(new Ray(_home, transform.forward), out float enter)
                 ? enter
                 : _home.magnitude;
+        }
+
+        /// <summary>
+        /// A blow landed. Knocks the camera for a moment so the hit is felt as well as seen.
+        ///
+        /// Here rather than on its own component, because this is the one thing allowed to move the
+        /// camera and two scripts writing the same transform would take turns undoing each other -
+        /// most visibly during a knockout, when both would have something to say at once.
+        /// </summary>
+        public void Shake()
+        {
+            _shakeLeft = ShakeTime;
+
+            // A fresh direction per blow. One fixed axis reads as the same twitch every time, which
+            // stops registering as an impact after about three of them.
+            _shakeSeed = Random.insideUnitSphere;
         }
 
         private void LateUpdate()
@@ -67,14 +98,33 @@ namespace ColosseumDuel.Gameplay.View
             // Unscaled, because the whole point of this moment is that the world is running slowly.
             // On scaled time the camera would crawl in at the same quarter speed as the death it is
             // trying to show, and arrive after the round was over.
-            transform.position = Vector3.Lerp(transform.position, target,
+            _settled = Vector3.Lerp(_settled, target,
                 1f - Mathf.Exp(-MoveSpeed * Time.unscaledDeltaTime));
 
             // Straight home the moment a round starts, rather than drifting there. A round that
             // opened with the camera still sliding would have the player reading a frame that is
             // about to change under them.
             if (state.Phase == MatchPhase.Reveal || state.Phase == MatchPhase.Pick)
-                transform.position = _home;
+                _settled = _home;
+
+            // The shake rides on top of where the camera has settled rather than being written into
+            // it. Added to the transform instead, it fed itself: the lerp home only recovers about
+            // a tenth of an offset per frame, so a shake added every frame piled up an order of
+            // magnitude past its own size and left the arena sitting well off centre.
+            transform.position = _settled + CurrentShake();
+        }
+
+        private Vector3 CurrentShake()
+        {
+            if (_shakeLeft <= 0f) return Vector3.zero;
+
+            _shakeLeft = Mathf.Max(0f, _shakeLeft - Time.unscaledDeltaTime);
+
+            // A couple of cycles out and back, fading as it goes. Unscaled again: a hit landing
+            // during the planning slow-motion should still hit at full speed.
+            float remaining = _shakeLeft / ShakeTime;
+            float wobble = Mathf.Sin(remaining * Mathf.PI * 5f) * remaining * remaining;
+            return _shakeSeed * (wobble * ShakeStrength);
         }
 
         /// <summary>
