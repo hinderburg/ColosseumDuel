@@ -536,6 +536,10 @@ namespace ColosseumDuel.EditorTools
             input.Controller = controller;
             input.ArenaCamera = cam;
 
+            // Written out rather than left to the field initialiser: this is the value that ends up
+            // in the .unity file, and it is the one the build actually plays with.
+            input.Scheme = ControlScheme.Tap;
+
 
             BuildHud(controller, input);
 

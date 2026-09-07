@@ -163,6 +163,42 @@ namespace ColosseumDuel.Tests
             }
         }
 
+        /// <summary>
+        /// The scene has to ship on the tap control, not merely default to it in code.
+        ///
+        /// This is the bug it exists to catch, and it shipped: the field initialiser was changed to
+        /// Tap, but PlayerInputController was already serialised into Arena.unity, and a serialised
+        /// component keeps its stored number no matter what the initialiser later says. The built
+        /// game stayed on Drag and tapping the sand did nothing at all. Every existing tap test set
+        /// the scheme itself before driving it, so all of them passed while the game was unplayable.
+        /// Asserted against the scene, because the scene is what the player gets.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSceneShipsWithTappingAsTheControl()
+        {
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            Assert.IsNotNull(input, "the Arena scene must contain a PlayerInputController");
+            Assert.AreEqual(ControlScheme.Tap, input.Scheme,
+                "the scene is set to the control the game no longer offers");
+
+            // A tap has to survive the trip through the scene's own camera and arena scaling, not
+            // just through a test rig: aim at where the simulation says the gladiator's own dash
+            // ends and check the plan comes back pointing that way.
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.05f);
+            Assert.AreEqual(MatchPhase.Planning, _controller.Manager.State.Phase);
+
+            var g = _controller.Manager.State.P1.Active;
+            var target = g.Pos + new Vector2(0f, g.DashReach() * 0.5f);
+            var screen = input.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
+
+            Assert.IsTrue(input.TapTo(screen), "a tap on open sand should file a move");
+
+            Assert.AreEqual(ActionType.Move, g.PlannedAction);
+            Assert.Greater(Vector2.Dot(g.PlannedAimDirection, Vector2.up), 0.95f,
+                "the ordered run should point at the tap");
+        }
+
         [UnityTest]
         public IEnumerator ATrapStopsTheGladiatorAndBites()
         {
