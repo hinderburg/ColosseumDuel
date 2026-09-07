@@ -6,6 +6,10 @@
 
 **▶ Играть: https://hinderburg.github.io/ColosseumDuel/**
 
+**▶ Ветка `Iteration1`: https://hinderburg.github.io/ColosseumDuel/iteration1/** — оружейные
+навыки, кровотечение, добивание в конце хода, меню сборки ростера. Живёт рядом с основным
+билдом, а не вместо него: `Tools/publish-webgl.ps1 -Subdirectory iteration1`.
+
 Unity-порт веб-прототипа. Дизайн — [`GDD.md`](GDD.md), состояние работ и журнал найденных
 проблем — [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
 
