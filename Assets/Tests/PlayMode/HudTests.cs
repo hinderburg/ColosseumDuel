@@ -93,11 +93,11 @@ namespace ColosseumDuel.Tests
             var overlay = Find("Overlay");
             Assert.IsTrue(overlay.activeInHierarchy, "the pick overlay should be up before the match starts");
 
-            foreach (var def in GladiatorDef.All)
+            for (int slot = 0; slot < GameConstants.SquadSize; slot++)
             {
-                var button = FindButton($"Pick_{def.Name}");
-                Assert.IsNotNull(button, $"missing pick button for {def.Name}");
-                Assert.IsTrue(button.interactable, $"{def.Name} is alive and should be pickable");
+                var button = FindButton($"Pick_{slot}");
+                Assert.IsNotNull(button, $"missing pick button for squad slot {slot}");
+                Assert.IsTrue(button.interactable, $"slot {slot} is alive and should be pickable");
             }
 
             yield return null;
@@ -106,7 +106,8 @@ namespace ColosseumDuel.Tests
         [UnityTest]
         public IEnumerator PickingThroughTheHudStartsTheRoundAndHidesTheOverlay()
         {
-            FindButton($"Pick_{GladiatorDef.Barbarius.Name}").onClick.Invoke();
+            int barbarius = _controller.Squad.IndexOf(GladiatorId.Barbarius);
+            FindButton($"Pick_{barbarius}").onClick.Invoke();
             yield return null;
 
             Assert.AreEqual(GladiatorId.Barbarius, State.P1.Active.Def.Id,
@@ -157,23 +158,26 @@ namespace ColosseumDuel.Tests
             }
         }
 
-        [Test]
-        public void ThePickCardsCarryTheIconAndSpellOutTheAbility()
+        [UnityTest]
+        public IEnumerator ThePickCardsCarryTheIconAndSpellOutTheAbility()
         {
-            foreach (var def in GladiatorDef.All)
+            yield return null;
+
+            for (int slot = 0; slot < GameConstants.SquadSize; slot++)
             {
-                var card = Find($"Pick_{def.Name}");
-                Assert.IsNotNull(card, $"no pick card for {def.Name}");
+                var def = GladiatorDef.Get(_controller.Squad[slot]);
+                var card = Find($"Pick_{slot}");
+                Assert.IsNotNull(card, $"no pick card in slot {slot}");
 
                 var icon = card.GetComponentsInChildren<Image>(true)
-                    .FirstOrDefault(i => i.name == $"Icon_{def.Id}");
+                    .FirstOrDefault(i => i.name == $"Icon_{slot}");
                 Assert.IsNotNull(icon, $"{def.Name}'s card has no icon");
                 Assert.AreSame(_controller.Arena.Palette.IconFor(def.Id), icon.sprite);
 
                 // The name alone says nothing: "Mongoose" tells a first-time player neither what it
                 // does nor how long it lasts, and that is the whole basis of the choice being made.
                 var ability = card.GetComponentsInChildren<Text>(true)
-                    .FirstOrDefault(t => t.name == $"Ability_{def.Id}");
+                    .FirstOrDefault(t => t.name == $"Ability_{slot}");
                 Assert.IsNotNull(ability, $"{def.Name}'s card has no ability line");
                 StringAssert.Contains(def.AbilityName, ability.text);
                 StringAssert.Contains(def.AbilityDescription, ability.text);
@@ -200,9 +204,9 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             Assert.IsTrue(Find("Overlay").activeInHierarchy, "a restart should land on the pick screen");
-            foreach (var def in GladiatorDef.All)
-                Assert.IsTrue(FindButton($"Pick_{def.Name}").interactable,
-                    $"{def.Name} should be pickable again");
+            for (int slot = 0; slot < GameConstants.SquadSize; slot++)
+                Assert.IsTrue(FindButton($"Pick_{slot}").interactable,
+                    $"slot {slot} should be pickable again");
 
             Assert.IsFalse(input.AbilityArmed, "an armed ability survived into the new match");
             Assert.IsFalse(input.DefendArmed, "an armed guard survived into the new match");
@@ -353,9 +357,9 @@ namespace ColosseumDuel.Tests
             yield return RunUntil(() => State.P1.NeedsPick, 30f);
 
             Assert.IsTrue(Find("Overlay").activeInHierarchy);
-            Assert.IsFalse(FindButton($"Pick_{GladiatorDef.Brutius.Name}").interactable,
+            Assert.IsFalse(FindButton($"Pick_{_controller.Squad.IndexOf(GladiatorId.Brutius)}").interactable,
                 "the fallen gladiator must not be pickable again");
-            Assert.IsTrue(FindButton($"Pick_{GladiatorDef.Hilius.Name}").interactable);
+            Assert.IsTrue(FindButton($"Pick_{_controller.Squad.IndexOf(GladiatorId.Hilius)}").interactable);
         }
 
         [UnityTest]

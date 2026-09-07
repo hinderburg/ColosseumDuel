@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay.View;
 using UnityEngine;
@@ -89,12 +90,41 @@ namespace ColosseumDuel.Gameplay
             _matchesStarted++;
 
             Manager.StartMatch(
-                new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius },
+                Squad.Select(GladiatorDef.Get),
                 new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius },
                 tutorial);
         }
 
         private int _matchesStarted;
+
+        /// <summary>
+        /// The three the player fights with, in the order they appear on the pick screen.
+        ///
+        /// Archetypes rather than instances, and duplicates are allowed: the roster screen offers
+        /// two of each, so a squad of two Brutius and one Hilius is a legitimate composition. That
+        /// is also why picks are submitted by slot - see GameManager.SubmitPick(side, index).
+        ///
+        /// Lives here rather than in Core because it outlives a match: it is what the player chose
+        /// in the menu, and every restart is fought with it until they change it.
+        /// </summary>
+        public readonly List<GladiatorId> Squad = new List<GladiatorId>
+        {
+            GladiatorId.Brutius, GladiatorId.Barbarius, GladiatorId.Hilius
+        };
+
+        /// <summary>
+        /// Replaces the squad and starts a fresh match with it. Refuses a squad of the wrong size,
+        /// which would otherwise leave the pick screen with slots that answer to nobody.
+        /// </summary>
+        public bool SetSquad(IReadOnlyList<GladiatorId> squad)
+        {
+            if (squad == null || squad.Count != GameConstants.SquadSize) return false;
+
+            Squad.Clear();
+            Squad.AddRange(squad);
+            RestartMatch();
+            return true;
+        }
 
         private void BuildViews()
         {
@@ -246,6 +276,12 @@ namespace ColosseumDuel.Gameplay
         public void SubmitPlayerPick(GladiatorId id)
         {
             Manager?.SubmitPick(PlayerSide.P1, id);
+        }
+
+        /// <summary>Sends in the fighter in that squad slot. What the pick cards call.</summary>
+        public void SubmitPlayerPick(int rosterIndex)
+        {
+            Manager?.SubmitPick(PlayerSide.P1, rosterIndex);
         }
     }
 }

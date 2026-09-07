@@ -96,12 +96,30 @@ namespace ColosseumDuel.Core
 
         public bool SubmitPick(PlayerSide side, GladiatorId id)
         {
+            var player = State.Get(side);
+            return SubmitPick(side, player.Roster.FirstOrDefault(g => g.Def.Id == id && g.Alive));
+        }
+
+        /// <summary>
+        /// Picks by squad slot rather than by archetype.
+        ///
+        /// A squad can now hold two of the same archetype, and once it does, "send in Brutius" is
+        /// an ambiguous order: the two are separate fighters with separate health, and the player
+        /// choosing between them is choosing which of those two is fresh enough to send.
+        /// </summary>
+        public bool SubmitPick(PlayerSide side, int rosterIndex)
+        {
+            var roster = State.Get(side).Roster;
+            if (rosterIndex < 0 || rosterIndex >= roster.Count) return false;
+            return SubmitPick(side, roster[rosterIndex]);
+        }
+
+        private bool SubmitPick(PlayerSide side, GladiatorInstance chosen)
+        {
             if (State.Phase != MatchPhase.Pick) return false;
             var player = State.Get(side);
             if (!player.NeedsPick) return false;
-
-            var chosen = player.Roster.FirstOrDefault(g => g.Def.Id == id && g.Alive);
-            if (chosen == null) return false;
+            if (chosen == null || !chosen.Alive || !player.Roster.Contains(chosen)) return false;
 
             chosen.ResetForNewRound();
             player.Active = chosen;
@@ -117,8 +135,10 @@ namespace ColosseumDuel.Core
             var alive = State.Bot.Roster.Where(g => g.Alive).ToList();
             if (alive.Count == 0) return;
             // simple heuristic: whichever gladiator currently has the highest HP fraction
+            // By instance, not by archetype: with two of the same in a squad, picking by id would
+            // send in whichever came first in the list rather than the one it actually chose.
             var pick = alive.OrderByDescending(g => g.Hp / g.Def.MaxHp).First();
-            SubmitPick(PlayerSide.Bot, pick.Def.Id);
+            SubmitPick(PlayerSide.Bot, pick);
         }
 
         private void ConfirmPicksAndReveal()

@@ -24,6 +24,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private readonly List<Button> _pickButtons = new List<Button>();
         private readonly List<Text> _pickButtonLabels = new List<Text>();
         private readonly List<Text> _pickAbilityLabels = new List<Text>();
+        private readonly List<Image> _pickIcons = new List<Image>();
 
         private Text _phaseLabel;
         private Text _hint;
@@ -245,23 +246,21 @@ namespace ColosseumDuel.Gameplay.Hud
             pickLayout.childControlWidth = false;
             pickLayout.childControlHeight = false;
 
-            var iconPalette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
-
-            foreach (var def in GladiatorDef.All)
+            // One card per squad slot rather than one per archetype. A squad can hold two of the
+            // same fighter now, and they are two separate men with separate health - listing the
+            // three archetypes would show one card for a pair the player has to choose between.
+            for (int slot = 0; slot < GameConstants.SquadSize; slot++)
             {
-                var id = def.Id;
-                var button = HudFactory.CreateButton($"Pick_{def.Name}", _pickRow, def.Name, 20);
+                int index = slot;
+                var button = HudFactory.CreateButton($"Pick_{slot}", _pickRow, "", 20);
                 button.GetComponent<RectTransform>().sizeDelta = new Vector2(380f, 96f);
-                button.onClick.AddListener(() => Controller?.SubmitPlayerPick(id));
+                button.onClick.AddListener(() => Controller?.SubmitPlayerPick(index));
 
                 // The same icon the roster card carries, so the choice made here is recognisable in
                 // the corner for the rest of the match without re-reading a name.
-                var icon = HudFactory.CreatePanel($"Icon_{def.Id}", button.transform,
-                    iconPalette != null ? iconPalette.ArchetypeColor(def.Id) : Color.white);
-                icon.sprite = iconPalette != null ? iconPalette.IconFor(def.Id) : null;
+                var icon = HudFactory.CreatePanel($"Icon_{slot}", button.transform, Color.white);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
-                icon.enabled = icon.sprite != null;
                 var iconRect = icon.rectTransform;
                 iconRect.anchorMin = new Vector2(0f, 0.5f);
                 iconRect.anchorMax = new Vector2(0f, 0.5f);
@@ -278,9 +277,8 @@ namespace ColosseumDuel.Gameplay.Hud
                 // The ability on its own line, in its own colour: what it does is the whole basis of
                 // the choice, and it was previously reduced to a bare name at the end of the stats -
                 // "Mongoose" tells a first-time player nothing at all.
-                var ability = HudFactory.CreateLabel($"Ability_{def.Id}", button.transform,
-                    $"{def.AbilityName}: {def.AbilityDescription}", 14, TextAnchor.LowerLeft,
-                    HudFactory.RageColor);
+                var ability = HudFactory.CreateLabel($"Ability_{slot}", button.transform, "", 14,
+                    TextAnchor.LowerLeft, HudFactory.RageColor);
                 ability.rectTransform.anchorMin = Vector2.zero;
                 ability.rectTransform.anchorMax = Vector2.one;
                 ability.rectTransform.offsetMin = new Vector2(84f, 10f);
@@ -289,6 +287,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 _pickButtons.Add(button);
                 _pickButtonLabels.Add(label);
                 _pickAbilityLabels.Add(ability);
+                _pickIcons.Add(icon);
             }
 
             _restartButton = HudFactory.CreateButton("Restart", panel.transform, "Again", 24);
@@ -406,12 +405,26 @@ namespace ColosseumDuel.Gameplay.Hud
                     ? "Who opens the fight?"
                     : "Your fighter has fallen - who steps out?";
 
+                var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
+
                 for (int i = 0; i < _pickButtons.Count; i++)
                 {
-                    var def = GladiatorDef.All[i];
-                    var instance = state.P1.Roster.Find(x => x.Def.Id == def.Id);
-                    bool alive = instance != null && instance.Alive;
+                    // Read off the squad by slot. Looked up by archetype, a squad holding two of the
+                    // same fighter showed one of them twice and the other not at all.
+                    var instance = i < state.P1.Roster.Count ? state.P1.Roster[i] : null;
+                    bool present = instance != null;
+                    bool alive = present && instance.Alive;
+
+                    _pickButtons[i].gameObject.SetActive(present);
+                    if (!present) continue;
+
+                    var def = instance.Def;
                     _pickButtons[i].interactable = alive;
+
+                    _pickIcons[i].sprite = palette != null ? palette.IconFor(def.Id) : null;
+                    _pickIcons[i].color = palette != null ? palette.ArchetypeColor(def.Id) : Color.white;
+                    _pickIcons[i].enabled = _pickIcons[i].sprite != null;
+
                     // Damage and speed alongside HP: with the ability spelled out on its own line
                     // below, the stat line is the only place the actual trade between the three is
                     // visible, and "200 HP" alone does not say that Brutius is also the slowest.
