@@ -203,8 +203,12 @@ namespace ColosseumDuel.Gameplay.View
         /// The models are centred on their geometry, so parenting one straight to a hand puts the
         /// middle of the blade in the fist and half the sword out through the wrist. Shifted along
         /// the blade by about a third, which lands the fist just above the pommel.
+        ///
+        /// Negative, because the pack builds a blade running up its own +Y from the grip: pushing it
+        /// the other way put the fist round the point and the crossguard out at the far end, so
+        /// every gladiator on the arena was holding his sword by the sharp bit.
         /// </summary>
-        private const float GripAlongBlade = 0.34f;
+        private const float GripAlongBlade = -0.34f;
 
         private Transform _mainHand;      // holder, on the right hand
         private Transform _mainSword;

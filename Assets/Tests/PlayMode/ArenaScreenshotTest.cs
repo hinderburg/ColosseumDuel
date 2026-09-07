@@ -91,8 +91,49 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The other control, so both are in the capture set: the marker on the tapped point and the
-        /// dashed run to it are the only feedback tapping gives, and they are worth an eye.
+        /// One frame per archetype, each holding each weapon.
+        ///
+        /// Everything about a gladiator that can only be judged by eye is in these: whether the
+        /// helmet is on his head at his own build, and whether he is holding the sword by the hilt
+        /// rather than by the point. Both have been wrong at some stage and both looked fine in
+        /// every assertion that could be written about them.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EachArchetypeRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+
+            foreach (var def in GladiatorDef.All)
+            {
+                controller.RestartMatch();
+                yield return null;
+
+                controller.SubmitPlayerPick(def.Id);
+                yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+                // Nose to nose in the middle, so the pair fills the frame at the fixed camera
+                // distance and a head is more than a dozen pixels across.
+                var player = controller.Manager.State.P1.Active;
+                var bot = controller.Manager.State.Bot.Active;
+                player.Pos = new Vector2(-46f, -30f);
+                bot.Pos = new Vector2(46f, -30f);
+                player.Weapon = WeaponKind.DualSwords;
+                bot.Weapon = WeaponKind.SwordAndShield;
+                yield return null;
+
+                yield return Capture(SuffixPath($"-{def.Id}"));
+            }
+        }
+
+        /// <summary>
+        /// The tap control, which the previous summary describes: the marker on the tapped point and
+        /// the dashed run to it are the only feedback tapping gives, and they are worth an eye.
         /// </summary>
         [UnityTest]
         public IEnumerator TapControlRendersAFrame()
