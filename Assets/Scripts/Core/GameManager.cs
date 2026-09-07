@@ -487,7 +487,7 @@ namespace ColosseumDuel.Core
             // hazard damage - continuous DOT while standing in an active danger ring
             if (HazardSystem.IsInActiveHazard(g.Pos, State.Cycle))
             {
-                float dps = GameConstants.HazardDamageFraction * g.Def.MaxHp / GameConstants.ActionTime;
+                float dps = GameConstants.HazardDamagePerPhase / GameConstants.ActionTime;
                 g.TakeDamage(dps * dt);
             }
 

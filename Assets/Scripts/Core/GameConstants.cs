@@ -129,10 +129,18 @@ namespace ColosseumDuel.Core
         public const float TrapRadius = 14f;
 
         // --- arena hazard (shrinking rings) ---
-        // Share of max HP the danger zone burns through over one action phase. Doubled in a balance
-        // pass: at 15% the fire was a nuisance to be walked through, which is the opposite of what a
-        // closing arena is for.
-        public const float HazardDamageFraction = 0.30f;
+
+        /// <summary>
+        /// What the spikes cost a gladiator who spends a whole action phase in them.
+        ///
+        /// A flat number rather than a share of his own health, which is what it used to be. As a
+        /// share it punished the three archetypes equally in proportion and unequally in effect -
+        /// the closing arena is a wall, and a wall does not hit harder because the man walking into
+        /// it is tougher. At 65 against health of 100 to 200 it is two or three phases from full,
+        /// which is what a shrinking arena is for: somewhere you cannot stand, not somewhere
+        /// expensive to stand.
+        /// </summary>
+        public const float HazardDamagePerPhase = 65f;
         public const int HazardSafeCycles = 6;            // arena is fully safe for the first 6 full cycles
 
         // --- squads ---
