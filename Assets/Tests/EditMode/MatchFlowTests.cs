@@ -205,13 +205,16 @@ namespace ColosseumDuel.Tests
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
-            p1.Weapon = WeaponKind.DualSwords;   // the shortest reach in the game
+            p1.Weapon = WeaponKind.DualSwords;   // the shortest reach in the game, level with the shield
             bot.Weapon = WeaponKind.DualSwords;
 
-            // Side by side across his path, far enough apart that they never collide, and he runs
-            // the length of the arena past her.
+            // Side by side across his path, far enough apart that they never collide, and starting
+            // half a dash short of her so a full dash carries him the same distance out the far
+            // side. Half a dash rather than a fixed hundred and twenty units: the reach is what
+            // sets the lateral gap, so a fixed run length quietly stops clearing it the moment the
+            // reach grows, and the test fails on its own geometry rather than on the rule.
             float miss = (GameConstants.CollideDistance + WeaponDef.DualSwords.Reach) * 0.5f;
-            p1.Pos = new Vector2(-miss, -120f);
+            p1.Pos = new Vector2(-miss, -p1.DashReach() * 0.5f);
             bot.Pos = new Vector2(0f, 0f);
             float botHp = bot.Hp;
 

@@ -11,9 +11,12 @@ namespace ColosseumDuel.Core
     /// vanished after one blow would spend most of the match being none of them.
     ///
     /// The three trade along the same axis in opposite directions. Twin swords hit twice for less
-    /// and leave the enemy bleeding, but only at arm's length. A mace hits hardest and furthest and
-    /// throws its target back, but lands once. Sword and shield sits in the middle of both and is
-    /// the only one that answers back by halving what it takes.
+    /// and leave the enemy bleeding. A mace hits hardest and furthest and throws its target back,
+    /// but lands once. Sword and shield sits between them and is the only one that answers back by
+    /// halving what it takes.
+    ///
+    /// The two that carry a sword reach the same distance, because they carry the same sword: what
+    /// separates them is the second blade against the shield, not how far either can lean.
     /// </summary>
     public sealed class WeaponDef
     {
@@ -39,9 +42,15 @@ namespace ColosseumDuel.Core
         /// How far it strikes, centre to centre, in virtual units.
         ///
         /// The third axis the three trade along, and the one that decides who gets hit for free: a
-        /// mace can end its run at a distance a pair of short blades cannot answer from. Never below
+        /// mace can end its run at a distance a sword cannot answer from. Never below
         /// CollideDistance, so running straight into somebody always counts as being in range - a
         /// weapon that could not reach a body pressed against it would be a bug, not a drawback.
+        ///
+        /// Set against the models rather than pulled out of the air. A blade is 56 virtual units
+        /// long and a hammer 86 (GearSizes, through ArenaView's scale), and the frames drawn by
+        /// WeaponReachRendersAFrame put the reach ring beside the weapon that is meant to fill it.
+        /// Every one of these used to be short of its own weapon - the twin swords by half, which
+        /// on screen is a blade passing through a man who takes no damage.
         /// </summary>
         public readonly float Reach;
 
@@ -71,19 +80,19 @@ namespace ColosseumDuel.Core
         public static readonly WeaponDef DualSwords = new WeaponDef(
             WeaponKind.DualSwords, "Twin swords", damageMultiplier: 0.7f, attacks: 2,
             incomingDamageMultiplier: 1f, bleeds: true, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 8f,
+            reach: GameConstants.GladiatorRadius * 2f + 20f,   // 52
             description: "Two light blows, and the wound keeps bleeding");
 
         public static readonly WeaponDef SwordAndShield = new WeaponDef(
             WeaponKind.SwordAndShield, "Sword and shield", damageMultiplier: 1f, attacks: 1,
             incomingDamageMultiplier: GameConstants.ShieldDamageMult, bleeds: false, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 26f,
+            reach: GameConstants.GladiatorRadius * 2f + 20f,   // 52 - the same sword, so the same reach
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
             WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.5f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: GameConstants.MaceKnockback,
-            reach: GameConstants.GladiatorRadius * 2f + 46f,
+            reach: GameConstants.GladiatorRadius * 2f + 73f,   // 105
             description: "One heavy blow that throws them back");
 
         /// <summary>The three a gladiator can be trained in, in the order the UI lists them.</summary>
