@@ -97,9 +97,11 @@ namespace ColosseumDuel.Core
         public const int ItemCountOnArena = 3; // always exactly 1 weapon + 1 shield + 1 random
 
         // --- traps ---
-        // Scattered fresh every round. Enough that crossing the arena is a decision rather than a
-        // formality, few enough that a dash is not a dice roll.
-        public const int TrapCount = 5;
+        // Laid out fresh every round, half in each fighter's end. Even, so neither side starts the
+        // round with more holes to worry about than the other - which is why this stays a multiple
+        // of two. Enough that crossing the arena is a decision rather than a formality, few enough
+        // that a dash is not a dice roll.
+        public const int TrapCount = 6;
         public const float TrapRadius = 14f;
 
         // --- arena hazard (shrinking rings) ---

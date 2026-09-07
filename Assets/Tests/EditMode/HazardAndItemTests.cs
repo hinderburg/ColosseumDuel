@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using ColosseumDuel.Core;
 using NUnit.Framework;
 using UnityEngine;
@@ -162,6 +163,31 @@ namespace ColosseumDuel.Tests
 
             Assert.AreNotSame(shield, items.TryPickup(g), "a two-hander should walk straight over a shield");
             CollectionAssert.Contains(items.Items, shield, "and it should still be lying there");
+        }
+
+        [Test]
+        public void TrapsAreSplitEvenlyBetweenTheTwoEndsOfTheArena()
+        {
+            // The two ends are not interchangeable - the player starts in one and the opponent in
+            // the other - so a free scatter that happened to drop four of six into one end would
+            // hand that round to whoever was standing in the other. Checked over many draws,
+            // because getting it right once by luck is exactly the failure being guarded against.
+            for (int seed = 0; seed < 40; seed++)
+            {
+                var traps = new TrapSystem(new System.Random(seed));
+                traps.SpawnForRound();
+
+                Assert.AreEqual(GameConstants.TrapCount, traps.Traps.Count);
+
+                int near = traps.Traps.Count(t => t.Pos.y < 0f);
+                int far = traps.Traps.Count(t => t.Pos.y > 0f);
+                Assert.AreEqual(GameConstants.TrapCount / 2, near, $"seed {seed}: near end");
+                Assert.AreEqual(GameConstants.TrapCount / 2, far, $"seed {seed}: far end");
+
+                foreach (var trap in traps.Traps)
+                    Assert.LessOrEqual(ArenaShape.NormalizedDistance(trap.Pos), 1f,
+                        $"seed {seed}: a trap was laid outside the wall");
+            }
         }
 
         private static int CountOf(ItemSystem items, ItemKind kind)

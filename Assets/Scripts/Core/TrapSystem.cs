@@ -40,11 +40,25 @@ namespace ColosseumDuel.Core
         /// <summary>How close the centres have to be for the jaws to close.</summary>
         public static float TriggerDistance => GameConstants.GladiatorRadius + GameConstants.TrapRadius;
 
+        /// <summary>
+        /// Lays out the round's traps, half in each fighter's end of the arena.
+        ///
+        /// Split rather than scattered freely, because the two ends are not interchangeable: the
+        /// player's fighter starts in one and the opponent's in the other, and a free scatter that
+        /// happened to put four of six in one end would hand that round to whoever was standing in
+        /// the other. Both sides get the same number of holes to worry about.
+        /// </summary>
         public void SpawnForRound()
         {
             Traps.Clear();
+
+            int perSide = GameConstants.TrapCount / 2;
             for (int i = 0; i < GameConstants.TrapCount; i++)
-                Traps.Add(new ArenaTrap { Pos = RandomPos() });
+            {
+                // First half in the near end, second half in the far end.
+                float side = i < perSide ? -1f : 1f;
+                Traps.Add(new ArenaTrap { Pos = RandomPos(side) });
+            }
         }
 
         /// <summary>
@@ -72,18 +86,20 @@ namespace ColosseumDuel.Core
             return null;
         }
 
-        private Vector2 RandomPos()
+        /// <summary>A point in one half of the arena, in the half the sign of <paramref name="side"/> picks.</summary>
+        private Vector2 RandomPos(float side)
         {
             // Drawn on a unit circle and stretched onto the ellipse, the same walk item spawns use,
-            // so the shape of the arena is stated in one place rather than three.
+            // so the shape of the arena is stated in one place rather than three. The angle is
+            // confined to a half turn and then given its side's sign.
             float r = Mathf.Sqrt((float)_rng.NextDouble());
-            float a = (float)(_rng.NextDouble() * Math.PI * 2.0);
+            float a = (float)(_rng.NextDouble() * Math.PI);
 
-            // Kept out of the middle as well as off the wall: the fighters start on the long axis
-            // and a trap on the centre line would be stepped on by whoever moved first, every round,
-            // which is a coin toss rather than a hazard.
+            // Kept out of the middle as well as off the wall: a trap sitting on the centre of the
+            // arena is the one square both fighters cross on their way to each other, so it would
+            // be sprung by whoever moved first, every round - a coin toss rather than a hazard.
             float margin = GameConstants.TrapRadius * 2f;
-            var onUnitCircle = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * Mathf.Lerp(0.35f, 1f, r);
+            var onUnitCircle = new Vector2(Mathf.Cos(a), Mathf.Sin(a) * side) * Mathf.Lerp(0.35f, 1f, r);
 
             return new Vector2(
                 onUnitCircle.x * (ArenaShape.RadiusX - margin),
