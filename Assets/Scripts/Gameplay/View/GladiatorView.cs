@@ -148,7 +148,6 @@ namespace ColosseumDuel.Gameplay.View
                     : BuildPrimitiveFigure(palette, parent, helmetMaterial, radius, bodyHeight);
 
                 figure.name = $"Figure_{def.Id}";
-                figure.SetActive(false);
 
                 // Build, so the three read apart by shape and not only by colour. Colour is also
                 // what the danger rings, the hazard and the two side helmets are using; a broad
@@ -157,6 +156,15 @@ namespace ColosseumDuel.Gameplay.View
                 // happens to be facing.
                 figure.transform.localScale =
                     new Vector3(def.BuildWidth, def.BuildHeight, def.BuildWidth);
+
+                // Seated here rather than when the prefab was built, and after the build scale, so
+                // it is measured against the figure that will actually be drawn. Seated once at
+                // scale 1 it slid off both the broad archetype and the small one.
+                SeatHelmet(figure);
+
+                // Hidden only after it has been measured: a renderer reports the bounds it was
+                // authored with either way, but measuring what is on screen means having it there.
+                figure.SetActive(false);
 
                 // Replace the imported materials outright rather than tinting them. Tinting left
                 // three figures that cast shadows and drew nothing: whatever the model ships with
@@ -193,6 +201,56 @@ namespace ColosseumDuel.Gameplay.View
 
                 _figures[i] = figure;
             }
+        }
+
+        /// <summary>How far the crown of the helm stands over the crown of the bare head.</summary>
+        private const float HelmetProudOfCrown = -0.04f;
+
+        /// <summary>
+        /// Drops the helmet onto the head of the figure as it will actually be drawn.
+        ///
+        /// The one fact available about where a skull is: the top of a gladiator IS the top of his
+        /// head, because nothing on him is higher. Lining the crown of the helm up with it seats the
+        /// helm whatever the rig calls its bones and wherever it decided to put them.
+        ///
+        /// Done here, after the archetype has been scaled, rather than once when the prefab was
+        /// built. The prefab is shared by three builds - a fifth broader, or fifteen percent shorter
+        /// - and a seat measured at scale 1 is only correct at scale 1: on the others the helm rode
+        /// clear of the head with the whole face in the open.
+        /// </summary>
+        private static void SeatHelmet(GameObject figure)
+        {
+            var helmet = figure.transform.Find("Helmet");
+            if (helmet == null) return;
+
+            var head = WorldBounds(helmet.gameObject, null);
+            var body = WorldBounds(figure, helmet);
+            if (head.size.y < 0.0001f || body.size.y < 0.0001f) return;
+
+            // Through the parent's scale, because the correction is measured in world units and
+            // applied to a local offset - and the parent's scale is the entire reason this has to
+            // happen at all.
+            float lift = body.max.y + head.size.y * HelmetProudOfCrown - head.max.y;
+            float parentScale = Mathf.Abs(figure.transform.lossyScale.y);
+            if (parentScale < 0.0001f) return;
+
+            helmet.localPosition += new Vector3(0f, lift / parentScale, 0f);
+        }
+
+        /// <summary>World bounds of every renderer under <paramref name="root"/>, minus one subtree.</summary>
+        private static Bounds WorldBounds(GameObject root, Transform excluding)
+        {
+            var result = new Bounds();
+            bool any = false;
+
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (excluding != null && renderer.transform.IsChildOf(excluding)) continue;
+                if (!any) { result = renderer.bounds; any = true; }
+                else result.Encapsulate(renderer.bounds);
+            }
+
+            return any ? result : new Bounds();
         }
 
         // --- carried gear ---
