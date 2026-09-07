@@ -66,6 +66,7 @@ namespace ColosseumDuel.Gameplay
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
             Manager.Damaged += OnDamaged;
+            Manager.Bitten += OnBitten;
             Manager.Bled += OnBled;
             Manager.AbilityFired += OnAbilityFired;
 
@@ -216,6 +217,23 @@ namespace ColosseumDuel.Gameplay
             if (victim != null) Arena.PlayBlood(victim.Pos);
         }
 
+
+        /// <summary>
+        /// A trap closed on somebody.
+        ///
+        /// The recoil and the blood, but no swing from the other side - a trap used to be reported
+        /// through Damaged, and since the view reads a hit as "the other one swung", a gladiator
+        /// stepping into one made his opponent throw an attack from wherever he happened to be
+        /// standing, with nothing anywhere near him.
+        /// </summary>
+        private void OnBitten(PlayerSide side, float amount)
+        {
+            if (amount <= 0f) return;
+            ViewFor(side).PlayHit();
+
+            var victim = Manager.State.Get(side).Active;
+            if (victim != null) Arena.PlayBlood(victim.Pos);
+        }
 
         /// <summary>
         /// A wound opened up at the top of a cycle.

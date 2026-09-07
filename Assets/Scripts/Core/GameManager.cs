@@ -23,8 +23,17 @@ namespace ColosseumDuel.Core
         // lands and resolves inside one frame leaves no trace in the state to poll. These report
         // those moments without Core knowing that anything is watching.
 
-        /// <summary>A gladiator took combat damage. Carries the side that was hit and the amount.</summary>
+        /// <summary>
+        /// A gladiator was struck by the other gladiator. Carries the side hit and the amount.
+        ///
+        /// Blows only. The view reads "somebody was hit" as "the other one swung", so anything the
+        /// arena itself does to a fighter has to arrive by another route or a gladiator alone at his
+        /// end of the sand plays an attack at nobody.
+        /// </summary>
         public event Action<PlayerSide, float> Damaged;
+
+        /// <summary>A trap closed on a gladiator. Nobody swung, so nothing should swing.</summary>
+        public event Action<PlayerSide, float> Bitten;
 
         /// <summary>A head-on collision resolved, at this point in virtual space.</summary>
         public event Action<Vector2> Impact;
@@ -500,7 +509,7 @@ namespace ColosseumDuel.Core
             var trap = State.Traps?.TryTrigger(g);
             if (trap != null)
             {
-                Damaged?.Invoke(SideOf(g), TrapSystem.Damage);
+                Bitten?.Invoke(SideOf(g), TrapSystem.Damage);
                 Impact?.Invoke(trap.Pos);
             }
         }

@@ -154,5 +154,55 @@ namespace ColosseumDuel.Tests
 
             Assert.AreEqual(2, hitsOnBot, "Mongoose lands twice, so the effect should play twice");
         }
+
+        [Test]
+        public void ATrapIsNotReportedAsABlow()
+        {
+            // The view reads "somebody was hit" as "the other one swung". A trap arriving through
+            // Damaged therefore made the opponent throw an attack from wherever he happened to be
+            // standing, with nobody within a hundred units of him - an attack out of nowhere, in a
+            // game whose whole readability rests on attacks happening where two fighters meet.
+            var m = StartedRound();
+
+            int blows = 0, bites = 0;
+            m.Damaged += (_, __) => blows++;
+            m.Bitten += (_, __) => bites++;
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            // Him alone on a trap, the opponent parked at the far end and well out of any reach.
+            var trap = m.State.Traps.Traps[0];
+            p1.Pos = trap.Pos;
+            bot.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.9f);
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            RunOneCycle(m);
+
+            Assert.AreEqual(1, bites, "the trap should have closed on him");
+            Assert.AreEqual(0, blows, "nobody was in reach of anybody, so nobody swung");
+        }
+
+        [Test]
+        public void NobodySwingsAtTheEndOfAMoveThatFinishedOutOfReach()
+        {
+            var m = StartedRound();
+
+            int blows = 0;
+            m.Damaged += (_, __) => blows++;
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            float gap = Mathf.Max(p1.WeaponDef.Reach, bot.WeaponDef.Reach) + 10f;
+            p1.Pos = new Vector2(-gap * 0.5f, 0f);
+            bot.Pos = new Vector2(gap * 0.5f, 0f);
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            RunOneCycle(m);
+
+            Assert.AreEqual(0, blows, "the end-of-move blow must need somebody inside the reach");
+        }
     }
 }
