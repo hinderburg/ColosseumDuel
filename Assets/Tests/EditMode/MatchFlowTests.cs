@@ -300,16 +300,21 @@ namespace ColosseumDuel.Tests
 
             Assert.Less(p1.Hp, p1Hp);
             Assert.Less(bot.Hp, botHp);
-            // Measured against their bodies, not against the knockback constant. Asserting the
-            // knockback matches KnockbackDistance is the constant checking itself, and it passed
-            // happily for as long as that constant was 27 - less than the 28 they collide at and
-            // well inside the 32 their two bodies occupy, so they were left standing in each other
-            // and nothing on screen looked thrown back at all.
+            // Measured against their bodies, not against whatever constant does the bouncing.
+            // Asserting the recoil matches the recoil constant is the constant checking itself, and
+            // that passed happily for as long as the old knockback was 27 - less than the 28 they
+            // collide at and well inside the 32 their two bodies occupy, so they were left standing
+            // in each other and nothing on screen looked thrown back at all.
             float apart = Vector2.Distance(p1.Pos, bot.Pos);
             Assert.Greater(apart, GameConstants.GladiatorRadius * 2f,
-                "the knockback left them overlapping, so nothing appears to have been thrown back");
+                "the recoil left them overlapping, so nothing appears to have been thrown back");
             Assert.Greater(apart, GameConstants.CollideDistance,
                 "they should end up outside the range they just collided at");
+
+            // And they got there by moving, not by being teleported: a cut on the frame the swings
+            // were meant to play is what this replaced.
+            Assert.Greater(Vector2.Dot(p1.Vel, (p1.Pos - bot.Pos).normalized), 0f,
+                "the player should still be travelling away from the impact when the phase ends");
         }
 
         [Test]

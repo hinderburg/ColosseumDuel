@@ -67,17 +67,27 @@ namespace ColosseumDuel.Core
         public const float SpeedScale = 15f;
         public const float MaxDragVirtual = 90f; // max pull-back distance for the slingshot move
 
-        // How far apart a direct collision leaves the two fighters, measured centre to centre.
-        //
-        // It has to clear their own bodies, and for a long time it did not: it was written as a
-        // multiple of one radius and came out at 27, against a collide threshold of 28 and two
-        // bodies 32 wide. The "knockback" placed them closer than the distance at which they had
-        // just collided, still overlapping - so on screen nothing was thrown back at all, the two
-        // simply stopped in each other.
-        //
-        // Expressed against the width of the pair, which is what it actually has to beat.
-        public const float KnockbackDistance = GladiatorRadius * 2f * 1.4f;
-        public const float CollisionEarlyEndDelay = 0.25f; // cut the action phase short this long after a collision
+        /// <summary>
+        /// How fast a collision sends the two back off each other, in virtual units per second.
+        ///
+        /// A step back, not a shove: they used to be teleported to opposite ends of a fixed
+        /// distance the instant they touched, which on screen is not a collision but a cut - two
+        /// fighters meet and are suddenly somewhere else, on exactly the frame their swings were
+        /// meant to be playing. Setting them moving instead lets the rest of the phase carry them,
+        /// and the whole thing reads as one beat.
+        ///
+        /// Modest against a charge: the slowest gladiator runs at 150 and the fastest at 300, so
+        /// this is a recoil rather than a second dash in the other direction.
+        /// </summary>
+        public const float BounceSpeed = 90f;
+        /// <summary>
+        /// How long the action phase runs on after a collision before it is cut short.
+        ///
+        /// Long enough for the swings to play out and the recoil to carry, which it was not: at a
+        /// quarter of a second the phase ended mid-swing and the rest of it finished during the
+        /// planning slow-motion, at a third speed and seconds after the two had met.
+        /// </summary>
+        public const float CollisionEarlyEndDelay = 0.45f;
 
         public const int ActionSubsteps = 6; // subdivide stepAction(dt) to avoid tunneling through fast-moving gladiators
 

@@ -549,30 +549,39 @@ namespace ColosseumDuel.Core
         private void ResolveCollision(GladiatorInstance a, GladiatorInstance b)
         {
             State.Collided = true;
-            a.Vel = Vector2.zero;
-            b.Vel = Vector2.zero;
 
             Impact?.Invoke((a.Pos + b.Pos) * 0.5f);
 
-            // Both land every attack they still have this cycle - Mongoose (Hilius) gets two.
-            // Weapons are single-use, so a second swing is always unarmed.
+            // Both land every attack they still have this cycle - a weapon that swings twice lands
+            // twice, and Mongoose doubles whatever that was.
             ExchangeBlows(a, b);
 
-            // knock the two apart along the line between them so they can disengage next cycle
+            // A step back rather than a shove apart.
+            //
+            // They used to be teleported to opposite ends of a fixed distance the instant they
+            // touched. On screen that is not a collision, it is a cut: two fighters meet and are
+            // suddenly somewhere else, and it landed on exactly the frame their swings were meant
+            // to be playing. Now they are set moving backwards and the rest of the phase carries
+            // them, so the whole thing reads as one continuous beat - the blow, then the recoil.
+            Vector2 apart = a.Pos - b.Pos;
+            if (apart.sqrMagnitude < 0.0001f) apart = Vector2.up;
+            apart = apart.normalized;
+
+            // Just enough to stop them standing inside one another, since bodies that overlap read
+            // as one shape whatever they do next. Everything past that is the bounce.
             Vector2 mid = (a.Pos + b.Pos) * 0.5f;
-            Vector2 dir = (a.Pos - b.Pos);
-            if (dir.sqrMagnitude < 0.0001f) dir = Vector2.up;
-            dir = dir.normalized;
-            a.Pos = mid + dir * (GameConstants.KnockbackDistance * 0.5f);
-            b.Pos = mid - dir * (GameConstants.KnockbackDistance * 0.5f);
+            a.Pos = mid + apart * (GameConstants.CollideDistance * 0.5f);
+            b.Pos = mid - apart * (GameConstants.CollideDistance * 0.5f);
+
+            a.Vel = apart * GameConstants.BounceSpeed;
+            b.Vel = -apart * GameConstants.BounceSpeed;
 
             // Put them back inside the wall here rather than leaving it to the next step. A
             // collision against the wall throws one of them through it, and because the collision
             // also ends the action phase, nothing steps him again until the next one - so he would
             // stand outside the arena for the whole of planning, which is seconds, not a frame.
-            var still = Vector2.zero;
-            ArenaShape.Bounce(ref a.Pos, ref still, GameConstants.GladiatorRadius);
-            ArenaShape.Bounce(ref b.Pos, ref still, GameConstants.GladiatorRadius);
+            ArenaShape.Bounce(ref a.Pos, ref a.Vel, GameConstants.GladiatorRadius);
+            ArenaShape.Bounce(ref b.Pos, ref b.Vel, GameConstants.GladiatorRadius);
 
             State.CollisionEndTimer = GameConstants.CollisionEarlyEndDelay;
         }
