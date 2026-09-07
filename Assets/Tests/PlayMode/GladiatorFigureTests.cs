@@ -123,6 +123,77 @@ namespace ColosseumDuel.Tests
                 "the mace has to be the bigger of the two or nothing distinguishes them");
         }
 
+        /// <summary>
+        /// A weapon he was never trained in is ringed in red.
+        ///
+        /// The simulation deliberately lets him pick up anything - the warning is the HUD's job,
+        /// because a pickup that silently refused to happen reads as a bug while a red ring reads
+        /// as a mistake he made. So the ring is the whole of the feedback, and if it fails to come
+        /// up nothing at all tells him.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AWeaponHeWasNeverTrainedInIsRingedInRed()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var main = FindIn("Player", "HeldWeapon");
+            if (main == null) Assert.Ignore("No gear models - the weapon pack is not imported here.");
+
+            var g = _controller.Manager.State.P1.Active;
+            Assert.AreEqual(WeaponKind.TwoHandedMace, g.Def.SkilledWith, "Brutius is the mace fighter");
+
+            g.Weapon = WeaponKind.TwoHandedMace;
+            yield return null;
+            Assert.IsFalse(AnyShellShowing(), "his own weapon should carry no warning");
+
+            g.Weapon = WeaponKind.DualSwords;
+            yield return null;
+            Assert.IsTrue(AnyShellShowing(), "twin swords are not his, and nothing else says so");
+
+            g.Weapon = WeaponKind.TwoHandedMace;
+            yield return null;
+            Assert.IsFalse(AnyShellShowing(), "and the warning has to come back off again");
+        }
+
+        private bool AnyShellShowing()
+            => _controller.GetComponentsInChildren<Transform>(true)
+                .Any(t => t.name == ItemView.ShellName && t.gameObject.activeInHierarchy);
+
+        [UnityTest]
+        public IEnumerator GildedGearIsGoldInTheHandAndHisOwnIsSteel()
+        {
+            // Gold is the whole of how the player is told the copies on the sand are worth crossing
+            // a mined arena for. Turning it back to steel the moment it was picked up would hide
+            // the one thing that trip bought him.
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var main = FindIn("Player", "HeldWeapon");
+            if (main == null) Assert.Ignore("No gear models - the weapon pack is not imported here.");
+
+            var g = _controller.Manager.State.P1.Active;
+            var block = new MaterialPropertyBlock();
+
+            g.WeaponIsGilded = false;
+            yield return null;
+            Assert.AreEqual(GearSizes.CarriedTint, TintOf(main, block),
+                "the weapon he walked in with should be steel");
+
+            g.WeaponIsGilded = true;
+            yield return null;
+            Assert.AreEqual(GearSizes.GildedTint, TintOf(main, block),
+                "the one he took off the sand should stay gold in his hand");
+        }
+
+        private static Color TintOf(Transform holder, MaterialPropertyBlock block)
+        {
+            var renderer = holder.GetComponentsInChildren<Renderer>(true)
+                .First(r => r.GetComponentsInParent<Transform>(true).All(t => t.name != ItemView.ShellName));
+            renderer.GetPropertyBlock(block);
+            return block.GetColor(Shader.PropertyToID("_BaseColor"));
+        }
+
         [UnityTest]
         public IEnumerator TheFigureRunsWhenTheGladiatorDoes()
         {

@@ -28,12 +28,28 @@ namespace ColosseumDuel.Gameplay.View
         public static float MainHandLength(WeaponKind kind)
             => kind == WeaponKind.TwoHandedMace ? MaceLength : SwordLength;
 
-        /// <summary>
-        /// How far apart a weapon's own reach lets it strike, drawn as the ring under the fighter.
-        ///
-        /// Converted from simulation units by the caller; this is only the shape of the reading.
-        /// </summary>
         public static bool UsesMace(WeaponKind kind) => kind == WeaponKind.TwoHandedMace;
+
+        /// <summary>
+        /// Cool steel for what a gladiator brought with him, gold for the better copies on the sand.
+        ///
+        /// Tinted through a property block rather than built as two sets of materials: the models
+        /// keep their own texture, only the wash over it changes, and a shield and a blade can be
+        /// gilded by the same one line without either losing its own face.
+        /// </summary>
+        public static readonly Color CarriedTint = new Color(0.82f, 0.84f, 0.90f);
+
+        public static readonly Color GildedTint = new Color(1.00f, 0.78f, 0.22f);
+
+        /// <summary>
+        /// How much bigger the red shell around an untrained weapon is drawn than the weapon.
+        ///
+        /// Wildly uneven on purpose. A blade is two hundredths of a unit thick against a whole unit
+        /// of length, so a uniform swell big enough to see across the blade would add half a sword
+        /// to its point. Each axis is pushed out by roughly the same absolute amount instead, which
+        /// is what an outline is: a constant margin, not a constant ratio.
+        /// </summary>
+        public static readonly Vector3 UntrainedShell = new Vector3(4.5f, 1.05f, 1.5f);
 
         /// <summary>
         /// How a weapon or a shield lies on the sand: broad side up, long axis down the arena.

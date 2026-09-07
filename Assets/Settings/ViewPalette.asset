@@ -49,6 +49,7 @@ MonoBehaviour:
   MaceModel: {fileID: 4958248887937798342, guid: ffc0f65c12d47044f83a3e937cdb8fc4, type: 3}
   ShieldModel: {fileID: 8736053284591058948, guid: e046966197c3f7c4cbf49c2a615a71de, type: 3}
   HelmetModel: {fileID: 4097255080222555793, guid: 4af2d004a52a4e745a543a2c1cc3ed35, type: 3}
+  GearUntrained: {fileID: 2100000, guid: 7a788bc76103d72478365eb78b39fc34, type: 2}
   Vignette: {fileID: 21300000, guid: e6483163c415f7e4983af56901dba18e, type: 3}
   GladiatorFigures:
   - {fileID: 2668578167718699114, guid: 9168f9738c480124fadf9ac585529992, type: 3}

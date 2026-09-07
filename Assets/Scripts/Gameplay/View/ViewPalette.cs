@@ -131,6 +131,13 @@ namespace ColosseumDuel.Gameplay.View
         public GameObject HelmetModel;
 
         /// <summary>
+        /// Flat red, drawn inside-out, for the shell around a weapon its holder was never trained
+        /// in. Front faces are culled, so what is left is the far side of a slightly larger copy -
+        /// which from any angle is a margin around the silhouette.
+        /// </summary>
+        public Material GearUntrained;
+
+        /// <summary>
         /// Screen-edge tint for the planning phase, transparent in the middle. Generated, so it is
         /// always present.
         /// </summary>

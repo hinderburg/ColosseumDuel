@@ -50,9 +50,47 @@ namespace ColosseumDuel.Gameplay.View
                     new Vector3(radius * 0.8f, radius * 0.5f, radius * 2f), radius * 0.5f);
             }
 
+            // Everything on the sand is the gilded copy, and gold is the whole of how the player is
+            // told it is worth crossing the arena for.
+            Tint(root, GearSizes.GildedTint);
+
             root.SetActive(false);
             return view;
         }
+
+        /// <summary>
+        /// Washes every renderer under this object with one colour.
+        ///
+        /// Through a property block rather than by swapping materials: the models keep their own
+        /// texture, and a shield and a blade can both be gilded by the same line without either
+        /// losing its face. Touching the shared material instead would gild the ones in the
+        /// gladiators' hands too.
+        /// </summary>
+        public static void Tint(GameObject root, Color color)
+        {
+            var block = new MaterialPropertyBlock();
+            block.SetColor(BaseColorId, color);
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                // Everything except the red shell around an untrained weapon. It lives inside the
+                // weapon it outlines, so a blanket wash over the hand reached it too - and painted
+                // the warning the same gold as the thing it was warning about.
+                if (IsUnderShell(renderer.transform)) continue;
+                renderer.SetPropertyBlock(block);
+            }
+        }
+
+        /// <summary>Name of the inside-out copy that draws the untrained-weapon outline.</summary>
+        public const string ShellName = "UntrainedShell";
+
+        private static bool IsUnderShell(Transform t)
+        {
+            for (var walk = t; walk != null; walk = walk.parent)
+                if (walk.name == ShellName) return true;
+            return false;
+        }
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         /// <summary>Two blades side by side - the pair reads as a pair only if they are apart.</summary>
         private static GameObject BuildDualSwords(ViewPalette palette, Transform parent)

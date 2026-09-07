@@ -201,6 +201,7 @@ namespace ColosseumDuel.Gameplay.View
         private Transform _offSword;
         private Transform _offShield;
         private WeaponKind? _shownWeapon;
+        private bool _shownGilded;
 
         /// <summary>
         /// The gear a gladiator carries, built once and re-parented to whichever archetype is
@@ -237,15 +238,50 @@ namespace ColosseumDuel.Gameplay.View
             _offHand.gameObject.SetActive(false);
         }
 
-        /// <summary>One piece inside its holder, pushed along its length so the fist is at the grip.</summary>
-        private static Transform Grip(GameObject model, Transform holder, string name, float alongLength = GripAlongBlade)
+        /// <summary>
+        /// One piece inside its holder, pushed along its length so the fist is at the grip.
+        ///
+        /// Carried gear is washed cool steel, against the gold of the copies lying on the sand: the
+        /// two are the same models, and the colour is the only thing that says which of them is the
+        /// better one worth crossing the arena for.
+        ///
+        /// It also gets a red shell, hidden until he is holding something he was never trained in.
+        /// Built here rather than switched on demand, because building a mesh copy at the moment a
+        /// gladiator runs over the wrong weapon is a hitch exactly when the player is watching.
+        /// </summary>
+        private Transform Grip(GameObject model, Transform holder, string name,
+            float alongLength = GripAlongBlade)
         {
             var instance = Instantiate(model, holder).transform;
             instance.name = name;
             instance.localPosition = new Vector3(0f, alongLength, 0f);
+            ItemView.Tint(instance.gameObject, GearSizes.CarriedTint);
+
+            var untrained = _palette != null ? _palette.GearUntrained : null;
+            if (untrained != null)
+            {
+                var shell = Instantiate(model, instance).transform;
+                shell.name = ItemView.ShellName;
+                shell.localPosition = Vector3.zero;
+                shell.localScale = GearSizes.UntrainedShell;
+                foreach (var renderer in shell.GetComponentsInChildren<Renderer>(true))
+                {
+                    var slots = new Material[Mathf.Max(1, renderer.sharedMaterials.Length)];
+                    for (int i = 0; i < slots.Length; i++) slots[i] = untrained;
+                    renderer.sharedMaterials = slots;
+                    renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                }
+                shell.gameObject.SetActive(false);
+                _untrainedShells.Add(shell.gameObject);
+            }
+
             instance.gameObject.SetActive(false);
             return instance;
         }
+
+        /// <summary>Every red shell, shown together whenever he is carrying the wrong weapon.</summary>
+        private readonly System.Collections.Generic.List<GameObject> _untrainedShells =
+            new System.Collections.Generic.List<GameObject>();
 
         /// <summary>
         /// Hangs the carried gear off the current figure's hand bones: weapon in the right, whatever
@@ -279,9 +315,18 @@ namespace ColosseumDuel.Gameplay.View
             if (_offHand != null && _offHand.gameObject.activeSelf != offHanded)
                 _offHand.gameObject.SetActive(offHanded);
 
-            if (armed && _shownWeapon != g.Weapon)
+            if (armed && (_shownWeapon != g.Weapon || _shownGilded != g.WeaponIsGilded))
             {
                 _shownWeapon = g.Weapon;
+                _shownGilded = g.WeaponIsGilded;
+
+                // Steel for the one he walked in with, gold for the one he took off the sand. The
+                // brief says weapons in hand are silver, and that is what the loadout he starts a
+                // round with looks like - but a gilded weapon that turned back to steel the moment
+                // it was picked up would hide the one thing crossing a mined arena bought him.
+                var tint = g.WeaponIsGilded ? GearSizes.GildedTint : GearSizes.CarriedTint;
+                ItemView.Tint(_mainHand.gameObject, tint);
+                if (_offHand != null) ItemView.Tint(_offHand.gameObject, tint);
 
                 bool mace = GearSizes.UsesMace(g.Weapon) && _mainMace != null;
                 SetActive(_mainSword, !mace);
@@ -300,6 +345,13 @@ namespace ColosseumDuel.Gameplay.View
 
             if (armed) TurnBladeFlatUpwards(_mainHand);
             if (offHanded && !g.HasShield) TurnBladeFlatUpwards(_offHand);
+
+            // Ringed in red when it is not his weapon. The simulation lets him pick up anything -
+            // the warning is the HUD's job, and a pickup that silently refused to happen would read
+            // as a bug rather than as a mistake he made.
+            bool wrongWeapon = armed && g.IsUntrained;
+            foreach (var shell in _untrainedShells)
+                if (shell.activeSelf != wrongWeapon) shell.SetActive(wrongWeapon);
         }
 
         /// <summary>

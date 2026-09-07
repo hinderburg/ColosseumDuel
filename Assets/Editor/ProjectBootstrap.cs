@@ -386,6 +386,7 @@ namespace ColosseumDuel.EditorTools
             palette.MaceModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.MacePath);
             palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.ShieldPath);
             palette.HelmetModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.HelmetPath);
+            palette.GearUntrained = InsideOutUnlit("GearUntrained", new Color(0.95f, 0.12f, 0.10f));
             if (palette.SwordModel == null)
                 Debug.LogWarning($"[Colosseum] Gear prefabs missing at {GearPrefabs.SwordPath} - pickups " +
                                  "will be primitives and nobody will carry anything visible.");
@@ -709,6 +710,20 @@ namespace ColosseumDuel.EditorTools
             mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             mat.DisableKeyword("_ALPHATEST_ON");
             mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        /// <summary>
+        /// An unlit colour drawn on back faces only - the standard way to get an outline without a
+        /// custom shader. Put on a slightly larger copy of a mesh, the near half is culled away and
+        /// what remains is the far half showing past the real model's silhouette.
+        /// </summary>
+        private static Material InsideOutUnlit(string name, Color color)
+        {
+            var mat = Unlit(name, color);
+            mat.SetFloat("_Cull", (float)CullMode.Front);
+            mat.doubleSidedGI = false;
             EditorUtility.SetDirty(mat);
             return mat;
         }
