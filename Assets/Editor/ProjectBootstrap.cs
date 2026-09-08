@@ -215,6 +215,13 @@ namespace ColosseumDuel.EditorTools
             PlayerSettings.defaultWebScreenWidth = ScreenWidth;
             PlayerSettings.defaultWebScreenHeight = ScreenHeight;
 
+            // Our own page rather than Unity's. The stock template puts the player in a fixed-size
+            // box, absolutely positioned and centred with a translate - which takes it out of the
+            // flow, so the page has no height and cannot scroll, and centres a box taller than the
+            // window at a negative top. On any screen shorter than the canvas the top of the game
+            // was cut off and unreachable at once. See Assets/WebGLTemplates/Colosseum.
+            PlayerSettings.WebGL.template = "PROJECT:Colosseum";
+
             // GitHub Pages cannot be told to send Content-Encoding, which is why the usual advice is
             // to turn compression off entirely - at the cost of shipping a ~44 MB uncompressed
             // player. The decompression fallback is the better answer: Unity embeds a JS
