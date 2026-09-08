@@ -1128,6 +1128,7 @@ height: min(var(--app-height), calc(100vw * 1024 / 576));
 | `Crusader_Castle` (Crusader Weapon) | Мечи, щиты и шлемы: из них собираются gear-префабы |
 | `Low Poly Trim Sheet Asset Collection` | Декор (резерв) |
 | `ExplosiveLLC` (RPG Character Mecanim Animation Pack FREE) | Анимации: бег во все стороны, падение, отброс назад |
+| `Modern GDR - Free icons pack` | Иконки интерфейса из атласа `00_Atlas/DarkIcons.png` |
 
 ---
 
