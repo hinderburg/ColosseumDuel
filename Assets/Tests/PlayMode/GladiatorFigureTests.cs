@@ -393,6 +393,49 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// Both of them work the crowd while the player is deciding, and stop when he stops.
+        ///
+        /// The phase is four seconds of two men standing still; this is what fills it. Asserted on
+        /// the animator state rather than on the flag, because setting a bool nothing listens to is
+        /// exactly the failure worth catching - and on both sides, because a taunt only the player's
+        /// gladiator performs reads as the opponent having lost interest.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BothGladiatorsWorkTheCrowdWhileThePlayerDecides()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.4f);
+
+            var state = _controller.Manager.State;
+            Assert.AreEqual(MatchPhase.Planning, state.Phase, "this is about the planning phase");
+
+            var player = FindIn("Player", $"Figure_{GladiatorId.Barbarius}")?.GetComponentInChildren<Animator>(true);
+            var bot = FindIn("Bot", $"Figure_{state.Bot.Active.Def.Id}")?.GetComponentInChildren<Animator>(true);
+            if (player == null || player.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            // Waited for rather than sampled on the spot. The blend into the taunt takes an eighth
+            // of a second, and planning runs the world at a third speed, so it is nearly half a
+            // second of real time - long enough that a single sample at a fixed moment lands inside
+            // it, where the current state is still the one being left.
+            yield return RunUntil(() => player.GetCurrentAnimatorStateInfo(0).IsName("Taunt")
+                                        && bot.GetCurrentAnimatorStateInfo(0).IsName("Taunt"), 3f);
+
+            Assert.IsTrue(player.GetCurrentAnimatorStateInfo(0).IsName("Taunt"),
+                "the player's gladiator stood there doing nothing");
+            Assert.IsTrue(bot.GetCurrentAnimatorStateInfo(0).IsName("Taunt"),
+                "the opponent stood there doing nothing");
+
+            // And it stops when the thinking does: a gladiator posing while he charges is worse than
+            // one who never posed at all.
+            yield return RunUntil(() => _controller.Manager.State.Phase != MatchPhase.Planning, 8f);
+            yield return RunSeconds(0.4f);
+
+            Assert.IsFalse(player.GetCurrentAnimatorStateInfo(0).IsName("Taunt"),
+                "he was still working the crowd once the fighting started");
+        }
+
+        /// <summary>
         /// Either swing counts. There are two - a sword's and the two-handed one the mace got - and
         /// Brutius, who this test picks, is the one who swings the mace.
         /// </summary>

@@ -632,6 +632,19 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public void PlayKnockback() => TakeBlow(AnimatorParams.KnockbackId);
 
+        /// <summary>
+        /// Whether he is working the crowd, which he does for as long as the player is thinking.
+        ///
+        /// Set from the phase rather than fired as a one-shot: planning is four seconds of two men
+        /// standing still, and a trigger would give it one gesture and three seconds of the idle
+        /// pose. Whether he can actually take it up is the animator's decision - he cannot if he is
+        /// guarding, running, being hit, or dead.
+        /// </summary>
+        public void SetTaunting(bool taunting)
+        {
+            if (_animator != null) _animator.SetBool(AnimatorParams.TauntingId, taunting);
+        }
+
         private void TakeBlow(int trigger)
         {
             _blowTrigger = trigger;
