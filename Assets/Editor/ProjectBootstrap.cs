@@ -337,7 +337,8 @@ namespace ColosseumDuel.EditorTools
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with
             // its licence). Unity's built-in font has no Cyrillic glyphs, so it draws nothing at all
             // for the Russian captions once there are no OS fonts to fall back on - i.e. in a build.
-            palette.Skull = ProceduralTextures.EnsureSkull(TexturesDir + "/Skull.png");
+            palette.Skull = IconPack.Sprite("Cross_Bright")
+                            ?? ProceduralTextures.EnsureSkull(TexturesDir + "/Skull.png");
             palette.Disc = ProceduralTextures.EnsureDisc(TexturesDir + "/Disc.png");
             palette.Ring = ProceduralTextures.EnsureDisc(TexturesDir + "/Ring.png", innerFraction: 0.78f);
             palette.RoundedPanel = ProceduralTextures.EnsureRoundedRect(TexturesDir + "/RoundedPanel.png");
@@ -346,16 +347,16 @@ namespace ColosseumDuel.EditorTools
             for (int i = 0; i < GladiatorDef.All.Count; i++)
             {
                 var def = GladiatorDef.All[i];
-                palette.ArchetypeIcons[i] =
-                    ProceduralTextures.EnsureArchetypeIcon($"{TexturesDir}/Icon_{def.Id}.png", def.Id);
+                palette.ArchetypeIcons[i] = IconPack.Sprite(IconPack.ForArchetype(def.Id))
+                    ?? ProceduralTextures.EnsureArchetypeIcon($"{TexturesDir}/Icon_{def.Id}.png", def.Id);
             }
 
             palette.WeaponIcons = new Sprite[WeaponDef.All.Count];
             for (int i = 0; i < WeaponDef.All.Count; i++)
             {
                 var weapon = WeaponDef.All[i];
-                palette.WeaponIcons[i] =
-                    ProceduralTextures.EnsureWeaponIcon($"{TexturesDir}/Weapon_{weapon.Kind}.png", weapon.Kind);
+                palette.WeaponIcons[i] = IconPack.Sprite(IconPack.ForWeapon(weapon.Kind))
+                    ?? ProceduralTextures.EnsureWeaponIcon($"{TexturesDir}/Weapon_{weapon.Kind}.png", weapon.Kind);
             }
 
             // From Epic Toon FX, which is not in the repository (see PROJECT_CONTEXT.md). Missing is
