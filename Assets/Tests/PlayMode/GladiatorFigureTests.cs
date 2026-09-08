@@ -434,6 +434,46 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(animator.GetBool(AnimatorParams.Dead), "the animator was never told he fell");
         }
 
+        /// <summary>
+        /// The helmet is the top of a gladiator, on every build.
+        ///
+        /// The camera looks down at sixty-six degrees, so the crown is most of what a fighter shows
+        /// - and the helm used to be seated a shade below the bare head, which from up there meant
+        /// looking at hair. Asserted against the rest of the figure's renderers rather than by eye,
+        /// and on all three archetypes, because they are scaled to different heights and a single
+        /// offset that clears one can sit inside another.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheHelmetIsTheHighestThingOnEveryArchetype()
+        {
+            foreach (var def in GladiatorDef.All)
+            {
+                _controller.RestartMatch();
+                yield return null;
+                _controller.SubmitPlayerPick(def.Id);
+                yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+                var figure = FindIn("Player", $"Figure_{def.Id}");
+                var helmet = figure?.GetComponentsInChildren<Transform>(true)
+                    .FirstOrDefault(t => t.name == "Helmet");
+                if (helmet == null) Assert.Ignore("No helmet - the gear pack is not imported here.");
+
+                float helmetTop = float.NegativeInfinity;
+                foreach (var r in helmet.GetComponentsInChildren<Renderer>(true))
+                    helmetTop = Mathf.Max(helmetTop, r.bounds.max.y);
+
+                float bodyTop = float.NegativeInfinity;
+                foreach (var r in figure.GetComponentsInChildren<Renderer>(true))
+                {
+                    if (r.transform.IsChildOf(helmet)) continue;
+                    bodyTop = Mathf.Max(bodyTop, r.bounds.max.y);
+                }
+
+                Assert.Greater(helmetTop, bodyTop,
+                    $"{def.Name} shows {bodyTop - helmetTop:0.###} units of bare head above his helm");
+            }
+        }
+
         [UnityTest]
         public IEnumerator AFallenGladiatorStaysOnTheSand()
         {

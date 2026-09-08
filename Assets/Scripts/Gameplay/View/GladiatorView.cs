@@ -206,8 +206,15 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
-        /// <summary>How far the crown of the helm stands over the crown of the bare head.</summary>
-        private const float HelmetProudOfCrown = -0.04f;
+        /// <summary>
+        /// How far the crown of the helm stands over the crown of the bare head, as a share of the
+        /// helm's own height.
+        ///
+        /// Positive, and it has to be. At -0.04 the helm sat a shade inside the skull, and the
+        /// camera looks down at sixty-six degrees - so the top of a gladiator, which is most of
+        /// what he shows from up there, was hair with a metal ring around it.
+        /// </summary>
+        private const float HelmetProudOfCrown = 0.14f;
 
         /// <summary>
         /// Drops the helmet onto the head of the figure as it will actually be drawn.
