@@ -213,8 +213,12 @@ namespace ColosseumDuel.Gameplay.View
         /// Positive, and it has to be. At -0.04 the helm sat a shade inside the skull, and the
         /// camera looks down at sixty-six degrees - so the top of a gladiator, which is most of
         /// what he shows from up there, was hair with a metal ring around it.
+        ///
+        /// Raised again with the ready stance. The seat is measured once, in the pose the figure is
+        /// built in, and every pose after that moves the head inside a helm sitting where that one
+        /// measurement put it - so the clearance has to cover the tallest pose, not the measured one.
         /// </summary>
-        private const float HelmetProudOfCrown = 0.14f;
+        private const float HelmetProudOfCrown = 0.22f;
 
         /// <summary>
         /// Drops the helmet onto the head of the figure as it will actually be drawn.
@@ -633,16 +637,15 @@ namespace ColosseumDuel.Gameplay.View
         public void PlayKnockback() => TakeBlow(AnimatorParams.KnockbackId);
 
         /// <summary>
-        /// Whether he is working the crowd, which he does for as long as the player is thinking.
+        /// Whether he stands ready, which he does for as long as the player is thinking.
         ///
-        /// Set from the phase rather than fired as a one-shot: planning is four seconds of two men
-        /// standing still, and a trigger would give it one gesture and three seconds of the idle
-        /// pose. Whether he can actually take it up is the animator's decision - he cannot if he is
-        /// guarding, running, being hit, or dead.
+        /// Set from the phase rather than fired as a one-shot: it is a stance held for four seconds,
+        /// not a gesture. Whether he can actually take it up is the animator's decision - he cannot
+        /// if he is guarding, running, being hit, or dead.
         /// </summary>
-        public void SetTaunting(bool taunting)
+        public void SetReadyStance(bool ready)
         {
-            if (_animator != null) _animator.SetBool(AnimatorParams.TauntingId, taunting);
+            if (_animator != null) _animator.SetBool(AnimatorParams.ReadyStanceId, ready);
         }
 
         private void TakeBlow(int trigger)

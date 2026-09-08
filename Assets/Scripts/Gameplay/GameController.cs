@@ -193,12 +193,12 @@ namespace ColosseumDuel.Gameplay
             _playerView.Sync(state.P1.Active);
             _botView.Sync(state.Bot.Active);
 
-            // Both of them work the crowd while the player thinks. Driven from the phase here rather
+            // Both of them stand ready while the player thinks. Driven from the phase here rather
             // than from inside the view's own Sync, because it is a fact about the match and not
             // about either gladiator - and both sides are doing it for the same reason.
             bool planning = state.Phase == MatchPhase.Planning;
-            _playerView.SetTaunting(planning);
-            _botView.SetTaunting(planning);
+            _playerView.SetReadyStance(planning);
+            _botView.SetReadyStance(planning);
 
             Arena.Sync(state);
 

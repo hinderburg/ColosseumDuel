@@ -34,11 +34,10 @@ namespace ColosseumDuel.Gameplay.View
         public const string Knockback = "Knockback";
 
         /// <summary>
-        /// Whether he is working the crowd. Held for the whole planning phase rather than fired
-        /// once, because the phase is four seconds of two men standing still and the alternative is
-        /// four seconds of two men standing still.
+        /// Whether he is standing ready rather than merely standing. Held for the whole planning
+        /// phase rather than fired once, because it is a stance and not a gesture.
         /// </summary>
-        public const string Taunting = "Taunting";
+        public const string ReadyStance = "ReadyStance";
 
         /// <summary>Speed, in world units per second, above which the run cycle plays.</summary>
         public const float RunThreshold = 0.35f;
@@ -52,6 +51,6 @@ namespace ColosseumDuel.Gameplay.View
         public static readonly int MoveZId = Animator.StringToHash(MoveZ);
         public static readonly int TwoHandedId = Animator.StringToHash(TwoHanded);
         public static readonly int KnockbackId = Animator.StringToHash(Knockback);
-        public static readonly int TauntingId = Animator.StringToHash(Taunting);
+        public static readonly int ReadyStanceId = Animator.StringToHash(ReadyStance);
     }
 }

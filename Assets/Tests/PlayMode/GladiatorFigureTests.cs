@@ -401,7 +401,7 @@ namespace ColosseumDuel.Tests
         /// gladiator performs reads as the opponent having lost interest.
         /// </summary>
         [UnityTest]
-        public IEnumerator BothGladiatorsWorkTheCrowdWhileThePlayerDecides()
+        public IEnumerator BothGladiatorsStandReadyWhileThePlayerDecides()
         {
             _controller.SubmitPlayerPick(GladiatorId.Barbarius);
             yield return RunSeconds(GameConstants.RevealTime + 0.4f);
@@ -418,21 +418,21 @@ namespace ColosseumDuel.Tests
             // of a second, and planning runs the world at a third speed, so it is nearly half a
             // second of real time - long enough that a single sample at a fixed moment lands inside
             // it, where the current state is still the one being left.
-            yield return RunUntil(() => player.GetCurrentAnimatorStateInfo(0).IsName("Taunt")
-                                        && bot.GetCurrentAnimatorStateInfo(0).IsName("Taunt"), 3f);
+            yield return RunUntil(() => player.GetCurrentAnimatorStateInfo(0).IsName("Ready")
+                                        && bot.GetCurrentAnimatorStateInfo(0).IsName("Ready"), 3f);
 
-            Assert.IsTrue(player.GetCurrentAnimatorStateInfo(0).IsName("Taunt"),
-                "the player's gladiator stood there doing nothing");
-            Assert.IsTrue(bot.GetCurrentAnimatorStateInfo(0).IsName("Taunt"),
-                "the opponent stood there doing nothing");
+            Assert.IsTrue(player.GetCurrentAnimatorStateInfo(0).IsName("Ready"),
+                "the player's gladiator dropped out of his ready stance");
+            Assert.IsTrue(bot.GetCurrentAnimatorStateInfo(0).IsName("Ready"),
+                "the opponent dropped out of his ready stance");
 
             // And it stops when the thinking does: a gladiator posing while he charges is worse than
             // one who never posed at all.
             yield return RunUntil(() => _controller.Manager.State.Phase != MatchPhase.Planning, 8f);
             yield return RunSeconds(0.4f);
 
-            Assert.IsFalse(player.GetCurrentAnimatorStateInfo(0).IsName("Taunt"),
-                "he was still working the crowd once the fighting started");
+            Assert.IsFalse(player.GetCurrentAnimatorStateInfo(0).IsName("Ready"),
+                "he was still standing ready once the fighting started");
         }
 
         /// <summary>
@@ -443,6 +443,14 @@ namespace ColosseumDuel.Tests
         {
             if (IsSwing(animator.GetCurrentAnimatorStateInfo(0))) return true;
             return animator.IsInTransition(0) && IsSwing(animator.GetNextAnimatorStateInfo(0));
+        }
+
+        /// <summary>Anything hanging off a fist, as opposed to the fighter himself.</summary>
+        private static bool IsCarriedGear(Transform t)
+        {
+            for (var node = t; node != null; node = node.parent)
+                if (node.name == "HeldWeapon" || node.name == "HeldOffHand") return true;
+            return false;
         }
 
         private static bool IsSwing(AnimatorStateInfo info)
@@ -526,10 +534,15 @@ namespace ColosseumDuel.Tests
                 foreach (var r in helmet.GetComponentsInChildren<Renderer>(true))
                     helmetTop = Mathf.Max(helmetTop, r.bounds.max.y);
 
+                // The body, not what it is holding. A mace is longer than a man is tall and is
+                // carried at an angle that changes with every pose, so including it measures the
+                // weapon rather than the helmet - and a fighter whose hammer rides above his head is
+                // not a fighter with a bare head.
                 float bodyTop = float.NegativeInfinity;
                 foreach (var r in figure.GetComponentsInChildren<Renderer>(true))
                 {
                     if (r.transform.IsChildOf(helmet)) continue;
+                    if (IsCarriedGear(r.transform)) continue;
                     bodyTop = Mathf.Max(bodyTop, r.bounds.max.y);
                 }
 

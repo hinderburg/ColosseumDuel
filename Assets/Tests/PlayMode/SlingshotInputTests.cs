@@ -320,6 +320,89 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// The head sits at the far end of the lane, past the band's own rounded cap.
+        ///
+        /// It looked short of the end for a while and the maths was right: a LineRenderer with
+        /// rounded caps draws a half-disc of its own width past its last point, so the band kept
+        /// going after the arrow's tip.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheArrowHeadSitsAtTheFarEndOfTheLane()
+        {
+            var line = FindLine("TrajectoryPreview");
+            var head = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(t => t.name == "TrajectoryHead");
+            if (head == null) Assert.Ignore("No arrow head - the palette predates it.");
+
+            var player = Player;
+            _input.Scheme = ControlScheme.Swipe;
+            var anchor = player.Pos + new Vector2(-120f, -120f);
+            _input.TryBeginSwipe(anchor);
+            _input.UpdateDrag(anchor + new Vector2(0f, -GameConstants.MaxDragVirtual));
+            yield return null;
+
+            Assert.IsTrue(head.gameObject.activeSelf, "the lane has no head on it");
+
+            var arena = _controller.Arena;
+            var start = line.GetPosition(0);
+            var end = line.GetPosition(line.positionCount - 1);
+
+            // Measured along the run rather than as a distance, so "past the end" and "short of the
+            // end" are different answers rather than the same one.
+            var along = (end - start).normalized;
+            float headAlong = Vector3.Dot(head.position - start, along);
+            float lineAlong = Vector3.Dot(end - start, along);
+
+            // The threshold sits between the two measured cases rather than at a round number: with
+            // the cap accounted for the head's centre lands a seventh of a body radius short of the
+            // last point, and without it a whole radius and a third short. This is between them, so
+            // the test still fails if the cap is forgotten again.
+            float radius = arena.ScaleLength(GameConstants.GladiatorRadius);
+            Assert.Greater(headAlong, lineAlong - radius * 0.7f,
+                "the head is sitting back down the lane, short of where the band actually ends");
+            Assert.Less(headAlong, lineAlong + radius * 3f,
+                "the head has floated off past the end of the run");
+        }
+
+        /// <summary>
+        /// Arming the speed ability lengthens the run the preview promises.
+        ///
+        /// The buff has not fired yet while the player is still planning - it fires at the top of
+        /// the action phase - so the preview was drawing the unbuffed run and then the gladiator
+        /// went half as far again as the line said he would.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ArmingTheSpeedAbilityLengthensThePreviewedRun()
+        {
+            var line = FindLine("TrajectoryPreview");
+            var player = Player;
+            if (player.Def.Ability != AbilityKey.Spirit)
+                Assert.Ignore("This fixture's gladiator does not have the speed ability.");
+
+            _input.Scheme = ControlScheme.Swipe;
+            var anchor = player.Pos + new Vector2(-120f, -120f);
+            var drawnTo = anchor + new Vector2(0f, -GameConstants.MaxDragVirtual);
+
+            _input.TryBeginSwipe(anchor);
+            _input.UpdateDrag(drawnTo);
+            yield return null;
+            float plain = Vector3.Distance(line.GetPosition(0), line.GetPosition(line.positionCount - 1));
+            _input.CancelDrag();
+
+            player.Rage = GameConstants.RageMax;
+            _input.ToggleAbility();
+            Assert.IsTrue(_input.AbilityArmed, "the ability did not arm, so this proves nothing");
+
+            _input.TryBeginSwipe(anchor);
+            _input.UpdateDrag(drawnTo);
+            yield return null;
+            float spirited = Vector3.Distance(line.GetPosition(0), line.GetPosition(line.positionCount - 1));
+
+            Assert.Greater(spirited, plain * 1.3f,
+                $"the previewed run was {plain:0.00} without the ability and {spirited:0.00} with it");
+        }
+
+        /// <summary>
         /// The order stays drawn after the finger comes off, and goes when the phase does.
         ///
         /// Letting go used to take the preview with it, which left an order filed, seconds still on

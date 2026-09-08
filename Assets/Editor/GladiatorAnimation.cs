@@ -35,6 +35,9 @@ namespace ColosseumDuel.EditorTools
         private const string PackDir =
             "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack FREE/Animations";
 
+        /// <summary>How much faster than authored the run cycles play. See where it is applied.</summary>
+        private const float RunPlaybackSpeed = 1.45f;
+
         /// <summary>Builds or rebuilds the controller. Returns null if the clip pack is absent.</summary>
         public static AnimatorController EnsureController()
         {
@@ -63,7 +66,7 @@ namespace ColosseumDuel.EditorTools
             controller.AddParameter(AnimatorParams.MoveZ, AnimatorControllerParameterType.Float);
             controller.AddParameter(AnimatorParams.TwoHanded, AnimatorControllerParameterType.Bool);
             controller.AddParameter(AnimatorParams.Knockback, AnimatorControllerParameterType.Trigger);
-            controller.AddParameter(AnimatorParams.Taunting, AnimatorControllerParameterType.Bool);
+            controller.AddParameter(AnimatorParams.ReadyStance, AnimatorControllerParameterType.Bool);
 
             var machine = controller.layers[0].stateMachine;
 
@@ -73,17 +76,26 @@ namespace ColosseumDuel.EditorTools
 
             var runState = BuildRun(controller, idle);
 
+            // Played faster than it was authored.
+            //
+            // The cycles were made for a character crossing ground at a walking pace; a gladiator
+            // crosses a third of the arena in one second, and at the clip's own rate his feet were
+            // visibly slower than the ground going past under them. Playback rate rather than a
+            // different clip, because the pack has one run and this is what the knob is for.
+            runState.speed = RunPlaybackSpeed;
+
             var blockState = machine.AddState("Block");
             blockState.motion = Clip("OneHand_Up_Shield_Block_Idle");
 
-            // Working the crowd while the player thinks.
+            // How he stands while the player thinks.
             //
-            // The pack has no clip called a taunt; this is the nearest thing in it - a four-second
-            // gesture, which happens to be exactly the length of the planning phase, so it plays
-            // once through per phase rather than looping visibly. It is already marked as looping in
-            // the pack, so a phase cut short leaves it partway and the next one starts it again.
-            var tauntState = machine.AddState("Taunt");
-            tauntState.motion = Clip("Action_A_4_1") ?? idle;
+            // A second idle rather than a gesture. The first attempt used the nearest thing to a
+            // taunt in either pack, and a four-second flourish repeated every cycle is a lot of
+            // gesture for a game whose cycles are four seconds long. This is a fighting stance from
+            // the other pack - shifting weight, not posing - so the pause reads as two men waiting
+            // rather than as two men standing still.
+            var readyState = machine.AddState("Ready");
+            readyState.motion = PackClip("Unarmed", "Unarmed-Idle", loop: true) ?? idle;
 
             var attackState = machine.AddState("Attack");
             attackState.motion = Clip("OneHand_Up_Attack_1_InPlace");
@@ -119,30 +131,29 @@ namespace ColosseumDuel.EditorTools
                  Bool(AnimatorParams.Defending, false));
             Move(runState, idleState, Float(AnimatorParams.Speed, AnimatorConditionMode.Less, AnimatorParams.RunThreshold));
 
-            // --- the taunt ---
+            // --- the ready stance ---
             // Out of Idle only, never out of Any State. A gladiator who is running, guarding, being
-            // hit or dead has something better to be doing, and a taunt reachable from anywhere
+            // hit or dead has something better to be doing, and a stance reachable from anywhere
             // would cut across all four the moment the next planning phase opened.
             //
             // It leaves on the flag or on him starting to move, and the second condition is not
             // redundant: the phase flag is set by the view a frame before the simulation lets anyone
             // move, so without it the first frame of a charge is still spent posing.
-            Move(idleState, tauntState, Bool(AnimatorParams.Taunting, true),
+            Move(idleState, readyState, Bool(AnimatorParams.ReadyStance, true),
                  Bool(AnimatorParams.Defending, false),
                  Float(AnimatorParams.Speed, AnimatorConditionMode.Less, AnimatorParams.RunThreshold));
 
             // Leaving it snaps, and that is not a stylistic choice.
             //
             // A transition in progress cannot be interrupted, including by an Any State transition,
-            // so a blend out of the taunt is a window in which a blow that lands swallows its own
-            // swing. The taunt ends exactly when the planning phase does, which is exactly when the
+            // so a blend out of the stance is a window in which a blow that lands swallows its own
+            // swing. The stance ends exactly when the planning phase does, which is exactly when the
             // first blows of the exchange land - so at an eighth of a second that window caught the
-            // opening blow of nearly every cycle. Snapping shrinks it to nothing, and a man who has
-            // just been swung at should not be easing out of a pose anyway.
-            Snap(tauntState, idleState, Bool(AnimatorParams.Taunting, false));
-            Snap(tauntState, idleState,
+            // opening blow of nearly every cycle. Snapping shrinks it to nothing.
+            Snap(readyState, idleState, Bool(AnimatorParams.ReadyStance, false));
+            Snap(readyState, idleState,
                  Float(AnimatorParams.Speed, AnimatorConditionMode.Greater, AnimatorParams.RunThreshold));
-            Snap(tauntState, blockState, Bool(AnimatorParams.Defending, true));
+            Snap(readyState, blockState, Bool(AnimatorParams.Defending, true));
 
             // --- one-shots ---
             // From Any State, because a blow can land in any of them, and each returns on its own
@@ -211,10 +222,11 @@ namespace ColosseumDuel.EditorTools
         /// assets - so it has to be dug out of the file's sub-assets by name, and LoadAssetAtPath
         /// on the FBX would hand back the model instead.
         /// </summary>
-        private static AnimationClip PackClip(string folder, string clipName)
+        private static AnimationClip PackClip(string folder, string clipName, bool loop = false)
         {
             string path = $"{PackDir}/{folder}/RPG-Character@{clipName}.FBX";
             StripEvents(path);
+            if (loop) EnsureLooping(path);
 
             foreach (var asset in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
             {
@@ -236,6 +248,37 @@ namespace ColosseumDuel.EditorTools
         /// Cleared through the importer rather than on the clip. An imported clip is read-only, so
         /// AnimationUtility would appear to work and be undone by the next reimport.
         /// </summary>
+        /// <summary>
+        /// Marks a pack clip as looping.
+        ///
+        /// The pack's clips are authored as one-shots, and a one-shot held open for a four-second
+        /// phase plays once and then freezes on its last frame - which for a standing idle is a man
+        /// who stopped breathing. Set through the importer, like the events: an imported clip is
+        /// read-only, so setting it on the clip would be undone by the next reimport.
+        /// </summary>
+        private static void EnsureLooping(string path)
+        {
+            var importer = AssetImporter.GetAtPath(path) as ModelImporter;
+            if (importer == null) return;
+
+            var clips = importer.clipAnimations;
+            if (clips == null || clips.Length == 0) clips = importer.defaultClipAnimations;
+            if (clips == null || clips.Length == 0) return;
+
+            bool changed = false;
+            foreach (var clip in clips)
+            {
+                if (clip.loopTime) continue;
+                clip.loopTime = true;
+                changed = true;
+            }
+
+            if (!changed) return;
+
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
+        }
+
         private static void StripEvents(string path)
         {
             var importer = AssetImporter.GetAtPath(path) as ModelImporter;
