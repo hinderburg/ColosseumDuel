@@ -455,6 +455,59 @@ namespace ColosseumDuel.Tests
         /// help on cycle one and an obstruction on cycle five - so the end of it is worth a test
         /// rather than an eyeball: it only shows itself several cycles into a match nobody replays.
         /// </summary>
+        /// <summary>
+        /// One label per kind, on the nearest one of that kind.
+        ///
+        /// A caption on every trap and every weapon taught the same two things six times over and
+        /// filled the arena doing it. The nearest is the one the player can act on: a label on a
+        /// trap across the arena is a fact, one on the trap in front of them is a warning about the
+        /// run they are deciding on.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTutorialLabelsOnlyOneOfEachAndTheNearest()
+        {
+            var tutorial = Object.FindFirstObjectByType<TutorialView>(FindObjectsInactive.Include);
+            Assert.IsNotNull(tutorial);
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var player = State.P1.Active;
+            player.Pos = new Vector2(0f, -200f);
+
+            // Two of each, one beside him and one across the arena, so "nearest" and "first in the
+            // list" are different answers and picking the wrong one shows.
+            State.Items.Items.Clear();
+            State.Items.Items.Add(new ArenaItem { Kind = WeaponKind.TwoHandedMace, Pos = new Vector2(0f, 250f) });
+            State.Items.Items.Add(new ArenaItem { Kind = WeaponKind.DualSwords, Pos = new Vector2(20f, -180f) });
+
+            State.Traps.Traps.Clear();
+            State.Traps.Traps.Add(new ArenaTrap { Pos = new Vector2(0f, 240f), Armed = true });
+            State.Traps.Traps.Add(new ArenaTrap { Pos = new Vector2(-25f, -170f), Armed = true });
+            yield return null;
+
+            var shownItems = ActiveHints(tutorial, "ItemHint_");
+            var shownTraps = ActiveHints(tutorial, "TrapHint_");
+
+            Assert.AreEqual(1, shownItems.Count, "every weapon on the sand was labelled");
+            Assert.AreEqual(1, shownTraps.Count, "every trap on the sand was labelled");
+
+            // The near one, by where the label ended up on screen relative to the far one's world
+            // position - read through the same camera the player is looking through.
+            var camera = _controller.Arena.ArenaCamera;
+            var near = camera.WorldToScreenPoint(_controller.Arena.ToWorld(new Vector2(20f, -180f)));
+            var far = camera.WorldToScreenPoint(_controller.Arena.ToWorld(new Vector2(0f, 250f)));
+
+            float toNear = Mathf.Abs(shownItems[0].position.y - near.y);
+            float toFar = Mathf.Abs(shownItems[0].position.y - far.y);
+            Assert.Less(toNear, toFar, "the weapon label went to the one across the arena");
+        }
+
+        private static List<Transform> ActiveHints(TutorialView tutorial, string prefix)
+            => tutorial.GetComponentsInChildren<Transform>(true)
+                .Where(t => t.name.StartsWith(prefix) && t.gameObject.activeSelf)
+                .ToList();
+
         [UnityTest]
         public IEnumerator TheTutorialLabelsGoAwayAfterTwoCycles()
         {

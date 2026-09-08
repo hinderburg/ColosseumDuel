@@ -157,6 +157,35 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>What a pickup is worth, in as few words as will fit above it.</summary>
+        /// <summary>
+        /// Which of these is closest to a point, or -1 if none of them counts.
+        ///
+        /// Takes the position and the "counts at all" test as functions rather than being written
+        /// twice, once for weapons and once for traps: a trap has to be armed to be worth warning
+        /// about and a weapon has no such condition, and that is the only difference between them.
+        /// </summary>
+        private static int NearestIndex<T>(IReadOnlyList<T> candidates, Vector2 to,
+            System.Func<T, Vector2> positionOf, System.Func<T, bool> counts)
+        {
+            if (candidates == null) return -1;
+
+            int nearest = -1;
+            float best = float.MaxValue;
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                if (candidates[i] == null || !counts(candidates[i])) continue;
+
+                float d = Vector2.SqrMagnitude(positionOf(candidates[i]) - to);
+                if (d >= best) continue;
+
+                best = d;
+                nearest = i;
+            }
+
+            return nearest;
+        }
+
         private static string DescribeItem(ArenaItem item)
         {
             switch (item.Kind)
@@ -180,19 +209,31 @@ namespace ColosseumDuel.Gameplay.Hud
             if (gameObject.activeSelf != teaching) gameObject.SetActive(teaching);
             if (!teaching || _arena == null || _arena.ArenaCamera == null) return;
 
+            // One of each kind, and the nearest one.
+            //
+            // A caption on every trap and every weapon taught the same two things six times over and
+            // filled the arena doing it - and the arena is what the labels are pointing at. One
+            // example says as much as six, and the nearest is the one the player can act on: a label
+            // on a trap across the arena is a fact, a label on the trap in front of them is a
+            // warning about the run they are deciding on.
+            var player = state.P1.Active;
+            var here = player != null ? player.Pos : Vector2.zero;
+
             var items = state.Items?.Items;
+            int nearestItem = NearestIndex(items, here, item => item.Pos, _ => true);
             for (int i = 0; i < _itemHints.Count; i++)
             {
-                bool show = items != null && i < items.Count;
-                Place(_itemHints[i], show ? (Vector2?)items[i].Pos : null,
-                      show ? DescribeItem(items[i]) : null);
+                bool show = i == 0 && nearestItem >= 0;
+                Place(_itemHints[i], show ? (Vector2?)items[nearestItem].Pos : null,
+                      show ? DescribeItem(items[nearestItem]) : null);
             }
 
             var traps = state.Traps?.Traps;
+            int nearestTrap = NearestIndex(traps, here, trap => trap.Pos, trap => trap.Armed);
             for (int i = 0; i < _trapHints.Count; i++)
             {
-                bool show = traps != null && i < traps.Count && traps[i].Armed;
-                Place(_trapHints[i], show ? (Vector2?)traps[i].Pos : null,
+                bool show = i == 0 && nearestTrap >= 0;
+                Place(_trapHints[i], show ? (Vector2?)traps[nearestTrap].Pos : null,
                       show ? "Trap" : null);
             }
 
