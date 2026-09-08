@@ -54,10 +54,13 @@ namespace ColosseumDuel.Gameplay.Hud
         /// </summary>
         private const float Scatter = 26f;
 
-        private static readonly Color BlowColor = new Color(1.00f, 0.95f, 0.86f);
-        private static readonly Color TrapColor = new Color(0.96f, 0.66f, 0.22f);
-        private static readonly Color BleedColor = new Color(0.86f, 0.24f, 0.28f);
-        private static readonly Color SpikesColor = new Color(0.98f, 0.45f, 0.20f);
+        // All four are red, because all four are damage and that is the first thing the number has
+        // to say. They are four reds rather than one so the second thing - what took it - is still
+        // there to be read: a blow is the bright one, and the rest sit either side of it.
+        private static readonly Color BlowColor = new Color(0.95f, 0.20f, 0.16f);
+        private static readonly Color TrapColor = new Color(0.78f, 0.27f, 0.13f);
+        private static readonly Color BleedColor = new Color(0.66f, 0.09f, 0.16f);
+        private static readonly Color SpikesColor = new Color(0.98f, 0.42f, 0.14f);
 
         private sealed class Number
         {
