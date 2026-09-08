@@ -319,8 +319,12 @@ namespace ColosseumDuel.EditorTools
             palette.Shield = Lit("ItemShield", new Color(0.55f, 0.60f, 0.70f));
             palette.RandomItem = Lit("ItemRandom", new Color(0.60f, 0.35f, 0.80f));
 
-            palette.HazardActive = Unlit("HazardActive", new Color(0.70f, 0.12f, 0.06f));
-            palette.HazardTelegraph = Unlit("HazardTelegraph", new Color(0.55f, 0.38f, 0.10f));
+            // Washes over the sand rather than paint on top of it. Opaque and fully saturated, the
+            // danger zone read as the arena having been repainted red - it took over the frame from
+            // the fight happening on it. Transparent and dulled, it is ground you can see is
+            // dangerous and still see the floor of.
+            palette.HazardActive = TransparentUnlit("HazardActive", new Color(0.55f, 0.22f, 0.17f, 0.62f));
+            palette.HazardTelegraph = TransparentUnlit("HazardTelegraph", new Color(0.50f, 0.40f, 0.24f, 0.50f));
 
             palette.BarBackground = Unlit("BarBackground", new Color(0.06f, 0.06f, 0.08f));
             palette.BarHp = Unlit("BarHp", new Color(0.30f, 0.85f, 0.35f));
@@ -473,7 +477,10 @@ namespace ColosseumDuel.EditorTools
             // The floor gets its texture once across the whole disc - no repeat, so no seams and no
             // tiling pattern to notice. The wall material lives in the palette, since the wall is
             // built at runtime.
-            var sandMat = Lit("Sand", new Color(0.76f, 0.66f, 0.44f));
+            // Grey stone dust rather than desert sand. The warm yellow floor and the red danger zone
+            // were the two loudest things on screen and they were fighting each other; a grey ground
+            // leaves the red to mean something, and leaves the blood on it visible.
+            var sandMat = Lit("Sand", new Color(0.62f, 0.60f, 0.56f));
             ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
 
             // Re-loaded here rather than reused from above, and not defensively - it is genuinely
