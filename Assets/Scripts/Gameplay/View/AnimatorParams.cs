@@ -18,6 +18,21 @@ namespace ColosseumDuel.Gameplay.View
         public const string Hit = "Hit";
         public const string Dead = "Dead";
 
+        /// <summary>
+        /// Which way he is running, as a unit vector in his own frame: MoveZ ahead, MoveX to his
+        /// right. Two numbers rather than one, because the gladiators are turned to face each other
+        /// at all times and so most of their running is not forwards - a fighter circling or backing
+        /// off is moving sideways relative to himself, and one speed value cannot say that.
+        /// </summary>
+        public const string MoveX = "MoveX";
+        public const string MoveZ = "MoveZ";
+
+        /// <summary>Whether the weapon in his hands takes both of them. Picks the swing.</summary>
+        public const string TwoHanded = "TwoHanded";
+
+        /// <summary>A blow that throws him back rather than only hurting him.</summary>
+        public const string Knockback = "Knockback";
+
         /// <summary>Speed, in world units per second, above which the run cycle plays.</summary>
         public const float RunThreshold = 0.35f;
 
@@ -26,5 +41,9 @@ namespace ColosseumDuel.Gameplay.View
         public static readonly int AttackId = Animator.StringToHash(Attack);
         public static readonly int HitId = Animator.StringToHash(Hit);
         public static readonly int DeadId = Animator.StringToHash(Dead);
+        public static readonly int MoveXId = Animator.StringToHash(MoveX);
+        public static readonly int MoveZId = Animator.StringToHash(MoveZ);
+        public static readonly int TwoHandedId = Animator.StringToHash(TwoHanded);
+        public static readonly int KnockbackId = Animator.StringToHash(Knockback);
     }
 }

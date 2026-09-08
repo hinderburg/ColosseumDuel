@@ -614,8 +614,20 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         /// <summary>A blow just landed on this gladiator: squash the model and ring the impact.</summary>
-        public void PlayHit()
+        public void PlayHit() => TakeBlow(AnimatorParams.HitId);
+
+        /// <summary>
+        /// A blow that threw him back rather than one he only felt.
+        ///
+        /// The same path as a hit, down to the squash and the hold-off, because everything about
+        /// taking a blow is the same - only the clip differs. Two copies of this method drifted
+        /// apart the moment one of them was fixed.
+        /// </summary>
+        public void PlayKnockback() => TakeBlow(AnimatorParams.KnockbackId);
+
+        private void TakeBlow(int trigger)
         {
+            _blowTrigger = trigger;
             _hitPunchLeft = HitPunchTime;
             StartBurst(_arena.ScaleLength(GameConstants.GladiatorRadius) * 2.6f, 0.30f, Color.white);
 
@@ -630,7 +642,7 @@ namespace ColosseumDuel.Gameplay.View
                 return;
             }
 
-            if (_animator != null) _animator.SetTrigger(AnimatorParams.HitId);
+            if (_animator != null) _animator.SetTrigger(trigger);
             _hitThisFrame = true;
         }
 
@@ -652,6 +664,9 @@ namespace ColosseumDuel.Gameplay.View
         private bool _hitWaiting;
         private bool _hitThisFrame;
 
+        /// <summary>Which recoil the blow being taken calls for - a flinch, or a throw back.</summary>
+        private int _blowTrigger = -1;
+
         /// <summary>This gladiator just dealt a blow.</summary>
         public void PlaySwing()
         {
@@ -661,7 +676,7 @@ namespace ColosseumDuel.Gameplay.View
             // The trigger has not been consumed yet, so it can be taken back and re-fired after.
             if (_hitThisFrame && _animator != null)
             {
-                _animator.ResetTrigger(AnimatorParams.HitId);
+                if (_blowTrigger >= 0) _animator.ResetTrigger(_blowTrigger);
                 _hitWaiting = true;
             }
 
@@ -679,7 +694,7 @@ namespace ColosseumDuel.Gameplay.View
             if (_swingHoldLeft > 0f || !_hitWaiting) return;
 
             _hitWaiting = false;
-            if (_animator != null) _animator.SetTrigger(AnimatorParams.HitId);
+            if (_animator != null && _blowTrigger >= 0) _animator.SetTrigger(_blowTrigger);
         }
 
         /// <summary>This gladiator's ability just fired.</summary>
@@ -757,7 +772,49 @@ namespace ColosseumDuel.Gameplay.View
 
             _animator.SetFloat(AnimatorParams.SpeedId, g.Vel.magnitude * _arena.VirtualToWorld);
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
+            _animator.SetBool(AnimatorParams.TwoHandedId, g.Weapon == WeaponKind.TwoHandedMace);
+
+            SyncRunDirection(g);
         }
+
+        /// <summary>
+        /// Which way he is running, in his own frame, for the run blend.
+        ///
+        /// Worked out from Facing and Vel directly rather than by asking the figure's transform to
+        /// convert a world vector. The figure is turned from Facing in this same frame, so the
+        /// transform is either the same answer or last frame's - and the maths is two dot products.
+        ///
+        /// A unit vector, not a velocity: the blend picks which cycle to play and the separate
+        /// Speed parameter decides whether to play one at all. Feeding it real speed would put the
+        /// blend somewhere between the idle at the centre and a run at the rim, which reads as a
+        /// man wading.
+        /// </summary>
+        private void SyncRunDirection(GladiatorInstance g)
+        {
+            var vel = g.Vel;
+            if (vel.sqrMagnitude > 0.0001f) vel.Normalize();
+
+            var facing = g.Facing;
+            if (facing.sqrMagnitude < 0.0001f) facing = Vector2.up;
+
+            // His right is his facing turned a quarter clockwise: the model's forward is
+            // (Facing.x, 0, Facing.y) in world terms, and Unity's right-handed-Y turn takes that to
+            // (Facing.y, 0, -Facing.x).
+            float ahead = Vector2.Dot(vel, facing);
+            float across = vel.x * facing.y - vel.y * facing.x;
+
+            _animator.SetFloat(AnimatorParams.MoveXId, across, RunBlendDamping, Time.deltaTime);
+            _animator.SetFloat(AnimatorParams.MoveZId, ahead, RunBlendDamping, Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Seconds the run blend takes to follow a change of direction.
+        ///
+        /// Damped rather than snapped because the direction can reverse in a single frame - a bounce
+        /// off another gladiator does exactly that - and an unsmoothed blend cuts from one cycle to
+        /// the opposite one mid-stride.
+        /// </summary>
+        private const float RunBlendDamping = 0.12f;
 
         /// <summary>
         /// Seconds the red flicker of a bleed lasts. Longer than a hit reaction and much softer:

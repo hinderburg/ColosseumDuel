@@ -209,11 +209,19 @@ namespace ColosseumDuel.Gameplay
         private void OnDamaged(PlayerSide side, float amount)
         {
             if (amount <= 0f) return;
-            ViewFor(side).PlayHit();
 
             // The event names the victim, so the swing belongs to the other one. Both sides can be
             // dealt damage in the same exchange, and then both swing - which is exactly right.
-            ViewFor(side == PlayerSide.P1 ? PlayerSide.Bot : PlayerSide.P1).PlaySwing();
+            var otherSide = side == PlayerSide.P1 ? PlayerSide.Bot : PlayerSide.P1;
+
+            // Whether the blow throws him is a property of the weapon that landed it, and that is
+            // readable from the striker rather than needing an event of its own. A flinch played
+            // over a body already sliding backwards reads as the ground moving, not the man.
+            var striker = Manager.State.Get(otherSide).Active;
+            if (striker != null && striker.WeaponDef.Knockback > 0f) ViewFor(side).PlayKnockback();
+            else ViewFor(side).PlayHit();
+
+            ViewFor(otherSide).PlaySwing();
 
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.

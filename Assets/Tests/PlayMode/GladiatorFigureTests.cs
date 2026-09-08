@@ -326,11 +326,63 @@ namespace ColosseumDuel.Tests
                 $"the opponent's swing was on screen for {botSwing:0.###}s - it was cut short");
         }
 
+        /// <summary>
+        /// Running away from the man you are facing plays a backward cycle, not a forward one.
+        ///
+        /// The gladiators are turned to face each other every frame, so which way a fighter runs and
+        /// which way he faces are independent - and with one forward cycle, a fighter backing off
+        /// sprinted towards the man he was retreating from. Asserted on the blend parameters rather
+        /// than by eye, since that is what actually chooses the clip.
+        ///
+        /// Damped, so the numbers are read after they have had time to arrive: an assertion on the
+        /// frame the direction changes measures the damping, not the direction.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RunningBackwardsPlaysABackwardCycleRatherThanACharge()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var figure = FindIn("Player", $"Figure_{GladiatorId.Barbarius}");
+            var animator = figure != null ? figure.GetComponentInChildren<Animator>(true) : null;
+            if (animator == null || animator.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            var player = _controller.Manager.State.P1.Active;
+            var bot = _controller.Manager.State.Bot.Active;
+
+            // He faces the opponent, who is straight up the arena from him, and runs the other way.
+            player.Pos = new Vector2(0f, -60f);
+            bot.Pos = new Vector2(0f, 60f);
+            player.Vel = new Vector2(0f, -120f);
+            yield return RunSeconds(0.4f);
+
+            Assert.Less(animator.GetFloat(AnimatorParams.MoveZ), -0.6f,
+                "running away from the man he faces should read as backwards");
+            Assert.That(animator.GetFloat(AnimatorParams.MoveX), Is.EqualTo(0f).Within(0.25f),
+                "and straight back, not sideways");
+
+            // Now across his own front, which is the case a single speed value cannot express at
+            // all: same magnitude, same facing, a different cycle.
+            player.Vel = new Vector2(120f, 0f);
+            yield return RunSeconds(0.4f);
+
+            Assert.Greater(animator.GetFloat(AnimatorParams.MoveX), 0.6f,
+                "running to his own right should read as a right-hand strafe");
+        }
+
+        /// <summary>
+        /// Either swing counts. There are two - a sword's and the two-handed one the mace got - and
+        /// Brutius, who this test picks, is the one who swings the mace.
+        /// </summary>
         private static bool InAttack(Animator animator)
         {
-            if (animator.GetCurrentAnimatorStateInfo(0).IsName("Attack")) return true;
-            return animator.IsInTransition(0) && animator.GetNextAnimatorStateInfo(0).IsName("Attack");
+            if (IsSwing(animator.GetCurrentAnimatorStateInfo(0))) return true;
+            return animator.IsInTransition(0) && IsSwing(animator.GetNextAnimatorStateInfo(0));
         }
+
+        private static bool IsSwing(AnimatorStateInfo info)
+            => info.IsName("Attack") || info.IsName("AttackHeavy");
 
         /// <summary>
         /// The helmet stays on the head through an animation, and through the death in particular.
