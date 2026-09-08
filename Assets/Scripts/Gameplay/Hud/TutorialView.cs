@@ -67,7 +67,6 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>Scratch list for the de-overlap pass, reused so it allocates nothing per frame.</summary>
         private readonly List<Hint> _placed = new List<Hint>();
         private Hint _instruction;
-        private Image _tapMark;
 
         /// <summary>A plate and the text on it, resized together whenever the text changes.</summary>
         private sealed class Hint
@@ -115,16 +114,6 @@ namespace ColosseumDuel.Gameplay.Hud
             for (int i = 0; i < GameConstants.TrapCount; i++)
                 view._trapHints.Add(MakeHint(root, $"TrapHint_{i}", TrapPlateColor, LabelSize));
 
-            // The ring the player is being told to tap. Drawn in the HUD rather than on the arena
-            // because it has to sit on top of the spikes and the sand alike, and because it is
-            // instruction rather than scenery.
-            view._tapMark = HudFactory.CreatePanel("TutorialTapMark", root, new Color(1f, 0.9f, 0.4f, 0.9f));
-            HudFactory.UseSprite(view._tapMark, palette != null ? palette.Ring : null);
-            view._tapMark.raycastTarget = false;
-            var markRect = view._tapMark.rectTransform;
-            markRect.anchorMin = markRect.anchorMax = new Vector2(0.5f, 0.5f);
-            markRect.sizeDelta = new Vector2(64f, 64f);
-
             view._instruction = MakeHint(root, "TutorialInstruction", InstructionPlateColor, 17);
             view._instruction.Height = 36f;
             var rect = view._instruction.Rect;
@@ -156,7 +145,37 @@ namespace ColosseumDuel.Gameplay.Hud
             return hint;
         }
 
-        /// <summary>What a pickup is worth, in as few words as will fit above it.</summary>
+        /// <summary>Which weapon and which trap carry the labels this cycle. See ChooseWhatToLabel.</summary>
+        private int _labelledItem = -1;
+        private int _labelledTrap = -1;
+        private int _chosenForCycle = -1;
+
+        /// <summary>
+        /// Picks which trap and which weapon carry the labels, once per cycle.
+        ///
+        /// Once per cycle rather than once, because the sand changes under it - a weapon picked up
+        /// respawns elsewhere and a sprung trap stops being worth warning about - and once per frame
+        /// would mean a label that walks from one object to another while the player reads it.
+        /// </summary>
+        private void ChooseWhatToLabel(MatchState state,
+            IReadOnlyList<ArenaItem> items, IReadOnlyList<ArenaTrap> traps)
+        {
+            bool stale = _chosenForCycle != state.Cycle
+                         || _labelledItem < 0
+                         || items == null || _labelledItem >= items.Count
+                         || _labelledTrap < 0
+                         || traps == null || _labelledTrap >= traps.Count
+                         || !traps[_labelledTrap].Armed;
+            if (!stale) return;
+
+            var player = state.P1.Active;
+            var here = player != null ? player.Pos : Vector2.zero;
+
+            _labelledItem = NearestIndex(items, here, item => item.Pos, _ => true);
+            _labelledTrap = NearestIndex(traps, here, trap => trap.Pos, trap => trap.Armed);
+            _chosenForCycle = state.Cycle;
+        }
+
         /// <summary>
         /// Which of these is closest to a point, or -1 if none of them counts.
         ///
@@ -186,6 +205,7 @@ namespace ColosseumDuel.Gameplay.Hud
             return nearest;
         }
 
+        /// <summary>What a pickup is worth, in as few words as will fit above it.</summary>
         private static string DescribeItem(ArenaItem item)
         {
             switch (item.Kind)
@@ -216,26 +236,24 @@ namespace ColosseumDuel.Gameplay.Hud
             // example says as much as six, and the nearest is the one the player can act on: a label
             // on a trap across the arena is a fact, a label on the trap in front of them is a
             // warning about the run they are deciding on.
-            var player = state.P1.Active;
-            var here = player != null ? player.Pos : Vector2.zero;
-
+            // Chosen once a cycle and then left alone. Nearest is measured from a gladiator who is
+            // running, so recomputing it every frame hands the label from one trap to the next
+            // partway through a charge - and a caption that moves while you are reading it is worse
+            // than a caption on the wrong trap.
             var items = state.Items?.Items;
-            int nearestItem = NearestIndex(items, here, item => item.Pos, _ => true);
-            for (int i = 0; i < _itemHints.Count; i++)
-            {
-                bool show = i == 0 && nearestItem >= 0;
-                Place(_itemHints[i], show ? (Vector2?)items[nearestItem].Pos : null,
-                      show ? DescribeItem(items[nearestItem]) : null);
-            }
-
             var traps = state.Traps?.Traps;
-            int nearestTrap = NearestIndex(traps, here, trap => trap.Pos, trap => trap.Armed);
+            ChooseWhatToLabel(state, items, traps);
+
+            bool showItem = _labelledItem >= 0 && items != null && _labelledItem < items.Count;
+            for (int i = 0; i < _itemHints.Count; i++)
+                Place(_itemHints[i], i == 0 && showItem ? (Vector2?)items[_labelledItem].Pos : null,
+                      i == 0 && showItem ? DescribeItem(items[_labelledItem]) : null);
+
+            bool showTrap = _labelledTrap >= 0 && traps != null && _labelledTrap < traps.Count
+                            && traps[_labelledTrap].Armed;
             for (int i = 0; i < _trapHints.Count; i++)
-            {
-                bool show = i == 0 && nearestTrap >= 0;
-                Place(_trapHints[i], show ? (Vector2?)traps[nearestTrap].Pos : null,
-                      show ? "Trap" : null);
-            }
+                Place(_trapHints[i], i == 0 && showTrap ? (Vector2?)traps[_labelledTrap].Pos : null,
+                      i == 0 && showTrap ? "Trap" : null);
 
             // The instruction first: it is an obstacle for the rest, and it has to be at its final
             // width before anything can be lifted clear of it.
@@ -361,16 +379,13 @@ namespace ColosseumDuel.Gameplay.Hud
             var player = state.P1.Active;
             bool armed = player != null && player.WeaponIsGilded;
 
+            // Says the gesture the game is actually listening for. It said "tap" for as long as
+            // tapping was the control, and kept saying it after the swipe took over - which is a
+            // tutorial teaching the wrong thing, and the ring that used to point at the spot is gone
+            // now, so this line is the only guidance left.
             _instruction.SetText(armed
-                ? "Gilded and stronger - tap toward the enemy and swing"
-                : "Tap just past the gold weapon - you take it on the way");
-
-            // The ring marks the spot only while it is still the thing to do.
-            bool marking = !armed && state.Phase == MatchPhase.Planning
-                           && state.TutorialTapPoint != Vector2.zero;
-            if (_tapMark.enabled != marking) _tapMark.enabled = marking;
-            if (marking && TryCanvasPoint(state.TutorialTapPoint, 0f, out var markLocal))
-                _tapMark.rectTransform.anchoredPosition = markLocal;
+                ? "Gilded and stronger - swipe away from the enemy and charge"
+                : "Swipe away from the gold weapon - you take it on the way");
         }
 
         private void Place(Hint hint, Vector2? virtualPos, string text)
