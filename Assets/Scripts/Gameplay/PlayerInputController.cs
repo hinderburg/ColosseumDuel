@@ -163,9 +163,15 @@ namespace ColosseumDuel.Gameplay
 
             float span = TrajectoryWidth * ArrowHeadSpread;
 
-            // Set back by half its own length, so the point of the arrow lands where the run ends
-            // rather than half an arrow past it.
-            _arrowHead.transform.position = tip - travel * (span * 0.5f) + Vector3.up * 0.005f;
+            // Set back by half its own length so the arrow's point lands on the end of the run
+            // rather than half an arrow past it - and then forward again by the lane's own end cap.
+            //
+            // That cap is the reason this looked wrong. A LineRenderer with rounded caps draws a
+            // half-disc of its own width past the last point, so the band kept going for another
+            // half-width after the arrow's tip and the head read as sitting short of the end.
+            float pastTheCap = TrajectoryWidth * 0.5f;
+            _arrowHead.transform.position =
+                tip + travel * (pastTheCap - span * 0.5f) + Vector3.up * 0.005f;
 
             // Laid flat, then turned about the world's up axis. Composed rather than written as one
             // Euler triple: flat on the ground is ninety degrees of pitch, where Euler angles are
