@@ -343,6 +343,19 @@ namespace ColosseumDuel.Tests
 
             Assert.IsTrue(head.gameObject.activeSelf, "the lane has no head on it");
 
+            // Pointing the way the run goes. The quad's own up is where the texture's point is, so
+            // this is the arrow's direction and not merely the object's orientation.
+            var lastLeg = (line.GetPosition(line.positionCount - 1)
+                           - line.GetPosition(line.positionCount - 2)).normalized;
+            Assert.Greater(Vector3.Dot(head.up, lastLeg), 0.98f,
+                $"the head points {head.up} while the run goes {lastLeg}");
+
+            // Lying on the floor, not standing up out of it: the camera looks down, and an arrow on
+            // its edge is a line. Measured against the quad's own back, because a Unity quad's
+            // visible face is along its -Z - so an arrow facing the sky has its forward in the sand.
+            Assert.Greater(Vector3.Dot(-head.forward, Vector3.up), 0.98f,
+                "the head is not lying flat on the sand");
+
             var arena = _controller.Arena;
             var start = line.GetPosition(0);
             var end = line.GetPosition(line.positionCount - 1);

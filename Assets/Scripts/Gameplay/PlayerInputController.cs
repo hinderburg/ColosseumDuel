@@ -76,6 +76,9 @@ namespace ColosseumDuel.Gameplay
         /// <summary>How much wider than the lane the head on the end of it is.</summary>
         private const float ArrowHeadSpread = 1.35f;
 
+        /// <summary>How high above the sand the lane is drawn. The head goes just above it.</summary>
+        private const float TrajectoryHeight = 0.06f;
+
         private LineRenderer _trajectory;
         private GameObject _tapMarker;
         private LineRenderer _pullLine;
@@ -170,8 +173,13 @@ namespace ColosseumDuel.Gameplay
             // half-disc of its own width past the last point, so the band kept going for another
             // half-width after the arrow's tip and the head read as sitting short of the end.
             float pastTheCap = TrajectoryWidth * 0.5f;
+
+            // Above the lane, not under it. Both are transparent and sorted by distance to the
+            // camera, and the lane was the higher of the two - so the half of the head that overlaps
+            // the band's cap was being painted over by the band, which left a visibly shorter arrow
+            // sitting a little way back from where it had been put.
             _arrowHead.transform.position =
-                tip + travel * (pastTheCap - span * 0.5f) + Vector3.up * 0.005f;
+                tip + travel * (pastTheCap - span * 0.5f) + Vector3.up * (TrajectoryHeight + 0.01f);
 
             // Laid flat, then turned about the world's up axis. Composed rather than written as one
             // Euler triple: flat on the ground is ninety degrees of pitch, where Euler angles are
@@ -624,7 +632,7 @@ namespace ColosseumDuel.Gameplay
             var points = GameManager.ComputeTrajectoryPreview(g, aim, power);
             _worldPoints.Clear();
             foreach (var p in points)
-                _worldPoints.Add(Controller.Arena.ToWorld(p, 0.06f));
+                _worldPoints.Add(Controller.Arena.ToWorld(p, TrajectoryHeight));
 
             _trajectory.positionCount = _worldPoints.Count;
             for (int i = 0; i < _worldPoints.Count; i++)
@@ -667,7 +675,7 @@ namespace ColosseumDuel.Gameplay
             var points = GameManager.ComputeTrajectoryPreview(g, aim, power);
             _worldPoints.Clear();
             foreach (var p in points)
-                _worldPoints.Add(Controller.Arena.ToWorld(p, 0.06f));
+                _worldPoints.Add(Controller.Arena.ToWorld(p, TrajectoryHeight));
 
             _trajectory.positionCount = _worldPoints.Count;
             for (int i = 0; i < _worldPoints.Count; i++)

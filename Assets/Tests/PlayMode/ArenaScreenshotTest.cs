@@ -171,6 +171,56 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// The planned run, close up and across open sand.
+        ///
+        /// The lane and the head on the end of it are small in a frame of the whole arena, and
+        /// judging whether the head sits where it should from one of those is guesswork. This puts
+        /// the run across the middle of the arena with nothing else in the way and brings the camera
+        /// in on it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePlannedRunRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            var camera = Camera.main;
+
+            var cameraDriver = camera.GetComponent<DeathCameraView>();
+            if (cameraDriver != null) cameraDriver.enabled = false;
+
+            controller.SubmitPlayerPick(GladiatorId.Hilius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.3f);
+
+            var player = controller.Manager.State.P1.Active;
+            var bot = controller.Manager.State.Bot.Active;
+
+            // Straight up the arena from the near end, so the whole run is on open sand and the
+            // camera does not have to look at it end-on.
+            player.Pos = new Vector2(0f, -230f);
+            bot.Pos = new Vector2(200f, 260f);
+            yield return null;
+
+            input.Scheme = ControlScheme.Swipe;
+            var anchor = new Vector2(-160f, 120f);
+            input.TryBeginSwipe(anchor);
+            input.UpdateDrag(anchor + new Vector2(0f, -GameConstants.MaxDragVirtual));
+            yield return null;
+
+            FrameOnPair(camera, controller.Arena, new Vector2(0f, -60f), 320f, 0f);
+            yield return null;
+
+            yield return Capture(SuffixPath("-run"));
+
+            if (cameraDriver != null) cameraDriver.enabled = true;
+        }
+
+        /// <summary>
         /// One frame per weapon: a fighter mid-swing, the ring at the distance that weapon is
         /// allowed to strike from, and an opponent standing exactly on it.
         ///
