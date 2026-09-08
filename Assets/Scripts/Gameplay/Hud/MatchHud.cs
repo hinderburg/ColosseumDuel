@@ -169,7 +169,7 @@ namespace ColosseumDuel.Gameplay.Hud
             _defendButton.onClick.AddListener(() => Input?.ToggleDefend());
 
             _hint = HudFactory.CreateLabel("Hint", root,
-                "Swipe anywhere - he runs the way you swipe, as far as you swipe",
+                "Swipe anywhere to pull back - he runs the other way, as far as you pull",
                 14, TextAnchor.LowerCenter, HudFactory.MutedTextColor);
             // Above the player's corner, for the same reason the phase line sits below the opponent's.
             _hint.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -411,7 +411,7 @@ namespace ColosseumDuel.Gameplay.Hud
             {
                 case ControlScheme.Tap: return "Tap the arena and your gladiator runs there";
                 case ControlScheme.Drag: return "Pull back from your gladiator and release to dash";
-                default: return "Swipe anywhere - he runs the way you swipe, as far as you swipe";
+                default: return "Swipe anywhere to pull back - he runs the other way, as far as you pull";
             }
         }
 

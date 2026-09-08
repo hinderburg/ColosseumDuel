@@ -287,15 +287,15 @@ namespace ColosseumDuel.Tests
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// A swipe starts wherever it starts and runs the way it is drawn.
+        /// A swipe starts anywhere and, like the pull, runs opposite itself.
         ///
-        /// Both halves are the whole point of it. A pull has to begin on the gladiator, so the hand
-        /// aiming him covers him; a swipe begins in the empty half of the screen. And it runs along
-        /// itself rather than opposite itself, because it is a line in the direction of travel and
-        /// not a slingshot being drawn back.
+        /// Both halves matter. Starting anywhere is the whole reason it exists - a pull has to begin
+        /// on the gladiator, so the hand aiming him covers him. Running opposite is what makes it the
+        /// same gesture as the pull rather than a second, contradictory one: two controls in the same
+        /// game that answer the same drag in opposite directions is worse than either alone.
         /// </summary>
         [Test]
-        public void ASwipeStartsAnywhereAndRunsTheWayItIsDrawn()
+        public void ASwipeStartsAnywhereAndRunsOppositeItself()
         {
             var g = _controller.Manager.State.P1.Active;
             _input.Scheme = ControlScheme.Swipe;
@@ -305,17 +305,46 @@ namespace ColosseumDuel.Tests
             var far = g.Pos + new Vector2(-160f, -140f);
             Assert.IsTrue(_input.TryBeginSwipe(far), "a swipe must start anywhere, not on the man");
 
-            // Drawn up the arena, so he should be ordered up the arena.
-            _input.UpdateDrag(far + new Vector2(0f, GameConstants.MaxDragVirtual * 0.8f));
+            // Drawn down the arena, so he should be ordered up it.
+            var drawnTo = far + new Vector2(0f, -GameConstants.MaxDragVirtual * 0.8f);
+            _input.UpdateDrag(drawnTo);
 
             Assert.Greater(Vector2.Dot(_input.CurrentAim, Vector2.up), 0.95f,
-                "the swipe ran opposite the way it was drawn");
+                "the swipe ran the way it was drawn instead of opposite it");
             Assert.AreEqual(0.8f, _input.CurrentPower, 0.05f,
                 "the swipe's length is its power");
 
-            Assert.IsTrue(_input.ReleaseDrag(far + new Vector2(0f, GameConstants.MaxDragVirtual * 0.8f)));
+            Assert.IsTrue(_input.ReleaseDrag(drawnTo));
             Assert.AreEqual(ActionType.Move, g.PlannedAction);
             Assert.Greater(Vector2.Dot(g.PlannedAimDirection, Vector2.up), 0.95f);
+        }
+
+        /// <summary>
+        /// The order stays drawn after the finger comes off, and goes when the phase does.
+        ///
+        /// Letting go used to take the preview with it, which left an order filed, seconds still on
+        /// the clock, and nothing on screen saying what had been ordered - so the only way to check
+        /// was to swipe again and read the new one.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AReleasedOrderStaysDrawnUntilThePhaseEnds()
+        {
+            var line = FindLine("TrajectoryPreview");
+            _input.Scheme = ControlScheme.Swipe;
+
+            var anchor = Player.Pos + new Vector2(-120f, -120f);
+            _input.TryBeginSwipe(anchor);
+            Assert.IsTrue(_input.ReleaseDrag(anchor + new Vector2(0f, -GameConstants.MaxDragVirtual)));
+
+            yield return null;
+            Assert.IsTrue(line.enabled, "the released order left nothing on screen");
+            Assert.IsFalse(_input.IsDragging, "the gesture is over even though its picture is not");
+
+            yield return RunSeconds(GameConstants.PlanningTime + 0.3f);
+
+            Assert.AreNotEqual(MatchPhase.Planning, _controller.Manager.State.Phase);
+            Assert.IsFalse(line.enabled,
+                "a run drawn while the gladiators are running describes an order already carried out");
         }
 
         /// <summary>

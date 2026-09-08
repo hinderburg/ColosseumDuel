@@ -254,7 +254,7 @@ namespace ColosseumDuel.Gameplay
                 // The tap feedback belongs to the phase that produced it. Left up, the ring and the
                 // dashes would still be sitting there while the gladiators ran, describing an order
                 // that had already been carried out.
-                ClearTapOrder();
+                ClearOrderDrawing();
                 return;
             }
 
@@ -449,11 +449,11 @@ namespace ColosseumDuel.Gameplay
         /// <summary>
         /// Turns wherever the finger is now into an aim and a power.
         ///
-        /// The two schemes measure from different places and in opposite directions, and both are
-        /// deliberate. A pull is measured from the gladiator - anchoring it to the body means a
-        /// slightly-off grab does not bias every launch by that offset - and runs opposite itself,
-        /// like a slingshot. A swipe is measured from wherever it started and runs along itself,
-        /// because it is not a slingshot: it is a line drawn in the direction of travel.
+        /// Both schemes are slingshots: drawn back one way, they run the other. What differs is
+        /// where the rubber is anchored. A pull is anchored to the gladiator, so a slightly-off grab
+        /// does not bias every launch by that offset; a swipe is anchored wherever the finger landed,
+        /// which is the whole point of it - the hand can work in the empty half of the screen instead
+        /// of on top of the man it is aiming.
         /// </summary>
         public void UpdateDrag(Vector2 virtualPoint)
         {
@@ -461,7 +461,7 @@ namespace ColosseumDuel.Gameplay
             var g = PlayerGladiator();
             if (g == null) { CancelDrag(); return; }
 
-            Vector2 stroke = _swiping ? virtualPoint - _swipeAnchor : g.Pos - virtualPoint;
+            Vector2 stroke = _swiping ? _swipeAnchor - virtualPoint : g.Pos - virtualPoint;
             CurrentPower = Mathf.Clamp01(stroke.magnitude / GameConstants.MaxDragVirtual);
             CurrentAim = stroke.sqrMagnitude > 0.0001f ? stroke.normalized : Vector2.zero;
 
@@ -482,6 +482,7 @@ namespace ColosseumDuel.Gameplay
 
             float power = CurrentPower;
             Vector2 aim = CurrentAim;
+            var g = PlayerGladiator();
             ClearDrag();
 
             if (power <= MinPowerToSubmit || aim == Vector2.zero) return false;
@@ -489,6 +490,12 @@ namespace ColosseumDuel.Gameplay
             // The armed ability is not touched here. It is its own decision, already filed, and
             // ordering a move - or changing it three times before the phase ends - leaves it alone.
             Controller.SubmitPlayerMove(aim, power);
+
+            // And the run stays drawn. Letting go used to take the preview with it, which left the
+            // player with an order filed, seconds still on the clock and nothing on screen saying
+            // what they had ordered - so the only way to check was to swipe again and read the new
+            // one. It goes when the phase does; see ClearOrderDrawing.
+            if (g != null) DrawRun(g, aim, power);
             return true;
         }
 
@@ -535,6 +542,11 @@ namespace ColosseumDuel.Gameplay
 
         // ------------------------------------------------------------------
 
+        /// <summary>
+        /// Ends the gesture. Deliberately does not take the drawn run with it - a released swipe
+        /// leaves its order on screen, and ReleaseDrag redraws it straight after calling this. What
+        /// clears the drawing is the phase ending; see ClearOrderDrawing.
+        /// </summary>
         private void ClearDrag()
         {
             IsDragging = false;
@@ -615,24 +627,38 @@ namespace ColosseumDuel.Gameplay
             ShowArrowHead(_worldPoints);
         }
 
-        /// <summary>Clears the tap feedback. The order stands; only its picture goes.</summary>
-        private void ClearTapOrder()
+        /// <summary>
+        /// Clears the picture of an order. The order itself stands - it was filed with the
+        /// simulation the moment it was given, and this is only what was left on screen to say so.
+        ///
+        /// Called when the phase ends, which is what the drawing is scoped to: a run drawn while the
+        /// gladiators are actually running describes an order already being carried out.
+        /// </summary>
+        private void ClearOrderDrawing()
         {
             if (_tapMarker != null && _tapMarker.activeSelf) _tapMarker.SetActive(false);
             Hide(_trajectory);
+            HideArrowHead();
         }
 
-        private void DrawTrajectory(GladiatorInstance g)
+        private void DrawTrajectory(GladiatorInstance g) => DrawRun(g, CurrentAim, CurrentPower);
+
+        /// <summary>
+        /// Draws the lane a run would take, from an aim and a power rather than from the gesture in
+        /// progress - so the same drawing serves the swipe being made and the order it left behind.
+        /// </summary>
+        private void DrawRun(GladiatorInstance g, Vector2 aim, float power)
         {
             if (_trajectory == null || Controller.Arena == null) return;
 
-            if (CurrentPower <= MinPowerToSubmit || CurrentAim == Vector2.zero)
+            if (power <= MinPowerToSubmit || aim == Vector2.zero)
             {
                 Hide(_trajectory);
+                HideArrowHead();
                 return;
             }
 
-            var points = GameManager.ComputeTrajectoryPreview(g, CurrentAim, CurrentPower);
+            var points = GameManager.ComputeTrajectoryPreview(g, aim, power);
             _worldPoints.Clear();
             foreach (var p in points)
                 _worldPoints.Add(Controller.Arena.ToWorld(p, 0.06f));
