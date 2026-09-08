@@ -2,57 +2,123 @@
 <html lang="en-us">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | Colosseum Duel</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Colosseum Duel</title>
+    <style>
+      /*
+        The stock template lays the player out as a fixed 576x1024 box, absolutely
+        positioned and centred with a translate. Absolute positioning takes it out of the flow, so the
+        page has no height of its own and cannot scroll - and centring a box taller than the window puts
+        its top edge at a negative offset. On any screen shorter than the canvas, the top of the game was
+        therefore both cut off and unreachable: nothing to scroll, nowhere to scroll to.
+
+        Here the canvas is fitted to the window instead, keeping the aspect the camera framing is built
+        around. Whichever of the two limits binds first decides the size, so the player is letterboxed
+        rather than cropped or stretched.
+      */
+      :root {
+        --app-height: 100vh;
+        --ground: #14110c;
+      }
+
+      /* Mobile browsers count the space under their own collapsing toolbars in 100vh, which hides the
+         top of the canvas behind the address bar. dvh is the height actually on screen. */
+      @supports (height: 100dvh) {
+        :root { --app-height: 100dvh; }
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--ground);
+        overflow: hidden;
+      }
+
+      #unity-container {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #unity-canvas {
+        display: block;
+        background: var(--ground);
+        width: min(100vw, calc(var(--app-height) * 576 / 1024));
+        height: min(var(--app-height), calc(100vw * 1024 / 576));
+
+        /* The game is played by dragging and tapping on the arena. Without this the browser reads a
+           drag as a scroll or a pinch and takes the input for itself. */
+        touch-action: none;
+      }
+
+      #unity-canvas:focus { outline: none; }
+
+      #unity-loading {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(60vw, 240px);
+        font: 14px/1.4 system-ui, sans-serif;
+        color: #c9bda2;
+        text-align: center;
+      }
+
+      #unity-loading-track {
+        margin-top: 10px;
+        height: 4px;
+        border-radius: 2px;
+        background: #2b2620;
+        overflow: hidden;
+      }
+
+      #unity-loading-fill {
+        width: 0%;
+        height: 100%;
+        background: #a6392c;
+        transition: width 0.15s linear;
+      }
+
+      #unity-warning {
+        position: fixed;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        max-width: 90vw;
+        font: 13px/1.4 system-ui, sans-serif;
+        z-index: 2;
+      }
+    </style>
   </head>
   <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=576 height=1024 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-logo-title-footer"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">Colosseum Duel</div>
-      </div>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width="576" height="1024" tabindex="-1"></canvas>
     </div>
+
+    <div id="unity-loading">
+      Colosseum Duel
+      <div id="unity-loading-track"><div id="unity-loading-fill"></div></div>
+    </div>
+
+    <div id="unity-warning"></div>
+
     <script>
       var canvas = document.querySelector("#unity-canvas");
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
       function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
+        var banner = document.querySelector("#unity-warning");
+        var div = document.createElement("div");
         div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
+        div.style.cssText = "padding:8px;border-radius:8px;margin-bottom:6px;background:" +
+          (type === "error" ? "#a6392c" : type === "warning" ? "#8a6410" : "#2b2620") + ";color:#fff";
+        banner.appendChild(div);
+        if (type !== "error") setTimeout(function () { banner.removeChild(div); }, 5000);
       }
 
       var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/WebGL.loader.js";
       var config = {
         arguments: [],
         dataUrl: buildUrl + "/WebGL.data.unityweb",
@@ -63,71 +129,21 @@
         productName: "Colosseum Duel",
         productVersion: "1.0",
         showBanner: unityShowBanner,
-        // errorHandler: function(err, url, line) {
-        //    alert("error " + err + " occurred at line " + line);
-        //    // Return 'true' if you handled this error and don't want Unity
-        //    // to process it further, 'false' otherwise.
-        //    return true;
-        // },
       };
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
-        canvas.style.width = "576px";
-        canvas.style.height = "1024px";
-      }
-
-      document.querySelector("#unity-loading-bar").style.display = "block";
-
       var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
+      script.src = buildUrl + "/WebGL.loader.js";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          document.querySelector("#unity-loading-fill").style.width = (100 * progress) + "%";
+        }).then(function () {
+          document.querySelector("#unity-loading").style.display = "none";
+          canvas.focus();
+        }).catch(function (message) {
+          unityShowBanner(message, "error");
+        });
+      };
       document.body.appendChild(script);
-
     </script>
   </body>
 </html>
