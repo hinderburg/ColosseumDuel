@@ -7,9 +7,13 @@ namespace ColosseumDuel.Core
     public static class GameConstants
     {
         // --- phase timing (seconds) ---
-        // How long the player gets to decide. Cut from 3.0 - the phase is timed on unscaled time
-        // while the world runs at a third speed, so this is two real seconds, not two slowed ones.
-        public const float PlanningTime = 2.0f;
+        // How long the player gets to decide, in real seconds - the phase is timed on unscaled time
+        // while the world runs at a third speed, so this is four real seconds, not four slowed ones.
+        //
+        // It has been 3.0 and then 2.0. Back up to 4.0 now that the order is given by a swipe: a
+        // gesture takes longer to make than a tap, and two seconds was long enough to decide but not
+        // long enough to decide and then draw the decision.
+        public const float PlanningTime = 4.0f;
         // How long the gladiators actually move. Cut from 4.0 to 2.0 and then to 1.0 across design
         // passes - a short burst reads as a charge, a long one as a jog.
         //

@@ -80,7 +80,7 @@ namespace ColosseumDuel.Tests
                 yield return null;
 
             float elapsed = Time.realtimeSinceStartup - started;
-            Assert.AreEqual(2f, GameConstants.PlanningTime, 0.001f, "the phase is meant to be two seconds");
+            Assert.AreEqual(4f, GameConstants.PlanningTime, 0.001f, "the phase is meant to be four seconds");
             Assert.AreEqual(GameConstants.PlanningTime, elapsed, 0.35f,
                 $"planning took {elapsed:0.00}s of real time");
         }

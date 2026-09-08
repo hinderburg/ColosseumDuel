@@ -298,14 +298,17 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            var timer = Find("DecisionTimer").GetComponent<Text>();
+            var timer = Find("DecisionTimer").GetComponent<Image>();
             var defend = FindButton("Defend").GetComponent<RectTransform>();
             var ability = FindButton("Ability").GetComponent<RectTransform>();
 
-            Assert.IsTrue(float.TryParse(timer.text.Replace(',', '.'),
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out float first),
-                $"the timer should read as a number, not '{timer.text}'");
+            // A ring that empties, with no number in it: how much is left is its shape.
+            Assert.AreEqual(Image.Type.Filled, timer.type, "the countdown is not a fill at all");
+            Assert.IsEmpty(Find("DecisionTimer").GetComponentsInChildren<Text>(true),
+                "the countdown went back to being read rather than seen");
+
+            float first = timer.fillAmount;
+            Assert.Greater(first, 0.5f, "the ring should start nearly full");
 
             // Above both buttons, on the gladiator's own column - the reason it moved off the status
             // line at the top of the screen, where timing a decision meant looking away from it.
@@ -315,10 +318,7 @@ namespace ColosseumDuel.Tests
 
             yield return RunSeconds(0.6f);
 
-            Assert.IsTrue(float.TryParse(timer.text.Replace(',', '.'),
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out float later));
-            Assert.Less(later, first, "the timer is not counting down");
+            Assert.Less(timer.fillAmount, first, "the ring is not emptying");
         }
 
         [UnityTest]

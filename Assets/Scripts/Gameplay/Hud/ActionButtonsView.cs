@@ -39,6 +39,12 @@ namespace ColosseumDuel.Gameplay.Hud
         /// </summary>
         private static readonly Vector2 TimerOffset = new Vector2(0f, 154f);
 
+        /// <summary>Across the countdown ring. Smaller than a button - it is read, not pressed.</summary>
+        private const float TimerSize = 52f;
+
+        /// <summary>The part of the ring that has already run out. Dark, and it stays put.</summary>
+        private static readonly Color TimerTrackColor = new Color(0f, 0f, 0f, 0.42f);
+
         private const float ButtonSize = 74f;
 
         /// <summary>Background of a button nobody has pressed.</summary>
@@ -63,7 +69,8 @@ namespace ColosseumDuel.Gameplay.Hud
         private Image _abilityBackground;
         private Image _defendBackground;
         private Image _defendGlow;
-        private Text _timer;
+        private Image _timer;
+        private RectTransform _timerTrack;
         private RectTransform _timerRect;
 
         public static ActionButtonsView Create(Transform canvas, ViewPalette palette, ArenaView arena)
@@ -110,17 +117,40 @@ namespace ColosseumDuel.Gameplay.Hud
             view._abilityGlow.transform.SetAsFirstSibling();
             HudFactory.Stretch(view._abilityGlow.rectTransform, -14f);
 
-            view._timer = HudFactory.CreateLabel("DecisionTimer", root, "", 30);
-            view._timerRect = view._timer.rectTransform;
+            // A ring that empties, not a number.
+            //
+            // The number was read, and that was the problem: four tenths of a second is a quantity
+            // to think about, and the phase is for thinking about the fight. A ring is seen without
+            // being read - how much is left is its shape, and the player takes it in from the corner
+            // of an eye already on the arena.
+            //
+            // Two rings: a dim one that stays whole, so there is something for the bright one to be
+            // a fraction of, and the bright one on top of it.
+            var track = HudFactory.CreatePanel("DecisionTimerTrack", root, TimerTrackColor);
+            HudFactory.UseSprite(track, palette != null ? palette.Ring : null);
+            track.raycastTarget = false;
+            var trackRect = track.rectTransform;
+            trackRect.anchorMin = trackRect.anchorMax = new Vector2(0.5f, 0.5f);
+            trackRect.pivot = new Vector2(0.5f, 0.5f);
+            trackRect.sizeDelta = new Vector2(TimerSize, TimerSize);
+            view._timerTrack = trackRect;
+
+            var timer = HudFactory.CreatePanel("DecisionTimer", root, Color.white);
+            HudFactory.UseSprite(timer, palette != null ? palette.Ring : null);
+            timer.raycastTarget = false;
+            timer.type = Image.Type.Filled;
+            timer.fillMethod = Image.FillMethod.Radial360;
+            timer.fillOrigin = (int)Image.Origin360.Top;
+
+            // Anticlockwise, so what is left drains away from the top rather than growing towards
+            // it. Clockwise reads as filling up, which is the opposite of what is happening.
+            timer.fillClockwise = false;
+
+            view._timer = timer;
+            view._timerRect = timer.rectTransform;
             view._timerRect.anchorMin = view._timerRect.anchorMax = new Vector2(0.5f, 0.5f);
             view._timerRect.pivot = new Vector2(0.5f, 0.5f);
-            view._timerRect.sizeDelta = new Vector2(200f, 40f);
-
-            // The countdown floats over the arena rather than over a panel, and the arena is bright
-            // sand. White numerals on it are legible right up until they are not.
-            var outline = view._timer.gameObject.AddComponent<Outline>();
-            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            view._timerRect.sizeDelta = new Vector2(TimerSize, TimerSize);
 
             if (palette != null && palette.AbilityReadyFire != null)
             {
@@ -201,13 +231,12 @@ namespace ColosseumDuel.Gameplay.Hud
             _defendRect.anchoredPosition = anchorLocal + DefendOffset;
             _abilityRect.anchoredPosition = anchorLocal + AbilityOffset;
             _timerRect.anchoredPosition = anchorLocal + TimerOffset;
+            _timerTrack.anchoredPosition = anchorLocal + TimerOffset;
 
-            // One decimal, because the last second is the one that matters and a whole-number
-            // countdown spends a third of its life showing "1".
-            _timer.text = secondsLeft.ToString("0.0");
+            _timer.fillAmount = Mathf.Clamp01(secondsLeft / GameConstants.PlanningTime);
 
-            // Red once there is under a second left. The clock is beside the decision now, so it can
-            // afford to say something rather than just count.
+            // Red once there is under a second left. The ring is beside the decision, so it can
+            // afford to say something as well as count.
             _timer.color = secondsLeft <= 1f ? new Color(1f, 0.45f, 0.35f) : Color.white;
 
             // The ability differs per gladiator, so name it rather than saying "special" - the
