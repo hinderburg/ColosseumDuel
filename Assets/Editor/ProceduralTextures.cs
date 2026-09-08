@@ -730,6 +730,136 @@ namespace ColosseumDuel.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
+        /// <summary>
+        /// The band a planned run is drawn as: a translucent lane with dashed rails down both sides
+        /// and a chevron pointing along it.
+        ///
+        /// Drawn as one tile that repeats along the line, so U runs the length of the run and V runs
+        /// across it. Everything about the shape is in the texture rather than in geometry, which is
+        /// what lets a single LineRenderer carry it round a bounce off the wall - the tiling follows
+        /// distance travelled, so the chevrons stay evenly spaced through a corner the preview's own
+        /// points are not evenly spaced around.
+        /// </summary>
+        public static Texture2D EnsureTrajectoryBand(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int along = 128;
+            const int across = 64;
+
+            // How much of the tile's length the dash occupies; the rest is the gap between dashes.
+            const float dashShare = 0.62f;
+
+            const float railThickness = 0.10f;   // of the width, at each edge
+            const float bodyAlpha = 0.24f;
+            const float railAlpha = 0.95f;
+            const float chevronAlpha = 0.5f;
+
+            var pixels = new Color32[along * across];
+            for (int u = 0; u < along; u++)
+            {
+                float t = u / (along - 1f);        // along the run
+                bool inDash = t < dashShare;
+
+                for (int v = 0; v < across; v++)
+                {
+                    float w = v / (across - 1f);   // across the run, 0 and 1 at the rails
+                    float fromEdge = Mathf.Min(w, 1f - w);
+
+                    float alpha = bodyAlpha;
+
+                    // Rails: dashed, so the lane reads as a route rather than as a painted road.
+                    if (fromEdge < railThickness && inDash) alpha = railAlpha;
+
+                    // A chevron, its point towards the far end. Built as the distance from a V
+                    // shape: |w - 0.5| gives the sideways distance from the middle, and the tip
+                    // leads the sides by that much.
+                    float sideways = Mathf.Abs(w - 0.5f) * 2f;
+                    float chevronTip = 0.72f - sideways * 0.34f;
+                    if (Mathf.Abs(t - chevronTip) < 0.055f && sideways < 0.82f)
+                        alpha = Mathf.Max(alpha, chevronAlpha);
+
+                    pixels[v * along + u] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                }
+            }
+
+            var texture = new Texture2D(along, across, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+
+            // Repeat along the run and clamp across it: the line tiles in U, and a wrap in V would
+            // bleed the rail on one edge into the rail on the other.
+            importer.wrapModeU = TextureWrapMode.Repeat;
+            importer.wrapModeV = TextureWrapMode.Clamp;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        /// <summary>
+        /// The head on the end of the planned run: a broad triangle, point forward, drawn on its
+        /// own quad because a LineRenderer has one width and an arrow has two.
+        /// </summary>
+        public static Texture2D EnsureArrowHead(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int size = 128;
+            var pixels = new Color32[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                // The head points towards +V, which is where the quad's own up ends up once it is
+                // laid on the ground and turned to the run's direction.
+                float t = y / (size - 1f);
+                float halfWidth = Mathf.Lerp(0.5f, 0.02f, t);
+
+                for (int x = 0; x < size; x++)
+                {
+                    float sideways = Mathf.Abs(x / (size - 1f) - 0.5f);
+
+                    // Antialiased over a couple of pixels, or the sloping edges of a triangle this
+                    // size read as a staircase.
+                    float alpha = Mathf.Clamp01((halfWidth - sideways) * size / 2.5f);
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                }
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
         public static Sprite EnsureDisc(string path, float innerFraction = 0f)
         {
             var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);

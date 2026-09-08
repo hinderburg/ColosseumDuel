@@ -26,5 +26,19 @@ namespace ColosseumDuel.Gameplay
         /// still the one a returning player may want.
         /// </summary>
         Drag = 1,
+
+        /// <summary>
+        /// Swipe anywhere on the screen: the direction he runs, and how far, are the direction and
+        /// the length of the swipe. What the game now opens on.
+        ///
+        /// The pull's expressiveness without its one real cost. A slingshot has to be started on the
+        /// gladiator, so the hand that aims him is also the hand covering him, and on a phone that
+        /// means aiming blind. Starting anywhere lets the thumb work in the empty half of the screen
+        /// while the eyes stay on the fight.
+        ///
+        /// It runs the way he runs, not the way a slingshot is drawn. Pulling back to go forward is
+        /// a convention that has to be taught; swiping towards where you want to go does not.
+        /// </summary>
+        Swipe = 2,
     }
 }

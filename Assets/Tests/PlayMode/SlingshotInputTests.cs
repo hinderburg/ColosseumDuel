@@ -286,6 +286,54 @@ namespace ColosseumDuel.Tests
         // tap to move
         // ------------------------------------------------------------------
 
+        /// <summary>
+        /// A swipe starts wherever it starts and runs the way it is drawn.
+        ///
+        /// Both halves are the whole point of it. A pull has to begin on the gladiator, so the hand
+        /// aiming him covers him; a swipe begins in the empty half of the screen. And it runs along
+        /// itself rather than opposite itself, because it is a line in the direction of travel and
+        /// not a slingshot being drawn back.
+        /// </summary>
+        [Test]
+        public void ASwipeStartsAnywhereAndRunsTheWayItIsDrawn()
+        {
+            var g = _controller.Manager.State.P1.Active;
+            _input.Scheme = ControlScheme.Swipe;
+
+            // Deliberately nowhere near him - further away than a pull would ever be allowed to
+            // start, and on the other side of the arena.
+            var far = g.Pos + new Vector2(-160f, -140f);
+            Assert.IsTrue(_input.TryBeginSwipe(far), "a swipe must start anywhere, not on the man");
+
+            // Drawn up the arena, so he should be ordered up the arena.
+            _input.UpdateDrag(far + new Vector2(0f, GameConstants.MaxDragVirtual * 0.8f));
+
+            Assert.Greater(Vector2.Dot(_input.CurrentAim, Vector2.up), 0.95f,
+                "the swipe ran opposite the way it was drawn");
+            Assert.AreEqual(0.8f, _input.CurrentPower, 0.05f,
+                "the swipe's length is its power");
+
+            Assert.IsTrue(_input.ReleaseDrag(far + new Vector2(0f, GameConstants.MaxDragVirtual * 0.8f)));
+            Assert.AreEqual(ActionType.Move, g.PlannedAction);
+            Assert.Greater(Vector2.Dot(g.PlannedAimDirection, Vector2.up), 0.95f);
+        }
+
+        /// <summary>
+        /// A pull still has to start on him. The two schemes differ in exactly this, and it is worth
+        /// pinning: a swipe that only worked on the gladiator would be a pull with a new name.
+        /// </summary>
+        [Test]
+        public void APullStillHasToStartOnTheGladiator()
+        {
+            var g = _controller.Manager.State.P1.Active;
+            _input.Scheme = ControlScheme.Drag;
+
+            var far = g.Pos + new Vector2(-160f, -140f);
+            Assert.IsFalse(_input.TryBeginDrag(far), "a pull started from across the arena");
+            Assert.IsTrue(_input.TryBeginDrag(g.Pos), "a pull would not start on the man himself");
+            _input.CancelDrag();
+        }
+
         [Test]
         public void ATapInsideHisReachSendsHimExactlyThere()
         {

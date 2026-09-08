@@ -21,9 +21,9 @@ namespace ColosseumDuel.Gameplay
         public GameController Controller;
         public Camera ArenaCamera;
 
-        [Tooltip("Which control the player is using. Tapping is the default and the only one the " +
-                 "game offers; dragging is still here and still works, from the inspector.")]
-        public ControlScheme Scheme = ControlScheme.Tap;
+        [Tooltip("Which control the player is using. Swiping is the default; all three are offered " +
+                 "on the main menu and the choice is remembered between sessions.")]
+        public ControlScheme Scheme = ControlScheme.Swipe;
 
         [Tooltip("How far from the gladiator, in virtual units, a press still counts as grabbing " +
                  "them. Only used by the simulation-space entry point; real presses are measured " +
@@ -61,12 +61,20 @@ namespace ColosseumDuel.Gameplay
 
         public Vector2 CurrentAim { get; private set; }
 
-        /// <summary>World width of the trajectory line. Wide on purpose - the old hairline was easy
-        /// to lose against bright sand and the red danger rings.</summary>
-        private const float TrajectoryWidth = 0.22f;
+        /// <summary>
+        /// How wide the planned run is drawn, in world units - about a gladiator across.
+        ///
+        /// A lane, not a line. At a fifth of this it told the player where he would end up and
+        /// nothing about a body going there; at his own width it is the ground he is about to cover,
+        /// and whether it passes through the other man is a thing you can see rather than judge.
+        /// </summary>
+        private const float TrajectoryWidth = 0.85f;
 
-        /// <summary>World length of one dash plus its gap.</summary>
-        private const float DashPeriod = 0.55f;
+        /// <summary>World length of one tile of the band - one chevron and one dash of each rail.</summary>
+        private const float DashPeriod = 1.15f;
+
+        /// <summary>How much wider than the lane the head on the end of it is.</summary>
+        private const float ArrowHeadSpread = 1.35f;
 
         private LineRenderer _trajectory;
         private GameObject _tapMarker;
@@ -106,6 +114,72 @@ namespace ColosseumDuel.Gameplay
                 TrajectoryWidth * 0.65f);
 
             BuildTapMarker(palette);
+            BuildArrowHead(palette);
+        }
+
+        /// <summary>
+        /// The head on the end of the lane.
+        ///
+        /// Its own quad rather than more line: a LineRenderer has one width along its whole length,
+        /// and the point of an arrow is that it has two.
+        ///
+        /// Parented to the arena for the same reason the tap marker is - this component lives on the
+        /// camera, and anything hung off the camera inherits its sixty-six degree pitch, which for
+        /// something meant to lie on the floor means being seen edge-on.
+        /// </summary>
+        private void BuildArrowHead(ViewPalette palette)
+        {
+            if (palette == null || palette.TrajectoryHead == null || palette.Quad == null) return;
+
+            _arrowHead = new GameObject("TrajectoryHead");
+            _arrowHead.transform.SetParent(Controller.Arena.transform, false);
+            _arrowHead.AddComponent<MeshFilter>().sharedMesh = palette.Quad;
+
+            var renderer = _arrowHead.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = palette.TrajectoryHead;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            _arrowHead.SetActive(false);
+        }
+
+        private GameObject _arrowHead;
+
+        /// <summary>
+        /// Puts the head at the end of the run, pointing the way it is going.
+        ///
+        /// The direction comes from the last two points of the preview rather than from the aim: the
+        /// run can bounce off the wall, and after a bounce the aim points at where he started from.
+        /// </summary>
+        private void ShowArrowHead(System.Collections.Generic.List<Vector3> worldPoints)
+        {
+            if (_arrowHead == null || worldPoints.Count < 2) return;
+
+            var tip = worldPoints[worldPoints.Count - 1];
+            var before = worldPoints[worldPoints.Count - 2];
+            var travel = tip - before;
+            if (travel.sqrMagnitude < 0.000001f) { HideArrowHead(); return; }
+            travel.Normalize();
+
+            float span = TrajectoryWidth * ArrowHeadSpread;
+
+            // Set back by half its own length, so the point of the arrow lands where the run ends
+            // rather than half an arrow past it.
+            _arrowHead.transform.position = tip - travel * (span * 0.5f) + Vector3.up * 0.005f;
+
+            // Laid flat, then turned about the world's up axis. Composed rather than written as one
+            // Euler triple: flat on the ground is ninety degrees of pitch, where Euler angles are
+            // gimbal-locked and the turn comes back out of a component nobody put it in.
+            float yaw = Mathf.Atan2(travel.x, travel.z) * Mathf.Rad2Deg;
+            _arrowHead.transform.rotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(90f, 0f, 0f);
+            _arrowHead.transform.localScale = new Vector3(span, span, 1f);
+
+            _arrowHead.SetActive(true);
+        }
+
+        private void HideArrowHead()
+        {
+            if (_arrowHead != null && _arrowHead.activeSelf) _arrowHead.SetActive(false);
         }
 
         /// <summary>
@@ -196,6 +270,7 @@ namespace ColosseumDuel.Gameplay
                 if (IsPointerOverHud()) return;
 
                 if (Scheme == ControlScheme.Tap) TapTo(Input.mousePosition);
+                else if (Scheme == ControlScheme.Swipe) TryBeginSwipeFromScreen(Input.mousePosition);
                 else TryBeginDragFromScreen(Input.mousePosition);
             }
             else if (Input.GetMouseButton(0) && IsDragging)
@@ -336,6 +411,31 @@ namespace ColosseumDuel.Gameplay
             return true;
         }
 
+        /// <summary>
+        /// Starts a swipe wherever the press landed. There is nothing to hit, which is the point of
+        /// it: the gesture is a direction, and a direction can be drawn anywhere.
+        /// </summary>
+        public bool TryBeginSwipeFromScreen(Vector3 screenPos)
+        {
+            if (!TryScreenToVirtual(screenPos, out var virtualPoint)) return false;
+            return TryBeginSwipe(virtualPoint);
+        }
+
+        public bool TryBeginSwipe(Vector2 virtualPoint)
+        {
+            if (PlayerGladiator() == null) return false;
+
+            _swipeAnchor = virtualPoint;
+            _swiping = true;
+            BeginDrag(virtualPoint);
+            return true;
+        }
+
+        /// <summary>Where a swipe started. Meaningless unless <see cref="_swiping"/>.</summary>
+        private Vector2 _swipeAnchor;
+
+        private bool _swiping;
+
         private void BeginDrag(Vector2 virtualPoint)
         {
             // Pulling back is choosing to move, which is the other half of the same either-or. The
@@ -347,8 +447,13 @@ namespace ColosseumDuel.Gameplay
         }
 
         /// <summary>
-        /// The pull is measured from the gladiator, not from wherever the press landed: anchoring it
-        /// to the body means a slightly-off grab does not bias every launch by that offset.
+        /// Turns wherever the finger is now into an aim and a power.
+        ///
+        /// The two schemes measure from different places and in opposite directions, and both are
+        /// deliberate. A pull is measured from the gladiator - anchoring it to the body means a
+        /// slightly-off grab does not bias every launch by that offset - and runs opposite itself,
+        /// like a slingshot. A swipe is measured from wherever it started and runs along itself,
+        /// because it is not a slingshot: it is a line drawn in the direction of travel.
         /// </summary>
         public void UpdateDrag(Vector2 virtualPoint)
         {
@@ -356,12 +461,17 @@ namespace ColosseumDuel.Gameplay
             var g = PlayerGladiator();
             if (g == null) { CancelDrag(); return; }
 
-            Vector2 pull = g.Pos - virtualPoint; // release runs opposite the pull, like a slingshot
-            CurrentPower = Mathf.Clamp01(pull.magnitude / GameConstants.MaxDragVirtual);
-            CurrentAim = pull.sqrMagnitude > 0.0001f ? pull.normalized : Vector2.zero;
+            Vector2 stroke = _swiping ? virtualPoint - _swipeAnchor : g.Pos - virtualPoint;
+            CurrentPower = Mathf.Clamp01(stroke.magnitude / GameConstants.MaxDragVirtual);
+            CurrentAim = stroke.sqrMagnitude > 0.0001f ? stroke.normalized : Vector2.zero;
 
             DrawTrajectory(g);
-            DrawPullLine(g, virtualPoint);
+
+            // The pull line is the handle on a slingshot. A swipe has no handle - the finger is not
+            // holding the gladiator, and a line drawn from him to a point he has nothing to do with
+            // says he is attached to it.
+            if (_swiping) Hide(_pullLine);
+            else DrawPullLine(g, virtualPoint);
         }
 
         /// <summary>Submits the move. Returns false if the pull was too short to count.</summary>
@@ -428,10 +538,12 @@ namespace ColosseumDuel.Gameplay
         private void ClearDrag()
         {
             IsDragging = false;
+            _swiping = false;
             CurrentPower = 0f;
             CurrentAim = Vector2.zero;
             Hide(_trajectory);
             Hide(_pullLine);
+            HideArrowHead();
         }
 
         private static void Hide(LineRenderer line)
@@ -500,6 +612,7 @@ namespace ColosseumDuel.Gameplay
             for (int i = 0; i < _worldPoints.Count; i++)
                 _trajectory.SetPosition(i, _worldPoints[i]);
             _trajectory.enabled = true;
+            ShowArrowHead(_worldPoints);
         }
 
         /// <summary>Clears the tap feedback. The order stands; only its picture goes.</summary>
@@ -528,6 +641,7 @@ namespace ColosseumDuel.Gameplay
             for (int i = 0; i < _worldPoints.Count; i++)
                 _trajectory.SetPosition(i, _worldPoints[i]);
             _trajectory.enabled = true;
+            ShowArrowHead(_worldPoints);
         }
 
         private GladiatorInstance PlayerGladiator()

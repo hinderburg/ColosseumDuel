@@ -71,8 +71,6 @@ namespace ColosseumDuel.Tests
             // to be taken a moment after the rings light up or it catches them still underground.
             yield return RunSeconds(0.8f);
 
-            // Hold a full-power pull aimed at the far wall, so the captured frame shows the
-            // trajectory preview including its bounce.
             var player = controller.Manager.State.P1.Active;
 
             // Armed, so the frame also shows the carried gear in his hands - the sword and the
@@ -81,10 +79,6 @@ namespace ColosseumDuel.Tests
             player.Weapon = WeaponKind.SwordAndShield;
             player.WeaponIsGilded = true;
             controller.Manager.State.Bot.Active.Weapon = WeaponKind.TwoHandedMace;
-            var aim = new Vector2(-0.707f, 0.707f);
-            input.TryBeginDrag(player.Pos);
-            input.UpdateDrag(player.Pos - aim * GameConstants.MaxDragVirtual);
-            yield return null;
 
             // A few rounds' worth of blood on the sand. The stains are the one thing on the arena
             // that is meant to build up over a whole match, so a frame taken at cycle eight of round
@@ -102,6 +96,20 @@ namespace ColosseumDuel.Tests
             // brighter of the two by a long way. The world is running at a third speed here, so this
             // is about a second of it.
             yield return RunSeconds(4f);
+
+            // Back to a planning phase before anything is aimed. The waits above are long enough to
+            // cross a cycle boundary, and a preview drawn during the action phase is not drawn at
+            // all - which is how this frame came back with an empty arena and nothing to say so.
+            yield return RunUntil(() => controller.Manager.State.Phase == MatchPhase.Planning, 10f);
+
+            // Holding a full-length swipe aimed at the far wall, so the captured frame shows the
+            // lane the run is previewed as, its bounce, and the head on the end of it. Drawn with
+            // the swipe rather than the pull because that is the control the game now opens on.
+            var aim = new Vector2(-0.707f, 0.707f);
+            var anchor = new Vector2(120f, -260f);
+            input.TryBeginSwipe(anchor);
+            input.UpdateDrag(anchor + aim * GameConstants.MaxDragVirtual);
+            yield return null;
 
             // A couple of damage numbers in the air, so the frame carries the one part of the HUD
             // that only exists for a second at a time and can never be caught by waiting for it.
@@ -480,6 +488,16 @@ namespace ColosseumDuel.Tests
             foreach (var p in pixels)
                 if (p.r != first.r || p.g != first.g || p.b != first.b) return true;
             return false;
+        }
+
+        private static IEnumerator RunUntil(System.Func<bool> done, float timeout)
+        {
+            float t = 0f;
+            while (t < timeout && !done())
+            {
+                yield return null;
+                t += Time.unscaledDeltaTime;
+            }
         }
 
         private static IEnumerator RunSeconds(float seconds)

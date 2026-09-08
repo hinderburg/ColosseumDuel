@@ -332,8 +332,16 @@ namespace ColosseumDuel.EditorTools
 
             // White, not the old yellow: over bright sand and a red danger ring the yellow line was
             // hard to pick out, which is what made the preview easy to miss.
+            //
+            // A lane rather than a line. A one-pixel dash said where he would go and nothing about
+            // him going there; a band as wide as he is says a body is about to travel down it.
             palette.Trajectory = TransparentUnlit("Trajectory", Color.white);
-            ApplyTexture(palette.Trajectory, ProceduralTextures.EnsureDash(TexturesDir + "/Dash.png"), Vector2.one);
+            ApplyTexture(palette.Trajectory,
+                ProceduralTextures.EnsureTrajectoryBand(TexturesDir + "/TrajectoryBand.png"), Vector2.one);
+
+            palette.TrajectoryHead = TransparentUnlit("TrajectoryHead", Color.white);
+            ApplyTexture(palette.TrajectoryHead,
+                ProceduralTextures.EnsureArrowHead(TexturesDir + "/ArrowHead.png"), Vector2.one);
 
             palette.PullLine = TransparentUnlit("PullLine", new Color(1f, 1f, 1f, 0.75f));
             palette.Burst = TransparentUnlit("Burst", Color.white);
@@ -594,8 +602,10 @@ namespace ColosseumDuel.EditorTools
             input.ArenaCamera = cam;
 
             // Written out rather than left to the field initialiser: this is the value that ends up
-            // in the .unity file, and it is the one the build actually plays with.
-            input.Scheme = ControlScheme.Tap;
+            // in the .unity file, and it is the one the build actually plays with. The last time
+            // this was left to the initialiser the built game shipped on the wrong scheme and every
+            // press on the sand did nothing.
+            input.Scheme = ControlScheme.Swipe;
 
             // The one thing allowed to move the camera. It reads its home pose off the transform at
             // startup, so it has to be added after the camera has been placed.

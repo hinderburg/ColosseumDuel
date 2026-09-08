@@ -77,6 +77,9 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public Material Banner;
 
+        /// <summary>The head on the end of the planned run. Its own quad; see PlayerInputController.</summary>
+        public Material TrajectoryHead;
+
         /// <summary>
         /// Rounded rectangle, nine-sliced: the shape every panel, button and bar in the HUD is cut
         /// to. One sprite for all of them rather than a radius per widget, so the corners match

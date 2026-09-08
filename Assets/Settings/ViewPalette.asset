@@ -33,6 +33,7 @@ MonoBehaviour:
   Ring: {fileID: 21300000, guid: ffa3f95862a47d14e8121c75b6ad4c4e, type: 3}
   BloodStain: {fileID: 2100000, guid: 01cb4463999d2224d9431d535363cd1b, type: 2}
   Banner: {fileID: 2100000, guid: f9c48d9d4918cad4fbd22e5828581ca9, type: 2}
+  TrajectoryHead: {fileID: 2100000, guid: 10acffad148c9e14da892016dabef629, type: 2}
   RoundedPanel: {fileID: 21300000, guid: 92a6364365206be40997246122d60451, type: 3}
   ArchetypeIcons:
   - {fileID: 623849741, guid: 132358e9bf26b60458b731bf001e31db, type: 3}

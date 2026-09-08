@@ -157,7 +157,80 @@ namespace ColosseumDuel.Gameplay.Hud
                 "Choose gladiators", 22);
             Centre((RectTransform)choose.transform, new Vector2(300f, 58f), -216f);
             choose.onClick.AddListener(OpenRosterScreen);
+
+            BuildControlPicker(panel.transform);
         }
+
+        /// <summary>How the three controls are labelled, in the order they are offered.</summary>
+        private static readonly (ControlScheme Scheme, string Name)[] Controls =
+        {
+            (ControlScheme.Swipe, "Swipe"),
+            (ControlScheme.Tap, "Tap"),
+            (ControlScheme.Drag, "Pull"),
+        };
+
+        private readonly List<Image> _controlButtons = new List<Image>();
+
+        /// <summary>
+        /// Three buttons in a row, one lit.
+        ///
+        /// On the menu rather than in a settings screen the game does not have, and worth the space:
+        /// which gesture moves a gladiator is the first thing a player has to get right, and the one
+        /// most likely to be the reason they put it down.
+        /// </summary>
+        private void BuildControlPicker(Transform panel)
+        {
+            var label = HudFactory.CreateLabel("ControlLabel", panel, "Control", 15,
+                TextAnchor.MiddleCenter, HudFactory.MutedTextColor);
+            Centre(label.rectTransform, new Vector2(300f, 22f), -286f);
+
+            const float width = 96f;
+            const float gap = 6f;
+            float left = -(Controls.Length - 1) * 0.5f * (width + gap);
+
+            for (int i = 0; i < Controls.Length; i++)
+            {
+                var (scheme, name) = Controls[i];
+
+                var button = HudFactory.CreateButton($"Control_{scheme}", panel, name, 18);
+                var rect = (RectTransform)button.transform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(width, 46f);
+                rect.anchoredPosition = new Vector2(left + i * (width + gap), -322f);
+
+                var chosen = scheme;
+                button.onClick.AddListener(() => ChooseControl(chosen));
+                _controlButtons.Add((Image)button.targetGraphic);
+            }
+        }
+
+        /// <summary>
+        /// Switches the control, for this match and the next one.
+        ///
+        /// Written onto the input component rather than kept here, because that component is what
+        /// actually reads it every frame - and it is the thing the scene serialises, so a choice
+        /// made here survives the rest of the session.
+        /// </summary>
+        private void ChooseControl(ControlScheme scheme)
+        {
+            var input = FindFirstObjectByType<PlayerInputController>();
+            if (input != null) input.Scheme = scheme;
+        }
+
+        private void SyncControlPicker()
+        {
+            var input = FindFirstObjectByType<PlayerInputController>();
+            if (input == null) return;
+
+            for (int i = 0; i < _controlButtons.Count && i < Controls.Length; i++)
+                _controlButtons[i].color = Controls[i].Scheme == input.Scheme
+                    ? ChosenControlColor
+                    : UnchosenControlColor;
+        }
+
+        private static readonly Color ChosenControlColor = new Color(0.20f, 0.34f, 0.56f, 0.98f);
+        private static readonly Color UnchosenControlColor = new Color(0.16f, 0.16f, 0.20f, 0.95f);
 
         private void BuildRoster(RectTransform root)
         {
@@ -318,6 +391,7 @@ namespace ColosseumDuel.Gameplay.Hud
             if (_rosterPanel.activeSelf != roster) _rosterPanel.SetActive(roster);
 
             if (main) SyncMain();
+            if (main) SyncControlPicker();
             if (roster) SyncRoster();
         }
 
