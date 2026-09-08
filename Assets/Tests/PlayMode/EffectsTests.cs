@@ -131,14 +131,27 @@ namespace ColosseumDuel.Tests
             yield return ForceCollision();
             yield return RunUntil(() => bursts.Any(b => b.gameObject.activeSelf), 5f);
 
-            var played = bursts.First(b => b.gameObject.activeSelf);
             var expected = _controller.Arena.ToWorld(victim.Pos);
 
+            // The one near the player's gladiator, not merely the first one in the pool.
+            //
+            // An exchange is simultaneous - both sides are struck and both bleed - so two bursts
+            // come up, and which of them sits earlier in the pool is an implementation detail of
+            // the round-robin. Taking the first was a coin flip that happened to land the right way
+            // for a long time, and stopped when a change to the reach moved where the two meet.
+            //
             // Horizontal position only: the burst sits at chest height, not on the floor.
+            var played = bursts
+                .Where(b => b.gameObject.activeSelf)
+                .OrderBy(b => Vector2.Distance(
+                    new Vector2(b.position.x, b.position.z),
+                    new Vector2(expected.x, expected.z)))
+                .First();
+
             Assert.Less(Vector2.Distance(
                     new Vector2(played.position.x, played.position.z),
                     new Vector2(expected.x, expected.z)),
-                2f, "the blood should appear where the blow landed");
+                2f, "no blood spilled where the blow landed on the player's gladiator");
 
             // Enabled is not the same as playing: a pooled system reused at the end of its
             // lifetime would sit there emitting nothing.
