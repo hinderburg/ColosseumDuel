@@ -710,6 +710,13 @@ namespace ColosseumDuel.Core
 
             FlushScorched();
 
+            // Everybody stops. The phase is over, and nothing between here and the next action
+            // phase moves anyone - but the velocity that carried them here was being left standing,
+            // so for the whole four seconds of planning the view was told they were still travelling
+            // at a full charge and ran them on the spot.
+            if (State.P1.Active != null) State.P1.Active.Vel = Vector2.zero;
+            if (State.Bot.Active != null) State.Bot.Active.Vel = Vector2.zero;
+
             State.P1.Active?.ResolveCycleRage();
             State.Bot.Active?.ResolveCycleRage();
 

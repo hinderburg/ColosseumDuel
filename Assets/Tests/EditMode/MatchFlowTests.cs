@@ -299,7 +299,20 @@ namespace ColosseumDuel.Tests
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            // The recoil is a fact about the action phase, so it is read inside it. Everyone is
+            // stopped when the phase ends - nothing between there and the next one moves anybody,
+            // and a velocity left standing had the view running them on the spot through four
+            // seconds of planning - so reading it afterwards finds a zero and proves nothing.
+            var recoil = Vector2.zero;
+            float elapsed = 0f;
+            while (m.State.Phase == MatchPhase.Action && elapsed < 30f)
+            {
+                if (m.State.Collided) recoil = p1.Vel;
+                m.Tick(Dt);
+                elapsed += Dt;
+            }
+            Assert.AreNotEqual(MatchPhase.Action, m.State.Phase, "stuck in Action");
 
             Assert.Less(p1.Hp, p1Hp);
             Assert.Less(bot.Hp, botHp);
@@ -316,8 +329,8 @@ namespace ColosseumDuel.Tests
 
             // And they got there by moving, not by being teleported: a cut on the frame the swings
             // were meant to play is what this replaced.
-            Assert.Greater(Vector2.Dot(p1.Vel, (p1.Pos - bot.Pos).normalized), 0f,
-                "the player should still be travelling away from the impact when the phase ends");
+            Assert.Greater(Vector2.Dot(recoil, (p1.Pos - bot.Pos).normalized), 0f,
+                "the player was never travelling away from the impact - he was moved, not thrown");
         }
 
         [Test]
