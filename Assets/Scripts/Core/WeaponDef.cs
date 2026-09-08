@@ -51,6 +51,11 @@ namespace ColosseumDuel.Core
         /// WeaponReachRendersAFrame put the reach ring beside the weapon that is meant to fill it.
         /// Every one of these used to be short of its own weapon - the twin swords by half, which
         /// on screen is a blade passing through a man who takes no damage.
+        ///
+        /// Five units on top of what the models measure, across all three. A swing sweeps, so the
+        /// weapon covers ground the tip is not standing on at the moment the blow resolves, and
+        /// matching the reach to the still pose left a margin where a blow visibly should have
+        /// landed and did not.
         /// </summary>
         public readonly float Reach;
 
@@ -80,19 +85,19 @@ namespace ColosseumDuel.Core
         public static readonly WeaponDef DualSwords = new WeaponDef(
             WeaponKind.DualSwords, "Twin swords", damageMultiplier: 0.7f, attacks: 2,
             incomingDamageMultiplier: 1f, bleeds: true, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 20f,   // 52
+            reach: GameConstants.GladiatorRadius * 2f + 25f,   // 57
             description: "Two light blows, and the wound keeps bleeding");
 
         public static readonly WeaponDef SwordAndShield = new WeaponDef(
             WeaponKind.SwordAndShield, "Sword and shield", damageMultiplier: 1f, attacks: 1,
             incomingDamageMultiplier: GameConstants.ShieldDamageMult, bleeds: false, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 20f,   // 52 - the same sword, so the same reach
+            reach: GameConstants.GladiatorRadius * 2f + 25f,   // 57 - the same sword, so the same reach
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
             WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.5f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: GameConstants.MaceKnockback,
-            reach: GameConstants.GladiatorRadius * 2f + 73f,   // 105
+            reach: GameConstants.GladiatorRadius * 2f + 78f,   // 110
             description: "One heavy blow that throws them back");
 
         /// <summary>The three a gladiator can be trained in, in the order the UI lists them.</summary>
