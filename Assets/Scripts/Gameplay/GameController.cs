@@ -96,6 +96,10 @@ namespace ColosseumDuel.Gameplay
             bool tutorial = _matchesStarted == 0;
             _matchesStarted++;
 
+            // A fresh match gets fresh sand. Rounds do not: a round is over when somebody falls, but
+            // the sand he fell on is the same sand, and by the third round it should look like it.
+            if (Arena != null) Arena.ClearBloodStains();
+
             Manager.StartMatch(
                 Squad.Select(GladiatorDef.Get),
                 new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius },
@@ -139,6 +143,7 @@ namespace ColosseumDuel.Gameplay
             Arena.BuildSpikes();
             Arena.BuildTraps();
             Arena.BuildBloodPool();
+            Arena.BuildBloodStains();
 
             var viewRoot = new GameObject("Views").transform;
             viewRoot.SetParent(transform, false);

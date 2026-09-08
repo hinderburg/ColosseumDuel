@@ -86,6 +86,23 @@ namespace ColosseumDuel.Tests
             input.UpdateDrag(player.Pos - aim * GameConstants.MaxDragVirtual);
             yield return null;
 
+            // A few rounds' worth of blood on the sand. The stains are the one thing on the arena
+            // that is meant to build up over a whole match, so a frame taken at cycle eight of round
+            // one shows none of what they are for.
+            foreach (var spot in new[]
+                     {
+                         new Vector2(-70f, 40f), new Vector2(30f, -80f), new Vector2(90f, 120f),
+                         new Vector2(-40f, -160f), new Vector2(10f, 200f), new Vector2(-120f, -60f),
+                     })
+                controller.Arena.PlayBlood(spot);
+
+            // Long enough for the bursts to finish. A blow throws bright particles at chest height
+            // and leaves a dark mark on the sand, and a frame taken while the particles are still in
+            // the air is a frame of the particles - they sit directly over the marks and are the
+            // brighter of the two by a long way. The world is running at a third speed here, so this
+            // is about a second of it.
+            yield return RunSeconds(4f);
+
             // A couple of damage numbers in the air, so the frame carries the one part of the HUD
             // that only exists for a second at a time and can never be caught by waiting for it.
             var numbers = Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.DamageNumbersView>();

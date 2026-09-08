@@ -290,9 +290,94 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
-        /// <summary>Plays a blood burst where a blow landed.</summary>
+        [Tooltip("How many blood stains the sand holds before the oldest is painted over.")]
+        public int BloodStainCount = 48;
+
+        /// <summary>How high above the floor a stain sits - under the danger rings, over the sand.</summary>
+        private const float BloodStainHeight = 0.012f;
+
+        private readonly List<Transform> _bloodStains = new List<Transform>();
+        private int _nextStain;
+
+        /// <summary>
+        /// Pre-builds the stains the sand can hold.
+        ///
+        /// One quad each, all sharing a material, all disabled until something bleeds on them. They
+        /// are never taken away during a match: a round is over when somebody falls, but the sand he
+        /// fell on is the same sand, and by the third round it should look like it.
+        ///
+        /// Forty-eight of them, recycled oldest-first past that. A long match trades a dozen blows a
+        /// round, so the wrap is far enough out that the arena reads as accumulating rather than as
+        /// holding a fixed number of marks.
+        /// </summary>
+        public void BuildBloodStains()
+        {
+            foreach (var stain in _bloodStains)
+                if (stain != null) Destroy(stain.gameObject);
+            _bloodStains.Clear();
+            _nextStain = 0;
+
+            if (Palette == null || Palette.BloodStain == null || Palette.Quad == null) return;
+
+            var root = new GameObject("BloodStains");
+            root.transform.SetParent(transform, false);
+
+            for (int i = 0; i < BloodStainCount; i++)
+            {
+                var stain = ViewPrimitives.CreateGroundQuad(
+                    Palette.Quad, $"Stain_{i:00}", root.transform, Palette.BloodStain);
+
+                var renderer = stain.GetComponent<Renderer>();
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+
+                stain.SetActive(false);
+                _bloodStains.Add(stain.transform);
+            }
+        }
+
+        /// <summary>Wipes the sand clean. A new match, not a new round.</summary>
+        public void ClearBloodStains()
+        {
+            foreach (var stain in _bloodStains)
+                if (stain != null) stain.gameObject.SetActive(false);
+            _nextStain = 0;
+        }
+
+        /// <summary>
+        /// Leaves a mark on the sand where a blow landed.
+        ///
+        /// Turned and sized at random. The texture is one splat, so without this every stain in the
+        /// arena would be the same shape at the same angle, and a dozen of them would read as a
+        /// pattern rather than as a fight.
+        /// </summary>
+        private void StainSand(Vector2 virtualPosition)
+        {
+            if (_bloodStains.Count == 0) return;
+
+            var stain = _bloodStains[_nextStain];
+            _nextStain = (_nextStain + 1) % _bloodStains.Count;
+
+            stain.localPosition = ToWorld(virtualPosition, BloodStainHeight);
+
+            // Laid flat first, then spun about the world's up axis. Written as a composition rather
+            // than as Euler(90, 0, angle): at ninety degrees of pitch that form is gimbal-locked, so
+            // it turns the quad correctly and reads back as something else entirely - the angle
+            // arrives in a component nobody put it in.
+            stain.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f)
+                                  * Quaternion.Euler(90f, 0f, 0f);
+
+            float span = ScaleLength(GameConstants.GladiatorRadius) * Random.Range(1.5f, 2.4f);
+            stain.localScale = new Vector3(span, span, 1f);
+
+            stain.gameObject.SetActive(true);
+        }
+
+        /// <summary>Plays a blood burst where a blow landed, and leaves the mark it makes.</summary>
         public void PlayBlood(Vector2 virtualPosition)
         {
+            StainSand(virtualPosition);
+
             if (_bloodPool.Count == 0) return;
 
             var burst = _bloodPool[_nextBlood];

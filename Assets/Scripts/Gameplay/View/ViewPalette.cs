@@ -66,6 +66,12 @@ namespace ColosseumDuel.Gameplay.View
         public Sprite Ring;
 
         /// <summary>
+        /// The mark a blow leaves on the sand. One splat texture on a transparent material; each
+        /// stain is the same quad turned and sized differently where it lands.
+        /// </summary>
+        public Material BloodStain;
+
+        /// <summary>
         /// Rounded rectangle, nine-sliced: the shape every panel, button and bar in the HUD is cut
         /// to. One sprite for all of them rather than a radius per widget, so the corners match
         /// across the whole interface without anything having to agree on a number.

@@ -347,6 +347,12 @@ namespace ColosseumDuel.EditorTools
             palette.Ring = ProceduralTextures.EnsureDisc(TexturesDir + "/Ring.png", innerFraction: 0.78f);
             palette.RoundedPanel = ProceduralTextures.EnsureRoundedRect(TexturesDir + "/RoundedPanel.png");
 
+            // Dark and slightly transparent, so a stain sits in the sand rather than on it, and so
+            // two that overlap darken instead of hiding one another.
+            palette.BloodStain = TransparentUnlit("BloodStain", new Color(0.26f, 0.030f, 0.035f, 0.80f));
+            ApplyTexture(palette.BloodStain,
+                ProceduralTextures.EnsureBloodStain(TexturesDir + "/BloodStain.png"), Vector2.one);
+
             palette.ArchetypeIcons = new Sprite[GladiatorDef.All.Count];
             for (int i = 0; i < GladiatorDef.All.Count; i++)
             {

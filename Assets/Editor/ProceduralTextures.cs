@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using ColosseumDuel.Core;
 using System.IO;
 using UnityEditor;
@@ -553,6 +554,94 @@ namespace ColosseumDuel.EditorTools
             // squares actually need the distance test.
             if (cx == x && cy == y) return true;
             return (x - cx) * (x - cx) + (y - cy) * (y - cy) <= radius * radius;
+        }
+
+        /// <summary>
+        /// A splat: one main pool with a ring of smaller drops thrown off it.
+        ///
+        /// White on transparent, so the material tints it - the same texture serves a fresh mark and
+        /// an old dried one. Drawn rather than taken from the effects pack, which has bursts of
+        /// particles and nothing that stays on the ground.
+        ///
+        /// Deliberately off-centre and uneven. A stain is spun to a random angle where it lands, and
+        /// a symmetrical blob spun to a random angle is the same blob - the irregularity is the
+        /// whole of what makes twenty of them look like twenty rather than one stamped over.
+        /// </summary>
+        public static Texture2D EnsureBloodStain(string path, int seed = 20260908)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int size = 128;
+            var random = new System.Random(seed);
+            var centre = new Vector2(size * 0.5f, size * 0.5f);
+
+            // One broad pool with a few flecks thrown off its edge. The pool has to dominate: with
+            // the drops anywhere near its size the whole thing reads as a starburst - a splash
+            // frozen in mid-air rather than something that has already soaked into the ground.
+            var blobs = new List<Vector3> { new Vector3(centre.x, centre.y, size * 0.34f) };
+
+            // Three lobes close in, which is what makes the pool's edge uneven rather than round.
+            for (int i = 0; i < 3; i++)
+            {
+                float angle = (float)(random.NextDouble() * Mathf.PI * 2f);
+                float distance = size * (0.10f + (float)random.NextDouble() * 0.10f);
+                blobs.Add(new Vector3(
+                    centre.x + Mathf.Cos(angle) * distance,
+                    centre.y + Mathf.Sin(angle) * distance,
+                    size * (0.14f + (float)random.NextDouble() * 0.08f)));
+            }
+
+            // And a handful of small flecks further out.
+            for (int i = 0; i < 6; i++)
+            {
+                float angle = (float)(random.NextDouble() * Mathf.PI * 2f);
+                float distance = size * (0.28f + (float)random.NextDouble() * 0.14f);
+                blobs.Add(new Vector3(
+                    centre.x + Mathf.Cos(angle) * distance,
+                    centre.y + Mathf.Sin(angle) * distance,
+                    size * (0.020f + (float)random.NextDouble() * 0.035f)));
+            }
+
+            var pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float alpha = 0f;
+                    foreach (var blob in blobs)
+                    {
+                        float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f),
+                                                   new Vector2(blob.x, blob.y));
+
+                        // Solid to two thirds of the way out, then falling off to nothing. A hard
+                        // edge reads as a sticker and a soft one as smoke; this is neither.
+                        float edge = Mathf.InverseLerp(blob.z, blob.z * 0.66f, d);
+                        alpha = Mathf.Max(alpha, Mathf.Clamp01(edge));
+                    }
+
+                    pixels[y * size + x] = new Color32(255, 255, 255, (byte)(alpha * 255f));
+                }
+            }
+
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;   // or the falloff tiles back in at the edges
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
         public static Sprite EnsureDisc(string path, float innerFraction = 0f)
