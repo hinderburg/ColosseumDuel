@@ -72,6 +72,12 @@ namespace ColosseumDuel.Gameplay.View
         public Material BloodStain;
 
         /// <summary>
+        /// The red banner hung on the arena wall. Its colours are in its texture rather than in this
+        /// material's tint - there are two of them, cloth and gold, and a tint has one.
+        /// </summary>
+        public Material Banner;
+
+        /// <summary>
         /// Rounded rectangle, nine-sliced: the shape every panel, button and bar in the HUD is cut
         /// to. One sprite for all of them rather than a radius per widget, so the corners match
         /// across the whole interface without anything having to agree on a number.

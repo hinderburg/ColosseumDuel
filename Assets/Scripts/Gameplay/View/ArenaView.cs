@@ -38,7 +38,10 @@ namespace ColosseumDuel.Gameplay.View
         public float GalleryDepth = 4.5f;
 
         [Tooltip("How many torches to space around the wall.")]
-        public int TorchCount = 14;
+        public int TorchCount = 18;
+
+        [Tooltip("How many banners to hang on the wall, between the torches.")]
+        public int BannerCount = 10;
 
         public float VirtualToWorld => WorldArenaRadius / GameConstants.ArenaRadius;
 

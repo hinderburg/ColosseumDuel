@@ -37,10 +37,11 @@ namespace ColosseumDuel.EditorTools
         private const float MetreToWorld = 1.67f;
 
         /// <summary>
-        /// Warm sandstone, per the layout sketch. The kit's own stone is a cool grey that sits
-        /// oddly against orange sand.
+        /// Pale grey stone, per the reference frame. It was warm sandstone for as long as the floor
+        /// was orange - the two had to agree - and now that the floor is bone, a brown wall around it
+        /// is the only warm thing left and reads as mud.
         /// </summary>
-        private static readonly Color StoneTint = new Color(0.86f, 0.66f, 0.45f);
+        private static readonly Color StoneTint = new Color(0.66f, 0.64f, 0.60f);
 
         private const string StoneMaterialDir = "Assets/Materials";
 
@@ -105,6 +106,66 @@ namespace ColosseumDuel.EditorTools
             }
 
             BuildTorches(arena.transform, palette, radiusX, radiusZ, arena.WallHeight, arena.TorchCount);
+            BuildBanners(arena.transform, palette, radiusX, radiusZ, arena.WallHeight, arena.BannerCount);
+        }
+
+        /// <summary>
+        /// Hangs banners on the inner face of the wall, between the torches.
+        ///
+        /// Flat quads rather than cloth. They are seen from a fixed camera sixty-six degrees above
+        /// the floor, at which angle a banner on the far wall is a few dozen pixels tall and one on
+        /// the near wall is behind the player's own squad - there is nothing for a simulated fold to
+        /// do that the shading painted into the texture does not already do.
+        ///
+        /// Offset half a step from the torches so the two alternate around the ring. Sharing the
+        /// angles would put every banner behind a flame.
+        /// </summary>
+        private static void BuildBanners(Transform parent, ViewPalette palette,
+                                         float radiusX, float radiusZ, float wallHeight, int count)
+        {
+            Clear(parent, "Banners");
+            if (palette == null || palette.Banner == null || palette.Quad == null || count <= 0) return;
+
+            var root = new GameObject("Banners");
+            root.transform.SetParent(parent, false);
+
+            const float bannerWidth = 1.35f;
+            const float bannerHeight = 2.1f;
+
+            // Just clear of the stone, or the banner z-fights with the wall it hangs on.
+            const float offWall = 0.06f;
+
+            var angles = ArenaShape.EvenlySpacedAngles(count, radiusX, radiusZ);
+            float halfStep = angles.Length > 1 ? (angles[1] - angles[0]) * 0.5f : 0f;
+
+            for (int i = 0; i < count; i++)
+            {
+                float t = angles[i] + halfStep;
+                var onWall = OnEllipse(t, radiusX, radiusZ, 0f);
+
+                var inward = new Vector3(-onWall.x, 0f, -onWall.z);
+                if (inward.sqrMagnitude < 0.0001f) inward = Vector3.forward;
+                inward.Normalize();
+
+                var banner = new GameObject($"Banner_{i:00}");
+                banner.transform.SetParent(root.transform, false);
+
+                // Hung from the top of the wall, hanging down its inner face.
+                banner.transform.localPosition = onWall
+                    + inward * offWall
+                    + Vector3.up * (wallHeight - bannerHeight * 0.5f);
+                // Facing the fight. A Unity quad's visible side points along its own -Z, so aiming
+                // its forward at the arena turns its back to it - the whole ring of banners rendered
+                // as nothing at all, and nothing logs a back-facing quad.
+                banner.transform.localRotation = Quaternion.LookRotation(-inward, Vector3.up);
+                banner.transform.localScale = new Vector3(bannerWidth, bannerHeight, 1f);
+
+                banner.AddComponent<MeshFilter>().sharedMesh = palette.Quad;
+                var renderer = banner.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = palette.Banner;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
         }
 
         private static void BuildWall(Transform root, ViewPalette palette,

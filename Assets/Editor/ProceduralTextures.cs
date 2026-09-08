@@ -644,6 +644,92 @@ namespace ColosseumDuel.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
+        /// <summary>
+        /// A hanging banner: deep red cloth, swallow-tailed at the foot, with a gold wreath on it.
+        ///
+        /// Both colours are baked in rather than tinted at the material, because there are two of
+        /// them and a material tint has one. That also means the banner is the one prop in the arena
+        /// whose colour is not a palette entry - it is here, in the drawing.
+        ///
+        /// The wreath is an open ring with leaf ticks around it. At the size a banner occupies on
+        /// screen it is a gold mark on red, and any more detail than that is lost - but a mark that
+        /// is roughly a wreath reads as Rome, and a plain gold disc reads as a coin.
+        /// </summary>
+        public static Texture2D EnsureBanner(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int width = 128;
+            const int height = 256;
+
+            var cloth = new Color(0.62f, 0.13f, 0.11f);
+            var clothEdge = new Color(0.44f, 0.09f, 0.08f);
+            var gold = new Color(0.85f, 0.66f, 0.28f);
+
+            // The wreath sits in the upper half, where the eye lands, not in the middle of a strip
+            // whose lower half is mostly hidden behind the parapet at this camera angle.
+            var wreath = new Vector2(width * 0.5f, height * 0.62f);
+            const float wreathRadius = 30f;
+            const float wreathThickness = 4.5f;
+
+            var pixels = new Color32[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // Swallow tail: a notch cut up from the bottom edge, deepest in the middle.
+                    float notch = (1f - Mathf.Abs(x / (width - 1f) * 2f - 1f)) * height * 0.13f;
+                    if (y < notch)
+                    {
+                        pixels[y * width + x] = new Color32(0, 0, 0, 0);
+                        continue;
+                    }
+
+                    // Shaded towards both long edges so the strip reads as cloth with a fold in it
+                    // rather than as a flat rectangle.
+                    float acrossEdge = Mathf.Abs(x / (width - 1f) * 2f - 1f);
+                    var color = Color.Lerp(cloth, clothEdge, acrossEdge * acrossEdge);
+
+                    var offset = new Vector2(x + 0.5f, y + 0.5f) - wreath;
+                    float d = offset.magnitude;
+
+                    // The ring itself, open at the top the way a laurel wreath is.
+                    float angle = Mathf.Atan2(offset.y, offset.x) * Mathf.Rad2Deg;
+                    bool inGap = angle > 62f && angle < 118f;
+                    if (!inGap && Mathf.Abs(d - wreathRadius) < wreathThickness) color = gold;
+
+                    // Leaf ticks, standing out from the ring.
+                    if (!inGap && d > wreathRadius && d < wreathRadius + 9f)
+                    {
+                        float around = Mathf.Repeat(angle, 22f);
+                        if (around < 9f) color = gold;
+                    }
+
+                    pixels[y * width + x] = color;
+                }
+            }
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaIsTransparency = true;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
         public static Sprite EnsureDisc(string path, float innerFraction = 0f)
         {
             var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);

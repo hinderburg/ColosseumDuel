@@ -349,9 +349,15 @@ namespace ColosseumDuel.EditorTools
 
             // Dark and slightly transparent, so a stain sits in the sand rather than on it, and so
             // two that overlap darken instead of hiding one another.
-            palette.BloodStain = TransparentUnlit("BloodStain", new Color(0.26f, 0.030f, 0.035f, 0.80f));
+            palette.BloodStain = TransparentUnlit("BloodStain", new Color(0.55f, 0.07f, 0.07f, 0.90f));
             ApplyTexture(palette.BloodStain,
                 ProceduralTextures.EnsureBloodStain(TexturesDir + "/BloodStain.png"), Vector2.one);
+
+            // White tint: the cloth and the wreath are both painted into the texture, so anything
+            // other than white here would push one of the two off its own colour.
+            palette.Banner = TransparentUnlit("Banner", Color.white);
+            ApplyTexture(palette.Banner,
+                ProceduralTextures.EnsureBanner(TexturesDir + "/Banner.png"), Vector2.one);
 
             palette.ArchetypeIcons = new Sprite[GladiatorDef.All.Count];
             for (int i = 0; i < GladiatorDef.All.Count; i++)
@@ -400,7 +406,7 @@ namespace ColosseumDuel.EditorTools
                 Debug.LogWarning($"[Colosseum] Arena kit not found at {WallBlockPath} - " +
                                  "the wall will be plain blocks. Import LoafbrrAssets/ModularArena to get it.");
 
-            palette.WallStone = Lit("Wall", new Color(0.52f, 0.36f, 0.24f)); // brown stone, per the layout sketch
+            palette.WallStone = Lit("Wall", new Color(0.64f, 0.62f, 0.58f)); // grey stone, per the reference frame
             ApplyTexture(palette.WallStone,
                          ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
                          new Vector2(2f, 1f));
@@ -483,10 +489,12 @@ namespace ColosseumDuel.EditorTools
             // The floor gets its texture once across the whole disc - no repeat, so no seams and no
             // tiling pattern to notice. The wall material lives in the palette, since the wall is
             // built at runtime.
-            // Grey stone dust rather than desert sand. The warm yellow floor and the red danger zone
-            // were the two loudest things on screen and they were fighting each other; a grey ground
-            // leaves the red to mean something, and leaves the blood on it visible.
-            var sandMat = Lit("Sand", new Color(0.62f, 0.60f, 0.56f));
+            // Pale bone, matching the reference frame: light and nearly colourless, but warm rather
+            // than grey. It went from orange sand to grey stone dust and has landed between the two,
+            // which is where the reference has it - bright enough that the figures read as dark
+            // shapes on it, drained enough that the red of the danger zone and the blood are the
+            // only saturated things on the floor.
+            var sandMat = Lit("Sand", new Color(0.80f, 0.75f, 0.64f));
             ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
 
             // Re-loaded here rather than reused from above, and not defensively - it is genuinely
@@ -546,11 +554,17 @@ namespace ColosseumDuel.EditorTools
             // the elevation, so tripling the wall at 50 degrees threw a shadow three units deep
             // across the floor and put a third of the playing area in the dark. At 68 it is under
             // one and a half, which reads as a wall standing in sunlight rather than as a stain.
-            lightGo.transform.rotation = Quaternion.Euler(68f, -30f, 0f);
+            lightGo.transform.rotation = Quaternion.Euler(78f, -30f, 0f);
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
+            light.color = new Color(1.00f, 0.96f, 0.88f);   // sunlight, not daylight-balanced white
             light.intensity = 1.1f;
             light.shadows = LightShadows.Soft;
+
+            // Half strength. The reference frame is lit like an illustration - shapes read by their
+            // own colour, not by what they are standing in - and at full strength the wall threw a
+            // hard band across a third of the floor and painted its own inner face black.
+            light.shadowStrength = 0.45f;
 
             // Ambient, set explicitly rather than left at the default. A scene created empty has no
             // skybox, so the default ambient is nearly black - and with a single sun that means every
@@ -560,8 +574,14 @@ namespace ColosseumDuel.EditorTools
             // A three-band ambient does the work a bounce would: warm light off the sand fills the
             // inside of the wall, cool light from above keeps the sand itself from going flat.
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.30f, 0.33f, 0.40f);
-            RenderSettings.ambientEquatorColor = new Color(0.36f, 0.31f, 0.25f);
+            // Warm-neutral rather than blue. The cool sky band was the whole reason the stone read as
+            // slate: the kit's own texture is already cool, and a blue fill on top of it turned a
+            // sandstone arena into a winter one.
+            RenderSettings.ambientSkyColor = new Color(0.42f, 0.41f, 0.38f);
+            // Lifted hard. This band is what lights vertical surfaces, and the inner face of the
+            // wall is vertical, faces inward and never catches a sun that comes in at sixty-eight
+            // degrees - so the arena was a near-black ring around a bright floor.
+            RenderSettings.ambientEquatorColor = new Color(0.54f, 0.50f, 0.44f);
             RenderSettings.ambientGroundColor = new Color(0.46f, 0.34f, 0.21f);
 
             // --- game logic host ---
