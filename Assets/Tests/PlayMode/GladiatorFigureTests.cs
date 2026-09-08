@@ -308,22 +308,43 @@ namespace ColosseumDuel.Tests
             _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Action, 6f);
 
-            // How long the swing is on screen, not merely whether it was entered. "Did it ever
-            // reach Attack" passes either way - the swing was always triggered, it was just cut
-            // off. Measured: a quarter of a second with the recoil held back, an eighth without,
-            // so the threshold sits between the two and the test can actually fail.
+            // How far into the swing each of them gets, not merely whether it was entered. "Did it
+            // ever reach Attack" passes either way - the swing was always triggered, it was just cut
+            // off one frame later by the recoil of the blow coming back.
+            //
+            // Read off the clip's own progress rather than by counting frames spent in the state.
+            // Counting frames measures the machine as much as the animation: a whole swing fits
+            // between two frames on a loaded batch run, and the test then fails when the suite is
+            // busy and passes when run on its own. One sample late in the clip proves the swing was
+            // not cut, however few samples there were.
             float playerSwing = 0f, botSwing = 0f;
-            for (float t = 0f; t < 0.6f; t += Time.unscaledDeltaTime)
+            for (float t = 0f; t < 0.8f; t += Time.unscaledDeltaTime)
             {
-                if (InAttack(player)) playerSwing += Time.unscaledDeltaTime;
-                if (InAttack(bot)) botSwing += Time.unscaledDeltaTime;
+                playerSwing = Mathf.Max(playerSwing, SwingProgress(player));
+                botSwing = Mathf.Max(botSwing, SwingProgress(bot));
                 yield return null;
             }
 
-            Assert.Greater(playerSwing, 0.2f,
-                $"the player's swing was on screen for {playerSwing:0.###}s - it was cut short");
-            Assert.Greater(botSwing, 0.2f,
-                $"the opponent's swing was on screen for {botSwing:0.###}s - it was cut short");
+            // Not the whole clip: the recoil is held off for SwingHoldsOffTheRecoil and then allowed
+            // through, so the swing is meant to be cut - just not on the frame it started. Measured
+            // on this rig: about 0.23 of the clip with the hold, about 0.12 without, so the
+            // threshold sits between the two and the test can actually fail.
+            Assert.Greater(playerSwing, 0.18f,
+                $"the player's swing reached {playerSwing:0.##} of its clip - it was cut short");
+            Assert.Greater(botSwing, 0.18f,
+                $"the opponent's swing reached {botSwing:0.##} of its clip - it was cut short");
+        }
+
+        /// <summary>How far through a swing this animator is, or zero if it is not swinging.</summary>
+        private static float SwingProgress(Animator animator)
+        {
+            var info = animator.GetCurrentAnimatorStateInfo(0);
+            if (!IsSwing(info)) return 0f;
+
+            // Clamped to the first pass: these clips do not loop, but a state left running while
+            // nothing else claims it keeps counting past one and would report a swing that was cut
+            // short as having gone round twice.
+            return Mathf.Clamp01(info.normalizedTime);
         }
 
         /// <summary>
