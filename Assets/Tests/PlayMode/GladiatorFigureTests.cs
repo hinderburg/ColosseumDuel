@@ -445,6 +445,98 @@ namespace ColosseumDuel.Tests
             return animator.IsInTransition(0) && IsSwing(animator.GetNextAnimatorStateInfo(0));
         }
 
+        /// <summary>
+        /// The swing starts before the blow lands, not after it.
+        ///
+        /// This is the whole of what the prediction buys. Without it the weapon began moving on the
+        /// frame the damage was announced, so every exchange was two men striking each other from an
+        /// idle pose and then swinging at the air where the other had been.
+        ///
+        /// Both moments are measured off the running game - the animator state for the swing, the
+        /// opponent's health for the blow - so this cannot pass by agreeing with the arithmetic that
+        /// scheduled it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSwingStartsBeforeTheBlowLands()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var figure = FindIn("Player", $"Figure_{GladiatorId.Brutius}");
+            var animator = figure != null ? figure.GetComponentInChildren<Animator>(true) : null;
+            if (animator == null || animator.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            var state = _controller.Manager.State;
+            var player = state.P1.Active;
+            var bot = state.Bot.Active;
+
+            player.Pos = new Vector2(-120f, 0f);
+            bot.Pos = new Vector2(120f, 0f);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
+
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Action, 8f);
+            Assert.Greater(state.P1.StrikeEta, 0f, "the charge was not predicted to land at all");
+
+            float startHp = bot.Hp;
+            float swingAt = -1f, blowAt = -1f;
+            float t = 0f;
+
+            while (t < 2f && (swingAt < 0f || blowAt < 0f))
+            {
+                yield return null;
+                t += Time.unscaledDeltaTime;
+
+                if (swingAt < 0f && IsSwing(animator.GetCurrentAnimatorStateInfo(0))) swingAt = t;
+                if (blowAt < 0f && bot.Hp < startHp) blowAt = t;
+            }
+
+            Assert.Greater(swingAt, -1f, "he never swung at all");
+            Assert.Greater(blowAt, -1f, "the blow never landed");
+            Assert.Less(swingAt, blowAt,
+                $"the swing started at {swingAt:0.000}s and the blow landed at {blowAt:0.000}s - " +
+                "he hit first and swung afterwards");
+        }
+
+        /// <summary>
+        /// The stance covers the thinking time, less the second before the charge.
+        ///
+        /// Measured in real seconds off the running game rather than derived from the clip length,
+        /// because the arithmetic behind it depends on the planning phase's time scale - the world
+        /// runs at a third speed while the player thinks, so a clip playing at its own rate finishes
+        /// in a third of the time it looks like it should. That coupling is invisible and easy to
+        /// break; this is what catches it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePlanningStanceFillsTheThinkingTime()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var figure = FindIn("Player", $"Figure_{GladiatorId.Barbarius}");
+            var animator = figure != null ? figure.GetComponentInChildren<Animator>(true) : null;
+            if (animator == null || animator.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            yield return RunUntil(() => animator.GetCurrentAnimatorStateInfo(0).IsName("Ready"), 3f);
+
+            // How far through the clip one real second of planning carries it. The state reports
+            // its progress as a fraction of the whole, so a full pass is 1.
+            float before = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+            float started = Time.realtimeSinceStartup;
+            yield return RunSeconds(1f);
+            float elapsed = Time.realtimeSinceStartup - started;
+            float after = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+
+            if (!animator.GetCurrentAnimatorStateInfo(0).IsName("Ready"))
+                Assert.Ignore("The phase ended mid-measurement; nothing to conclude.");
+
+            float wholePass = elapsed / Mathf.Max(after - before, 0.0001f);
+            Assert.AreEqual(GameConstants.PlanningTime - 1f, wholePass, 0.6f,
+                $"the stance takes {wholePass:0.00}s of real time, not the phase less a second");
+        }
+
         /// <summary>Anything hanging off a fist, as opposed to the fighter himself.</summary>
         private static bool IsCarriedGear(Transform t)
         {

@@ -1,3 +1,4 @@
+using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay.View;
 using System.IO;
 using UnityEditor;
@@ -40,6 +41,37 @@ namespace ColosseumDuel.EditorTools
 
         /// <summary>The stance held through the planning phase, picked by eye and named directly.</summary>
         private const string ReadyStanceFbx = "Assets/DoubleL/FBX Unity/Actions/Action/Action_A_5_2.fbx";
+
+        /// <summary>
+        /// How long the stance is given, in real seconds: the planning phase less a second.
+        ///
+        /// A second short of the phase on purpose. Ending exactly on the phase boundary would put
+        /// the last frame of the stance on the frame the charge begins, and a gesture finishing as a
+        /// man starts running reads as him being interrupted rather than as him setting off.
+        /// </summary>
+        private static float ReadyStanceSeconds => GameConstants.PlanningTime - 1f;
+
+        /// <summary>
+        /// Stretches the stance across the phase.
+        ///
+        /// The animator runs on scaled time and the planning phase runs the world at a third speed,
+        /// so a clip playing at its own rate covers only a third of the phase in real seconds - the
+        /// scale has to be divided back out here or the stance finishes long before the phase does.
+        /// The coupling is real and easy to break silently, so ThePlanningStanceFillsTheThinkingTime
+        /// measures the finished thing in real seconds rather than trusting this arithmetic.
+        /// </summary>
+        private static float ReadyStancePlaybackSpeed(AnimationClip clip)
+        {
+            if (clip == null || clip.length <= 0.001f) return 1f;
+            return clip.length / (ReadyStanceSeconds * PlanningTimeScale);
+        }
+
+        /// <summary>
+        /// What the world's time scale is during planning. Mirrors GameController's own default -
+        /// the one place that actually sets it - because an Editor script cannot read a scene value
+        /// that has not been loaded yet.
+        /// </summary>
+        private const float PlanningTimeScale = 0.3f;
 
         /// <summary>Builds or rebuilds the controller. Returns null if the clip pack is absent.</summary>
         public static AnimatorController EnsureController()
@@ -99,6 +131,7 @@ namespace ColosseumDuel.EditorTools
             readyState.motion = FbxClip(ReadyStanceFbx, loop: true)
                                 ?? Clip("Action_A_5_2")
                                 ?? idle;
+            readyState.speed = ReadyStancePlaybackSpeed(readyState.motion as AnimationClip);
 
             var attackState = machine.AddState("Attack");
             attackState.motion = Clip("OneHand_Up_Attack_1_InPlace");
