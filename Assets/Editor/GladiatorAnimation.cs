@@ -38,6 +38,9 @@ namespace ColosseumDuel.EditorTools
         /// <summary>How much faster than authored the run cycles play. See where it is applied.</summary>
         private const float RunPlaybackSpeed = 1.45f;
 
+        /// <summary>The stance held through the planning phase, picked by eye and named directly.</summary>
+        private const string ReadyStanceFbx = "Assets/DoubleL/FBX Unity/Actions/Action/Action_A_5_2.fbx";
+
         /// <summary>Builds or rebuilds the controller. Returns null if the clip pack is absent.</summary>
         public static AnimatorController EnsureController()
         {
@@ -87,15 +90,15 @@ namespace ColosseumDuel.EditorTools
             var blockState = machine.AddState("Block");
             blockState.motion = Clip("OneHand_Up_Shield_Block_Idle");
 
-            // How he stands while the player thinks.
+            // How he stands while the player thinks. Chosen by eye, by name.
             //
-            // A second idle rather than a gesture. The first attempt used the nearest thing to a
-            // taunt in either pack, and a four-second flourish repeated every cycle is a lot of
-            // gesture for a game whose cycles are four seconds long. This is a fighting stance from
-            // the other pack - shifting weight, not posing - so the pause reads as two men waiting
-            // rather than as two men standing still.
+            // Taken from the FBX rather than from the extracted clip beside it, because the FBX is
+            // the file that was asked for and the two are only assumed to be the same take. The
+            // extracted one is the fallback.
             var readyState = machine.AddState("Ready");
-            readyState.motion = PackClip("Unarmed", "Unarmed-Idle", loop: true) ?? idle;
+            readyState.motion = FbxClip(ReadyStanceFbx, loop: true)
+                                ?? Clip("Action_A_5_2")
+                                ?? idle;
 
             var attackState = machine.AddState("Attack");
             attackState.motion = Clip("OneHand_Up_Attack_1_InPlace");
@@ -222,6 +225,22 @@ namespace ColosseumDuel.EditorTools
         /// assets - so it has to be dug out of the file's sub-assets by name, and LoadAssetAtPath
         /// on the FBX would hand back the model instead.
         /// </summary>
+        /// <summary>
+        /// The animation inside an FBX, by path.
+        ///
+        /// LoadAssetAtPath on a model file hands back the model; a clip inside it is a sub-asset and
+        /// has to be dug out. Takes the first one it finds, which is what a single-take FBX has.
+        /// </summary>
+        private static AnimationClip FbxClip(string path, bool loop = false)
+        {
+            if (loop) EnsureLooping(path);
+
+            foreach (var asset in AssetDatabase.LoadAllAssetRepresentationsAtPath(path))
+                if (asset is AnimationClip clip) return clip;
+
+            return null;
+        }
+
         private static AnimationClip PackClip(string folder, string clipName, bool loop = false)
         {
             string path = $"{PackDir}/{folder}/RPG-Character@{clipName}.FBX";
