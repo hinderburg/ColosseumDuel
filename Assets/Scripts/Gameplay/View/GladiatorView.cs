@@ -645,15 +645,20 @@ namespace ColosseumDuel.Gameplay.View
         ///
         /// Longest for the mace: a two-handed weapon is wound up over the shoulder before it comes
         /// down, and the clip spends most of itself getting there.
+        ///
+        /// Each is about four frames longer than the first pass at them. Set by eye against the
+        /// clips rather than measured off the frame the weapon crosses the target, so they are
+        /// adjustable numbers and not derived ones - this is the knob to turn if a blow starts
+        /// landing early or late.
         /// </summary>
         public static float SwingLead(WeaponKind weapon)
         {
             switch (weapon)
             {
-                case WeaponKind.TwoHandedMace: return 0.34f;
-                case WeaponKind.SwordAndShield: return 0.22f;
-                case WeaponKind.DualSwords: return 0.16f;
-                default: return 0.18f;
+                case WeaponKind.TwoHandedMace: return 0.40f;
+                case WeaponKind.SwordAndShield: return 0.28f;
+                case WeaponKind.DualSwords: return 0.22f;
+                default: return 0.24f;
             }
         }
 

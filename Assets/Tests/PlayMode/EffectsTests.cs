@@ -49,6 +49,58 @@ namespace ColosseumDuel.Tests
             yield return RunSeconds(GameConstants.PlanningTime + 0.1f);
         }
 
+        /// <summary>
+        /// A blow struck from a standstill waits for its own weapon before it spills anything.
+        ///
+        /// Two fighters already inside each other's reach exchange on the first substep of the
+        /// phase, so there is no room in front of it to wind a swing up: the swing starts now and
+        /// the weapon arrives a third of a second later. Without the wait the blood, the stagger and
+        /// the shake all went off while the weapon was still on its way back over the shoulder.
+        ///
+        /// Measured as the gap between the health dropping - which is the simulation resolving the
+        /// blow - and the burst appearing, so it cannot pass by agreeing with the number that set it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AStandingBlowHoldsItsEffectsUntilTheWeaponArrives()
+        {
+            var pool = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "BloodBursts");
+            if (pool == null)
+            {
+                Assert.Ignore("No blood prefab - Epic Toon FX is not imported here.");
+                yield break;
+            }
+
+            var bursts = pool.Cast<Transform>().ToList();
+
+            // Nose to nose and both standing still, which is the case with no room to wind up.
+            float gap = Mathf.Min(State.P1.Active.WeaponDef.Reach, State.Bot.Active.WeaponDef.Reach) * 0.7f;
+            State.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
+            State.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+
+            yield return RunUntil(() => State.Phase == MatchPhase.Action, 8f);
+
+            float hpBefore = State.Bot.Active.Hp;
+            float blowAt = -1f, burstAt = -1f;
+            float t = 0f;
+
+            while (t < 2f && (blowAt < 0f || burstAt < 0f))
+            {
+                yield return null;
+                t += Time.unscaledDeltaTime;
+
+                if (blowAt < 0f && State.Bot.Active.Hp < hpBefore) blowAt = t;
+                if (burstAt < 0f && bursts.Any(b => b.gameObject.activeSelf)) burstAt = t;
+            }
+
+            Assert.Greater(blowAt, -1f, "no blow landed at all");
+            Assert.Greater(burstAt, -1f, "the blow spilled no blood");
+            Assert.Greater(burstAt - blowAt, 0.12f,
+                $"the blood came {burstAt - blowAt:0.000}s after the blow - it beat the weapon there");
+        }
+
         // ------------------------------------------------------------------
 
         [Test]

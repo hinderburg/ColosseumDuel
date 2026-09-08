@@ -68,8 +68,12 @@ namespace ColosseumDuel.Tests
             _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Action, 6f);
 
+            // Long enough to cover the wait the effects now sit behind. Two fighters already inside
+            // each other's reach exchange on the first substep, and there is no room in front of
+            // that to wind a swing up - so the shake is held back to meet the weapon instead of
+            // going off while it is still on its way.
             float furthest = 0f;
-            for (float t = 0f; t < 0.3f; t += Time.unscaledDeltaTime)
+            for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime)
             {
                 furthest = Mathf.Max(furthest, Vector3.Distance(_home, _camera.position));
                 yield return null;

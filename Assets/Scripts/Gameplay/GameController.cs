@@ -238,8 +238,9 @@ namespace ColosseumDuel.Gameplay
             ScheduleSwing(_botView, state.Bot);
         }
 
-        private static void ScheduleSwing(GladiatorView view, PlayerState side)
+        private void ScheduleSwing(GladiatorView view, PlayerState side)
         {
+            _effectDelay[(int)side.Side] = 0f;
             if (view == null) return;
 
             view.CancelScheduledSwing();
@@ -247,8 +248,24 @@ namespace ColosseumDuel.Gameplay
             var g = side.Active;
             if (g == null || !g.Alive || side.StrikeEta < 0f) return;
 
-            view.ScheduleSwing(side.StrikeEta - GladiatorView.SwingLead(g.Weapon));
+            float lead = GladiatorView.SwingLead(g.Weapon);
+            view.ScheduleSwing(side.StrikeEta - lead);
+
+            // What the swing could not be started early enough to cover.
+            //
+            // An exchange between two fighters already standing in reach of each other lands on the
+            // first substep of the phase, so there is no room in front of it to wind up: the swing
+            // starts now and the weapon arrives a third of a second later, while the blood and the
+            // stagger were going out immediately. The shortfall is held back off the effects so they
+            // meet the weapon rather than beating it there.
+            _effectDelay[(int)side.Side] = Mathf.Max(0f, lead - side.StrikeEta);
         }
+
+        /// <summary>
+        /// Per side, how long a blow's effects wait so they land with the weapon rather than ahead
+        /// of it. Indexed by PlayerSide, and it belongs to the striker rather than to the victim.
+        /// </summary>
+        private readonly float[] _effectDelay = new float[2];
 
         // ------------------------------------------------------------------
         // one-shot effects, driven by Core's events
@@ -268,11 +285,31 @@ namespace ColosseumDuel.Gameplay
             // Whether the blow throws him is a property of the weapon that landed it, and that is
             // readable from the striker rather than needing an event of its own. A flinch played
             // over a body already sliding backwards reads as the ground moving, not the man.
-            var striker = Manager.State.Get(otherSide).Active;
+            // The swing goes out now whatever happens - the guard inside it ignores this call if one
+            // is already running from the prediction, and answers it if there was none.
+            ViewFor(otherSide).PlaySwing();
+
+            float delay = _effectDelay[(int)otherSide];
+            if (delay <= 0f) PlayBlowEffects(side, otherSide, amount);
+            else StartCoroutine(PlayBlowEffectsAfter(delay, side, otherSide, amount));
+        }
+
+        /// <summary>
+        /// Everything a landed blow throws off: the recoil on the man hit, the blood, the number and
+        /// the knock on the camera.
+        ///
+        /// Separated from the event so it can be held back. The blow is announced when the
+        /// simulation resolves it, and the weapon arrives when the animation gets there - and those
+        /// are the same moment only when there was room to start the swing early.
+        /// </summary>
+        private void PlayBlowEffects(PlayerSide side, PlayerSide strikerSide, float amount)
+        {
+            // Whether the blow throws him is a property of the weapon that landed it, and that is
+            // readable from the striker rather than needing an event of its own. A flinch played
+            // over a body already sliding backwards reads as the ground moving, not the man.
+            var striker = Manager.State.Get(strikerSide).Active;
             if (striker != null && striker.WeaponDef.Knockback > 0f) ViewFor(side).PlayKnockback();
             else ViewFor(side).PlayHit();
-
-            ViewFor(otherSide).PlaySwing();
 
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
@@ -283,6 +320,24 @@ namespace ColosseumDuel.Gameplay
             // And a knock on the camera, so a blow is felt and not only seen. Only for blows: a
             // trap and a bleed go through their own events and leave the frame alone.
             if (_deathCamera != null) _deathCamera.Shake();
+        }
+
+        private System.Collections.IEnumerator PlayBlowEffectsAfter(
+            float delay, PlayerSide side, PlayerSide strikerSide, float amount)
+        {
+            // Unscaled, because the delay was measured against the phase clock and the simulation is
+            // ticked on unscaled time. They agree during the action phase, and this keeps them
+            // agreeing if the phase is ever slowed the way planning is.
+            float waited = 0f;
+            while (waited < delay)
+            {
+                yield return null;
+                waited += Time.unscaledDeltaTime;
+            }
+
+            // The round can end while this is in flight. The blood and the number belong to a blow
+            // that did land, so they still go out; nothing here reads a gladiator that may be gone.
+            PlayBlowEffects(side, strikerSide, amount);
         }
 
 

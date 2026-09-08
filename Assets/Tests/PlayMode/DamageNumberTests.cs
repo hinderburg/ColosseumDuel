@@ -128,6 +128,12 @@ namespace ColosseumDuel.Tests
             float hpBefore = state.Bot.Active.Hp;
             yield return RunUntil(() => state.Bot.Active.Hp < hpBefore, 8f);
 
+            // Waited for rather than read on the frame the health drops. Two fighters already inside
+            // each other's reach exchange on the first substep of the phase, which leaves no room in
+            // front of it to wind a swing up - so the number is held back to arrive with the weapon
+            // rather than ahead of it.
+            yield return RunUntil(() => Showing().Any(), 1f);
+
             Assert.IsNotEmpty(Showing(), "a blow landed in the match and no number came off him");
         }
 
