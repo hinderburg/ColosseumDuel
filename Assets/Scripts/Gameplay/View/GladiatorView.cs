@@ -637,6 +637,60 @@ namespace ColosseumDuel.Gameplay.View
         public void PlayKnockback() => TakeBlow(AnimatorParams.KnockbackId);
 
         /// <summary>
+        /// How long a swing takes to reach the target, per weapon, in seconds.
+        ///
+        /// The gap between a swing starting and the weapon arriving. Without it the blow lands and
+        /// the swing begins afterwards, which reads as the two men hitting each other with an idle
+        /// pose and apologising for it a moment later.
+        ///
+        /// Longest for the mace: a two-handed weapon is wound up over the shoulder before it comes
+        /// down, and the clip spends most of itself getting there.
+        /// </summary>
+        public static float SwingLead(WeaponKind weapon)
+        {
+            switch (weapon)
+            {
+                case WeaponKind.TwoHandedMace: return 0.34f;
+                case WeaponKind.SwordAndShield: return 0.22f;
+                case WeaponKind.DualSwords: return 0.16f;
+                default: return 0.18f;
+            }
+        }
+
+        /// <summary>
+        /// Starts the swing in this many seconds, so the weapon arrives when the blow does.
+        ///
+        /// Negative or zero swings now: a blow that lands on the first substep of the phase leaves
+        /// no room to wind up, and a late swing still reads better than none.
+        /// </summary>
+        public void ScheduleSwing(float delaySeconds)
+        {
+            _scheduledSwingIn = Mathf.Max(0f, delaySeconds);
+            _swingScheduled = true;
+            if (_scheduledSwingIn <= 0f) FireScheduledSwing();
+        }
+
+        /// <summary>Drops a swing that has not fired. Called when the phase it belonged to ends.</summary>
+        public void CancelScheduledSwing() => _swingScheduled = false;
+
+        private bool _swingScheduled;
+        private float _scheduledSwingIn;
+
+        private void AdvanceScheduledSwing(float dt)
+        {
+            if (!_swingScheduled) return;
+
+            _scheduledSwingIn -= dt;
+            if (_scheduledSwingIn <= 0f) FireScheduledSwing();
+        }
+
+        private void FireScheduledSwing()
+        {
+            _swingScheduled = false;
+            PlaySwing();
+        }
+
+        /// <summary>
         /// Whether he stands ready, which he does for as long as the player is thinking.
         ///
         /// Set from the phase rather than fired as a one-shot: it is a stance held for four seconds,
@@ -693,6 +747,15 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>This gladiator just dealt a blow.</summary>
         public void PlaySwing()
         {
+            // One swing per blow, not one per announcement of it.
+            //
+            // The swing is now started ahead of the blow, off the phase's prediction, and the blow
+            // itself still announces one when it lands. Without this guard that second call retriggers
+            // Attack from Any State partway through the swing already playing - which restarts the
+            // clip on the exact frame the weapon was about to arrive, so the prediction bought a
+            // wind-up and then threw it away.
+            if (_sinceSwingStarted < SwingRestartGuard) return;
+
             // A blow he was taking arrived earlier in this same frame - which half of the exchange
             // is announced first is an implementation detail of the loop, and without this the
             // fighter who happened to be struck first was the only one whose swing got cut off.
@@ -705,7 +768,19 @@ namespace ColosseumDuel.Gameplay.View
 
             if (_animator != null) _animator.SetTrigger(AnimatorParams.AttackId);
             _swingHoldLeft = SwingHoldsOffTheRecoil;
+            _sinceSwingStarted = 0f;
         }
+
+        /// <summary>
+        /// How long after a swing starts another call to start one is ignored.
+        ///
+        /// Long enough to cover the wind-up the prediction bought - the longest lead is the mace's
+        /// third of a second - and short enough that two genuinely separate exchanges in one cycle
+        /// still get a swing each.
+        /// </summary>
+        private const float SwingRestartGuard = 0.42f;
+
+        private float _sinceSwingStarted = float.MaxValue;
 
         /// <summary>Lets a held-back recoil through once the swing has had its moment.</summary>
         private void AdvanceSwingHold(float dt)
@@ -898,6 +973,8 @@ namespace ColosseumDuel.Gameplay.View
         {
             AdvanceBleedFlash(dt);
             AdvanceSwingHold(dt);
+            AdvanceScheduledSwing(dt);
+            if (_sinceSwingStarted < float.MaxValue) _sinceSwingStarted += dt;
 
             // Hit reaction: a quick squash-and-recover on the model only, so the bars above the head
             // stay put and readable while it plays.

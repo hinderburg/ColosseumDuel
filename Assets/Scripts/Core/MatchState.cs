@@ -12,6 +12,17 @@ namespace ColosseumDuel.Core
 
         public bool NeedsPick => Active == null && Roster.Any(g => g.Alive);
         public bool HasAnyAlive => Roster.Any(g => g.Alive);
+
+        /// <summary>
+        /// Seconds into the coming action phase at which this side's first blow lands, or negative
+        /// if it never does. Written when the phase starts and read by the view.
+        ///
+        /// It can be known because the phase is deterministic: both plans are in before anyone
+        /// moves, and nothing during the phase depends on anything outside it. That is what lets the
+        /// swing animation start early enough for the weapon to arrive on the frame the blow does,
+        /// instead of the blow landing and the swing beginning afterwards.
+        /// </summary>
+        public float StrikeEta = -1f;
     }
 
     public sealed class MatchState

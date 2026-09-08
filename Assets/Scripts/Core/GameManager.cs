@@ -429,6 +429,7 @@ namespace ColosseumDuel.Core
             _scorched[0] = 0f;
             _scorched[1] = 0f;
 
+            PredictStrikes();
             SetPhase(MatchPhase.Action);
         }
 
@@ -484,6 +485,99 @@ namespace ColosseumDuel.Core
             if (a.Alive) a.Facing = towardsBot;
             if (b.Alive) b.Facing = -towardsBot;
         }
+
+        /// <summary>
+        /// Works out when in the coming phase each side's first blow lands, before anyone has moved.
+        ///
+        /// The phase is deterministic once both plans are in: everything that decides where the two
+        /// end up - speed, aim, power, the wall - is known now, and nothing during the phase depends
+        /// on anything outside it. So the answer can be had by running the movement forward.
+        ///
+        /// Movement only. Damage, rage, traps and the hazard are left out on purpose: they change
+        /// what the phase costs, not where anybody is, and a prediction that also dealt damage would
+        /// be a second simulation quietly disagreeing with the first. Collisions are the exception,
+        /// because running into somebody is an exchange and there is nothing after it worth
+        /// predicting.
+        ///
+        /// A weapon picked up mid-run counts from the moment it is picked up, which is the whole
+        /// reason a fighter runs at one: the reach he strikes with is the reach he has when he
+        /// arrives, not the one he set off with.
+        /// </summary>
+        private void PredictStrikes()
+        {
+            State.P1.StrikeEta = -1f;
+            State.Bot.StrikeEta = -1f;
+
+            var a = State.P1.Active;
+            var b = State.Bot.Active;
+            if (a == null || b == null || !a.Alive || !b.Alive) return;
+
+            Vector2 posA = a.Pos, velA = a.Vel, posB = b.Pos, velB = b.Vel;
+            float reachA = a.WeaponDef.Reach, reachB = b.WeaponDef.Reach;
+
+            int steps = Mathf.CeilToInt(GameConstants.ActionTime / PredictionStep);
+            float t = 0f;
+
+            for (int step = 0; step < steps; step++)
+            {
+                var wasA = posA;
+                var wasB = posB;
+
+                posA += velA * PredictionStep;
+                ArenaShape.Bounce(ref posA, ref velA, GameConstants.GladiatorRadius);
+                posB += velB * PredictionStep;
+                ArenaShape.Bounce(ref posB, ref velB, GameConstants.GladiatorRadius);
+
+                t += PredictionStep;
+
+                // What he will be holding by the time he gets there.
+                reachA = Mathf.Max(reachA, ReachOfItemAt(posA));
+                reachB = Mathf.Max(reachB, ReachOfItemAt(posB));
+
+                float distance = ClosestApproach(wasA, posA, wasB, posB);
+
+                if (State.P1.StrikeEta < 0f && distance <= reachA) State.P1.StrikeEta = t;
+                if (State.Bot.StrikeEta < 0f && distance <= reachB) State.Bot.StrikeEta = t;
+
+                // A collision is an exchange, and both sides swing in it whatever their reach.
+                if (distance <= GameConstants.CollideDistance)
+                {
+                    if (State.P1.StrikeEta < 0f) State.P1.StrikeEta = t;
+                    if (State.Bot.StrikeEta < 0f) State.Bot.StrikeEta = t;
+                    return;
+                }
+
+                if (State.P1.StrikeEta >= 0f && State.Bot.StrikeEta >= 0f) return;
+            }
+        }
+
+        /// <summary>
+        /// The reach of a weapon lying close enough to be swept up at this point, or zero.
+        ///
+        /// Zero rather than a miss, so callers can take the larger of this and what they carry: a
+        /// fighter never picks up something shorter than the weapon in his hands and loses reach.
+        /// </summary>
+        private float ReachOfItemAt(Vector2 pos)
+        {
+            var items = State.Items?.Items;
+            if (items == null) return 0f;
+
+            float best = 0f;
+            foreach (var item in items)
+            {
+                if (item == null) continue;
+                if (Vector2.Distance(pos, item.Pos) > GameConstants.PickupDistance) continue;
+                best = Mathf.Max(best, WeaponDef.Get(item.Kind).Reach);
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// How finely the prediction walks the phase. Finer than the substeps the phase itself uses,
+        /// because this is arithmetic on two positions rather than a full step of the world, and the
+        /// answer feeds an animation whose lead time is measured in tenths of a second.
+        /// </summary>
+        private const float PredictionStep = GameConstants.ActionTime / 60f;
 
         private void StepActionSub(float dt)
         {

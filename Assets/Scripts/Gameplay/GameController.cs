@@ -211,7 +211,43 @@ namespace ColosseumDuel.Gameplay
 
         private void OnPhaseChanged(MatchState state)
         {
+            if (state.Phase == MatchPhase.Action) ScheduleSwings(state);
+            else
+            {
+                _playerView?.CancelScheduledSwing();
+                _botView?.CancelScheduledSwing();
+            }
+
             PhaseChanged?.Invoke(state);
+        }
+
+        /// <summary>
+        /// Starts each side's swing early enough that the weapon arrives when the blow does.
+        ///
+        /// The simulation has already worked out when in this phase each of them lands one - it can,
+        /// because the phase is deterministic once both plans are in. All this does is take that off
+        /// the clock by however long that weapon's swing takes to travel.
+        ///
+        /// A side with no blow coming is not scheduled at all: the swing that follows a blow landing
+        /// is still there for anything the prediction could not see, and one thrown at nothing is
+        /// worse than one thrown late.
+        /// </summary>
+        private void ScheduleSwings(MatchState state)
+        {
+            ScheduleSwing(_playerView, state.P1);
+            ScheduleSwing(_botView, state.Bot);
+        }
+
+        private static void ScheduleSwing(GladiatorView view, PlayerState side)
+        {
+            if (view == null) return;
+
+            view.CancelScheduledSwing();
+
+            var g = side.Active;
+            if (g == null || !g.Alive || side.StrikeEta < 0f) return;
+
+            view.ScheduleSwing(side.StrikeEta - GladiatorView.SwingLead(g.Weapon));
         }
 
         // ------------------------------------------------------------------
