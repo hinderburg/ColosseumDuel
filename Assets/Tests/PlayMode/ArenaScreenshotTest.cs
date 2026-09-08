@@ -86,6 +86,17 @@ namespace ColosseumDuel.Tests
             input.UpdateDrag(player.Pos - aim * GameConstants.MaxDragVirtual);
             yield return null;
 
+            // A couple of damage numbers in the air, so the frame carries the one part of the HUD
+            // that only exists for a second at a time and can never be caught by waiting for it.
+            var numbers = Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.DamageNumbersView>();
+            if (numbers != null)
+            {
+                numbers.Show(player.Pos, 34f, ColosseumDuel.Gameplay.Hud.DamageNumbersView.Source.Blow);
+                numbers.Show(controller.Manager.State.Bot.Active.Pos, 65f,
+                    ColosseumDuel.Gameplay.Hud.DamageNumbersView.Source.Spikes);
+                yield return null;
+            }
+
             yield return Capture(OutputPath());
 
             canvas.renderMode = originalMode;

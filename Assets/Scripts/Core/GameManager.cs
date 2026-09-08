@@ -49,6 +49,15 @@ namespace ColosseumDuel.Core
         /// </summary>
         public event Action<PlayerSide, float> Bled;
 
+        /// <summary>
+        /// What the closing arena cost somebody over one action phase, announced once at the end of
+        /// it. The spikes deal their damage continuously, substep by substep, so this is the only
+        /// point at which the cost is a number rather than a fraction of one.
+        /// </summary>
+        public event Action<PlayerSide, float> Scorched;
+
+        private readonly float[] _scorched = new float[2];
+
         private readonly System.Random _rng;
 
         public GameManager(System.Random rng = null)
@@ -413,6 +422,11 @@ namespace ColosseumDuel.Core
             ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
             FaceOpponents();
 
+            // Zeroed here rather than only when it is announced, so a phase abandoned partway - a
+            // round restarted, a match thrown away - cannot carry its tally into the next one.
+            _scorched[0] = 0f;
+            _scorched[1] = 0f;
+
             SetPhase(MatchPhase.Action);
         }
 
@@ -529,7 +543,14 @@ namespace ColosseumDuel.Core
             if (HazardSystem.IsInActiveHazard(g.Pos, State.Cycle))
             {
                 float dps = GameConstants.HazardDamagePerPhase / GameConstants.ActionTime;
-                g.TakeDamage(dps * dt);
+                float bite = dps * dt;
+                g.TakeDamage(bite);
+
+                // Totalled rather than announced. This runs once per substep of every frame, so a
+                // listener told each time would be told a hundred times a phase about a fraction of
+                // a point - which is not something anybody can be shown. The total goes out once,
+                // when the phase ends.
+                _scorched[(int)SideOf(g)] += bite;
             }
 
             // item pickup
@@ -685,6 +706,8 @@ namespace ColosseumDuel.Core
             // come within reach of each other, so a cycle that ends with them standing together has
             // already been paid for - on the substep they arrived.
 
+            FlushScorched();
+
             State.P1.Active?.ResolveCycleRage();
             State.Bot.Active?.ResolveCycleRage();
 
@@ -698,6 +721,22 @@ namespace ColosseumDuel.Core
             }
 
             StartCycle();
+        }
+
+        /// <summary>
+        /// Announces a phase's worth of spike damage and clears the tally.
+        ///
+        /// Cleared whether or not anybody was listening, so a phase spent in the fire cannot carry
+        /// into the next one and be reported twice.
+        /// </summary>
+        private void FlushScorched()
+        {
+            for (int side = 0; side < _scorched.Length; side++)
+            {
+                float total = _scorched[side];
+                _scorched[side] = 0f;
+                if (total > 0f) Scorched?.Invoke((PlayerSide)side, total);
+            }
         }
 
         private void AfterRoundEndDelay()

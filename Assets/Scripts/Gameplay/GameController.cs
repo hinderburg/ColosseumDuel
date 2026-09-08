@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay.View;
+using ColosseumDuel.Gameplay.Hud;
 using UnityEngine;
 
 namespace ColosseumDuel.Gameplay
@@ -72,6 +73,7 @@ namespace ColosseumDuel.Gameplay
             Manager.Damaged += OnDamaged;
             Manager.Bitten += OnBitten;
             Manager.Bled += OnBled;
+            Manager.Scorched += OnScorched;
             Manager.AbilityFired += OnAbilityFired;
 
             if (AutoStartOnPlay) RestartMatch();
@@ -227,6 +229,7 @@ namespace ColosseumDuel.Gameplay
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             var victim = Manager.State.Get(side).Active;
             if (victim != null) Arena.PlayBlood(victim.Pos);
+            ShowDamage(side, amount, DamageNumbersView.Source.Blow);
 
             // And a knock on the camera, so a blow is felt and not only seen. Only for blows: a
             // trap and a bleed go through their own events and leave the frame alone.
@@ -249,6 +252,7 @@ namespace ColosseumDuel.Gameplay
 
             var victim = Manager.State.Get(side).Active;
             if (victim != null) Arena.PlayBlood(victim.Pos);
+            ShowDamage(side, amount, DamageNumbersView.Source.Trap);
         }
 
         /// <summary>
@@ -264,7 +268,30 @@ namespace ColosseumDuel.Gameplay
 
             var victim = Manager.State.Get(side).Active;
             if (victim != null) Arena.PlayBlood(victim.Pos);
+            ShowDamage(side, amount, DamageNumbersView.Source.Bleed);
         }
+
+        /// <summary>A phase spent in the closing arena, totalled up.</summary>
+        private void OnScorched(PlayerSide side, float amount)
+            => ShowDamage(side, amount, DamageNumbersView.Source.Spikes);
+
+        /// <summary>
+        /// Sends the number up off whoever paid it.
+        ///
+        /// The view is found on demand rather than at startup: it is built by the HUD in its own
+        /// Start, and which of the two components starts first is not something either of them
+        /// gets to decide.
+        /// </summary>
+        private void ShowDamage(PlayerSide side, float amount, DamageNumbersView.Source source)
+        {
+            if (_damageNumbers == null) _damageNumbers = FindFirstObjectByType<DamageNumbersView>();
+            if (_damageNumbers == null) return;
+
+            var victim = Manager.State.Get(side).Active;
+            if (victim != null) _damageNumbers.Show(victim.Pos, amount, source);
+        }
+
+        private DamageNumbersView _damageNumbers;
 
         private void OnAbilityFired(PlayerSide side)
         {
