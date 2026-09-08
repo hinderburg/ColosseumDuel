@@ -41,7 +41,7 @@ namespace ColosseumDuel.EditorTools
         /// was orange - the two had to agree - and now that the floor is bone, a brown wall around it
         /// is the only warm thing left and reads as mud.
         /// </summary>
-        private static readonly Color StoneTint = new Color(0.66f, 0.64f, 0.60f);
+        private static readonly Color StoneTint = new Color(0.56f, 0.54f, 0.51f);
 
         private const string StoneMaterialDir = "Assets/Materials";
 
