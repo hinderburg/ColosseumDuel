@@ -153,6 +153,23 @@ namespace ColosseumDuel.Core
             return speed;
         }
 
+        /// <summary>
+        /// How fast he will be running once this cycle starts, buff included.
+        ///
+        /// The difference from EffectiveSpeed is one phase of timing. An armed ability has not
+        /// fired yet - it fires at the top of the action phase - so during planning EffectiveSpeed
+        /// still reports the unbuffed number. Anything that draws what the player is about to do
+        /// has to look forward instead: with the speed ability armed, the preview promised a run
+        /// half as long again as the one he would actually make.
+        /// </summary>
+        public float PlannedSpeed()
+        {
+            float speed = EffectiveSpeed();
+            bool willBeSpirited = AbilityArmed && Def.Ability == AbilityKey.Spirit
+                                  && !(Buff.IsActive && Buff.Key == AbilityKey.Spirit);
+            return willBeSpirited ? speed * 1.5f : speed;
+        }
+
         public void AddRage(float amount)
         {
             if (AbilityLockedCycles > 0) return; // locked out after a recent activation

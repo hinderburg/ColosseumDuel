@@ -326,7 +326,9 @@ namespace ColosseumDuel.Core
         {
             var points = new List<Vector2>();
             Vector2 pos = g.Pos;
-            Vector2 vel = aimDirection.normalized * (g.EffectiveSpeed() * GameConstants.SpeedScale * Mathf.Clamp01(power));
+            // PlannedSpeed, not EffectiveSpeed: an armed ability has not fired yet, and this is a
+            // drawing of what is about to happen rather than of what is happening.
+            Vector2 vel = aimDirection.normalized * (g.PlannedSpeed() * GameConstants.SpeedScale * Mathf.Clamp01(power));
             float t = 0f;
             points.Add(pos);
             while (t < GameConstants.ActionTime)
