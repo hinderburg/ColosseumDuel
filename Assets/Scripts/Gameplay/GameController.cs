@@ -440,6 +440,10 @@ namespace ColosseumDuel.Gameplay
         public bool SubmitPlayerAbility(bool armed)
             => Manager != null && Manager.SubmitAbility(PlayerSide.P1, armed);
 
+        /// <summary>Turns the player's gladiator round on the spot. False if it is still charging.</summary>
+        public bool SubmitPlayerAboutFace()
+            => Manager != null && Manager.SubmitAboutFace(PlayerSide.P1);
+
         /// <summary>
         /// Takes back whatever the player had chosen this phase, leaving them undecided again.
         ///

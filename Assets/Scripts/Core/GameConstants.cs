@@ -102,6 +102,16 @@ namespace ColosseumDuel.Core
         public const float RageMax = 1.0f;
         public const int AbilityLockCycles = 1; // cycles rage cannot charge after activating an ability
 
+        /// <summary>
+        /// How many cycles a gladiator goes without his about-face after spending it.
+        ///
+        /// Every gladiator has it and it costs no rage, so time is the whole of its price. Two
+        /// cycles is long enough that turning round is a decision - the fight moves a long way in
+        /// two cycles - and short enough that a man who has run himself at a wall is not stuck
+        /// facing it for the rest of the round.
+        /// </summary>
+        public const int AboutFaceRechargeCycles = 2;
+
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
         public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes

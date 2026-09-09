@@ -323,6 +323,28 @@ namespace ColosseumDuel.Core
             return g.AbilityArmed;
         }
 
+        /// <summary>
+        /// Turns a gladiator round on the spot, if his about-face is charged. Returns whether it was.
+        ///
+        /// Planning only, and it does not touch the plan he has filed - except that it cannot leave
+        /// it standing either: an order given before the turn was aimed into the arc he had then,
+        /// and after it that arc is behind him. Rather than quietly swinging his run round by 180
+        /// degrees, the order is dropped and he is left undecided, which is the state the phase
+        /// started in and the one the buttons already know how to show.
+        /// </summary>
+        public bool SubmitAboutFace(PlayerSide side)
+        {
+            if (State.Phase != MatchPhase.Planning) return false;
+
+            var g = State.Get(side).Active;
+            if (g == null || !g.AboutFace()) return false;
+
+            g.PlannedAction = ActionType.None;
+            g.PlannedAimDirection = Vector2.zero;
+            g.PlannedPower = 0f;
+            return true;
+        }
+
         /// <summary>Simulates the full bounced trajectory for a prospective Move, for UI preview
         /// while the player is still dragging. Mirrors computeTrajectoryPreview() in the JS build.</summary>
         public static List<Vector2> ComputeTrajectoryPreview(GladiatorInstance g, Vector2 aimDirection, float power, float stepSeconds = 0.05f)

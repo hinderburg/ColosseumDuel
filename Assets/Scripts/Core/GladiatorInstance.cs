@@ -106,6 +106,48 @@ namespace ColosseumDuel.Core
             return amount;
         }
 
+
+        /// <summary>
+        /// Cycles still to run before he can turn on the spot again. Zero means it is ready.
+        ///
+        /// The about-face is not a rage ability - it costs nothing and every gladiator has it, whoever
+        /// he is - so it does not go through Rage or ActiveBuff. What it costs is time: two whole
+        /// cycles of not having it, which is what makes spending it a decision rather than a habit.
+        /// </summary>
+        public int AboutFaceCooldown;
+
+        public bool CanAboutFace => AboutFaceCooldown <= 0 && Alive;
+
+        /// <summary>
+        /// How charged the about-face is, from nothing to ready. For the ring on its button.
+        /// </summary>
+        public float AboutFaceReadiness
+            => AboutFaceCooldown <= 0
+                ? 1f
+                : 1f - AboutFaceCooldown / (float)(GameConstants.AboutFaceRechargeCycles + 1);
+
+        /// <summary>
+        /// Turns him round where he stands, and starts the cooldown.
+        ///
+        /// The whole of what it does is flip Facing, because facing is what the arc of ground he can
+        /// be ordered onto is struck about - so a man who has run himself into a corner can spend
+        /// this and have the whole arena in front of him again instead of the wall.
+        ///
+        /// It is not a move and does not spend the cycle. What it spends is the next two.
+        /// </summary>
+        public bool AboutFace()
+        {
+            if (!CanAboutFace) return false;
+
+            Facing = -Facing;
+
+            // Plus one so it also covers the cycle it was used in, the same way an ability lock
+            // does - otherwise "two cycles" would quietly mean one and a bit, depending on how
+            // early in the phase the button was pressed.
+            AboutFaceCooldown = GameConstants.AboutFaceRechargeCycles + 1;
+            return true;
+        }
+
         public float Rage = 0f;
         public int AbilityLockedCycles = 0;
         public ActiveBuff Buff;
@@ -277,6 +319,7 @@ namespace ColosseumDuel.Core
             DealtDamageThisCycle = false;
             TookDamageThisCycle = false;
             if (AbilityLockedCycles > 0) AbilityLockedCycles--;
+            if (AboutFaceCooldown > 0) AboutFaceCooldown--;
             if (Buff.CyclesLeft > 0)
             {
                 Buff.CyclesLeft--;
@@ -310,6 +353,10 @@ namespace ColosseumDuel.Core
             AbilityArmed = false;
             Buff = default;
             AbilityLockedCycles = 0;
+
+            // Charged at the top of every round. A cooldown carried across would punish a round
+            // winner for something he did in the round before, in a fight he is no longer in.
+            AboutFaceCooldown = 0;
 
             // Back to his own weapon each round. A gilded one is the reward for crossing the arena
             // under fire during a round; carrying it into the next one for free would make the
