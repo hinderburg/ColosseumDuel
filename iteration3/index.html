@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Colosseum Duel</title>
+    <style>
+      /*
+        The stock template lays the player out as a fixed 576x1024 box, absolutely
+        positioned and centred with a translate. Absolute positioning takes it out of the flow, so the
+        page has no height of its own and cannot scroll - and centring a box taller than the window puts
+        its top edge at a negative offset. On any screen shorter than the canvas, the top of the game was
+        therefore both cut off and unreachable: nothing to scroll, nowhere to scroll to.
+
+        Here the canvas is fitted to the window instead, keeping the aspect the camera framing is built
+        around. Whichever of the two limits binds first decides the size, so the player is letterboxed
+        rather than cropped or stretched.
+      */
+      :root {
+        --app-height: 100vh;
+        --ground: #14110c;
+      }
+
+      /* Mobile browsers count the space under their own collapsing toolbars in 100vh, which hides the
+         top of the canvas behind the address bar. dvh is the height actually on screen. */
+      @supports (height: 100dvh) {
+        :root { --app-height: 100dvh; }
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--ground);
+        overflow: hidden;
+      }
+
+      #unity-container {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #unity-canvas {
+        display: block;
+        background: var(--ground);
+        width: min(100vw, calc(var(--app-height) * 576 / 1024));
+        height: min(var(--app-height), calc(100vw * 1024 / 576));
+
+        /* The game is played by dragging and tapping on the arena. Without this the browser reads a
+           drag as a scroll or a pinch and takes the input for itself. */
+        touch-action: none;
+      }
+
+      #unity-canvas:focus { outline: none; }
+
+      #unity-loading {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: min(60vw, 240px);
+        font: 14px/1.4 system-ui, sans-serif;
+        color: #c9bda2;
+        text-align: center;
+      }
+
+      #unity-loading-track {
+        margin-top: 10px;
+        height: 4px;
+        border-radius: 2px;
+        background: #2b2620;
+        overflow: hidden;
+      }
+
+      #unity-loading-fill {
+        width: 0%;
+        height: 100%;
+        background: #a6392c;
+        transition: width 0.15s linear;
+      }
+
+      #unity-warning {
+        position: fixed;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        max-width: 90vw;
+        font: 13px/1.4 system-ui, sans-serif;
+        z-index: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="unity-container">
+      <canvas id="unity-canvas" width="576" height="1024" tabindex="-1"></canvas>
+    </div>
+
+    <div id="unity-loading">
+      Colosseum Duel
+      <div id="unity-loading-track"><div id="unity-loading-fill"></div></div>
+    </div>
+
+    <div id="unity-warning"></div>
+
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
+
+      function unityShowBanner(msg, type) {
+        var banner = document.querySelector("#unity-warning");
+        var div = document.createElement("div");
+        div.innerHTML = msg;
+        div.style.cssText = "padding:8px;border-radius:8px;margin-bottom:6px;background:" +
+          (type === "error" ? "#a6392c" : type === "warning" ? "#8a6410" : "#2b2620") + ";color:#fff";
+        banner.appendChild(div);
+        if (type !== "error") setTimeout(function () { banner.removeChild(div); }, 5000);
+      }
+
+      var buildUrl = "Build";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/WebGL.data.unityweb",
+        frameworkUrl: buildUrl + "/WebGL.framework.js.unityweb",
+        codeUrl: buildUrl + "/WebGL.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "ColosseumDuel",
+        productName: "Colosseum Duel",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
+
+      var script = document.createElement("script");
+      script.src = buildUrl + "/WebGL.loader.js";
+      script.onload = function () {
+        createUnityInstance(canvas, config, function (progress) {
+          document.querySelector("#unity-loading-fill").style.width = (100 * progress) + "%";
+        }).then(function () {
+          document.querySelector("#unity-loading").style.display = "none";
+          canvas.focus();
+        }).catch(function (message) {
+          unityShowBanner(message, "error");
+        });
+      };
+      document.body.appendChild(script);
+    </script>
+  </body>
+</html>
