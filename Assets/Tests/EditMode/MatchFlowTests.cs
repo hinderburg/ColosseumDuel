@@ -101,11 +101,11 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheyKeepLookingAtEachOtherWhicheverWayTheyRun()
+        public void TheyLookWhereTheyAreGoing_NotAtEachOther()
         {
-            // Facing used to follow the run, so a gladiator ordered to back off spent the cycle
-            // showing the enemy his shoulders. With a camera fixed overhead, which way a figure is
-            // looking is most of what says these two are in a fight.
+            // They used to look at each other whatever they were doing, which read well and made
+            // the direction a man faces mean nothing. It means something now: it decides which of
+            // him a blow lands on, so turning your back on the other one is a thing you can do.
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
@@ -122,12 +122,16 @@ namespace ColosseumDuel.Tests
                 m.Tick(Dt);
                 if (!p1.Alive || !bot.Alive) break;
 
-                var between = (bot.Pos - p1.Pos).normalized;
-                Assert.AreEqual(1f, Vector2.Dot(p1.Facing, between), 0.001f,
-                    "the player's fighter turned away while retreating");
-                Assert.AreEqual(1f, Vector2.Dot(bot.Facing, -between), 0.001f,
-                    "the opponent turned away while running sideways");
+                Assert.AreEqual(1f, Vector2.Dot(p1.Facing, Vector2.down), 0.001f,
+                    "he was ordered backwards and should be looking backwards");
+                Assert.AreEqual(1f, Vector2.Dot(bot.Facing, Vector2.right), 0.001f,
+                    "she was ordered sideways and should be looking sideways");
             }
+
+            // And that is a back turned, not just a number: the man retreating is showing the other
+            // one his spine, which is the sector that costs.
+            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
+                "running away from somebody should present your back to them");
 
             Assert.Less(p1.Pos.y, bot.Pos.y, "he really did move away, so this was not vacuous");
         }

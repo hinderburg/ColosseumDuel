@@ -43,6 +43,20 @@ namespace ColosseumDuel.Core
         Hilius
     }
 
+    /// <summary>
+    /// Which part of a gladiator a blow landed on, measured against the way he is facing.
+    ///
+    /// Three sectors of ninety degrees each: forty-five either side of his own nose is the front,
+    /// the ninety behind him is his back, and what is left is a flank on each side. The split is
+    /// what makes which way a man is looking a decision rather than decoration.
+    /// </summary>
+    public enum HitSector
+    {
+        Front,
+        Side,
+        Back,
+    }
+
     public enum AbilityKey
     {
         Spirit,   // Brutius - +50% speed for 2 cycles

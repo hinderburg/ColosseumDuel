@@ -145,6 +145,32 @@ namespace ColosseumDuel.Core
         /// </summary>
         public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
 
+        /// <summary>
+        /// Which part of him a blow coming from this point lands on.
+        ///
+        /// Measured from where the attacker is, not from where the blow was aimed: a man standing
+        /// behind you is behind you whatever direction he swung in. The half-angles are why the
+        /// front is the narrowest thing to hit despite every sector being ninety degrees wide - the
+        /// front is forty-five either side of the nose, and the back is forty-five either side of
+        /// the spine.
+        /// </summary>
+        public HitSector SectorHitFrom(Vector2 attackerPos)
+        {
+            var fromHim = attackerPos - Pos;
+            if (fromHim.sqrMagnitude < 0.000001f) return HitSector.Front;
+
+            var facing = Facing.sqrMagnitude > 0.000001f ? Facing.normalized : Vector2.up;
+
+            // The cosine of the angle between where he is looking and where the blow came from.
+            // Forty-five degrees is cos 45, and a hundred and thirty-five is its negative.
+            float alignment = Vector2.Dot(facing, fromHim.normalized);
+
+            const float halfSector = 0.70710678f; // cos 45 degrees
+            if (alignment >= halfSector) return HitSector.Front;
+            if (alignment <= -halfSector) return HitSector.Back;
+            return HitSector.Side;
+        }
+
         public float EffectiveSpeed()
         {
             float speed = Def.Speed;

@@ -107,6 +107,17 @@ namespace ColosseumDuel.Core
         public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
 
         /// <summary>
+        /// What a blow is worth for landing behind a gladiator, and for landing on his flank.
+        ///
+        /// This is what makes the way a man is facing a decision. He turns to where he is running,
+        /// so ordering a run is also ordering which of him is exposed for the rest of the cycle -
+        /// and charging past somebody to end up behind them is worth almost half a blow again.
+        /// </summary>
+        public const float BackAttackMult = 1.40f;
+
+        public const float FlankAttackMult = 1.20f;
+
+        /// <summary>
         /// How much better the gilded copies on the sand are than the weapon a gladiator arrives
         /// with. It is the entire reason to break off and cross a mined arena for one, so it has to
         /// be worth a trap and a stretch of danger zone - but it is a better version of the same

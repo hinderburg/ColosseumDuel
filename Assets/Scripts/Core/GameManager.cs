@@ -427,7 +427,7 @@ namespace ColosseumDuel.Core
 
             ApplyPlannedAction(PlayerSide.P1, State.P1.Active, State.Bot.Active);
             ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
-            FaceOpponents();
+            FaceTravel();
 
             // Zeroed here rather than only when it is announced, so a phase abandoned partway - a
             // round restarted, a match thrown away - cannot carry its tally into the next one.
@@ -469,30 +469,28 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Turns both fighters to look at each other, whatever either of them is doing.
+        /// Turns each fighter to look the way he is going.
         ///
-        /// Facing used to follow the run, which meant a gladiator ordered to back off or circle
-        /// spent the cycle showing the enemy his shoulders - and with the camera fixed overhead, the
-        /// direction a figure looks is most of what says the two are in a fight rather than two
-        /// people crossing the same field. Movement is still whatever the player ordered; only where
-        /// he is looking is decided here.
+        /// They used to look at each other whatever they were doing, which read well and made the
+        /// direction a man faces mean nothing. It means something now: it decides which of him a
+        /// blow lands on. Turning your back on the other one is a thing you can do, and it costs.
         ///
-        /// The cost is that the run clip now plays while strafing or retreating. On a figure this
-        /// size it reads as footwork; a directional blend tree would do it properly, and is not
-        /// worth a rig change yet.
+        /// Standing still keeps the last heading rather than falling back to anything, so a
+        /// gladiator who stops is still facing where he was going - which is what decides the sector
+        /// for the rest of the cycle.
         /// </summary>
-        private void FaceOpponents()
+        private void FaceTravel()
         {
-            var a = State.P1.Active;
-            var b = State.Bot.Active;
-            if (a == null || b == null) return;
+            FaceTravel(State.P1.Active);
+            FaceTravel(State.Bot.Active);
+        }
 
-            var between = b.Pos - a.Pos;
-            if (between.sqrMagnitude < 0.0001f) return;
+        private static void FaceTravel(GladiatorInstance g)
+        {
+            if (g == null || !g.Alive) return;
+            if (g.Vel.sqrMagnitude < 0.0001f) return;
 
-            var towardsBot = between.normalized;
-            if (a.Alive) a.Facing = towardsBot;
-            if (b.Alive) b.Facing = -towardsBot;
+            g.Facing = g.Vel.normalized;
         }
 
         /// <summary>
@@ -598,7 +596,7 @@ namespace ColosseumDuel.Core
 
             StepGladiator(a, dt);
             StepGladiator(b, dt);
-            FaceOpponents();
+            FaceTravel();
 
             if (a == null || b == null || !a.Alive || !b.Alive) return;
 

@@ -32,9 +32,30 @@ namespace ColosseumDuel.Core
         /// The bleeding a weapon leaves is opened here rather than by the caller: it is a property
         /// of the blow, and every place a blow can happen would otherwise have to remember to do it.
         /// </summary>
+        /// <summary>
+        /// What a blow is worth for the part of the man it landed on.
+        ///
+        /// A property of the blow rather than of the defence, so it scales the raw damage and every
+        /// mitigation still applies on top - a shield held by a man who has been got behind is a
+        /// shield facing the wrong way, but it is still a shield.
+        ///
+        /// It scales the bleeding with it, which follows: a wound opened from behind is a deeper
+        /// wound, not a shallower one that keeps bleeding at the same rate.
+        /// </summary>
+        public static float SectorMultiplier(HitSector sector)
+        {
+            switch (sector)
+            {
+                case HitSector.Back: return GameConstants.BackAttackMult;
+                case HitSector.Side: return GameConstants.FlankAttackMult;
+                default: return 1f;
+            }
+        }
+
         public static float DealDamage(GladiatorInstance attacker, GladiatorInstance defender)
         {
-            float raw = ComputeAttackDamage(attacker);
+            float raw = ComputeAttackDamage(attacker)
+                        * SectorMultiplier(defender.SectorHitFrom(attacker.Pos));
             float final = ApplyMitigation(defender, raw);
 
             defender.TakeDamage(final);
