@@ -13,10 +13,10 @@ namespace ColosseumDuel.Core
     /// way, and the sectors on his body (see GladiatorInstance.SectorHitFrom) become something an
     /// opponent can actually work around behind.
     ///
-    /// Both of its dimensions come off his speed and pull in opposite directions. Faster reaches
-    /// further and turns worse - the wide, short arc of a heavy man and the long, narrow one of a
-    /// quick one are the same envelope read at two speeds, and the ability that makes him faster
-    /// makes him less able to change his mind.
+    /// Both of its dimensions come off his speed and run the same way. A quick gladiator reaches
+    /// further and turns wider; a heavy one covers less ground and is stuck harder with the
+    /// heading he set off on - the long, wide envelope and the short, narrow one are the same
+    /// shape read at two speeds, and the ability that makes him faster opens both at once.
     /// </summary>
     public readonly struct MoveEnvelope
     {
@@ -76,7 +76,7 @@ namespace ColosseumDuel.Core
         /// Interpolated across the speeds the three archetypes actually have rather than against
         /// numbers written here, so the ends of the scale stay the slowest and fastest gladiator in
         /// the game if either is ever retuned. Anything quicker than the fastest - which is what the
-        /// speed ability produces - sits at the narrow end rather than off the end of it.
+        /// speed ability produces - sits at the cap rather than off the end of it.
         /// </summary>
         public static float ArcDegreesFor(float speed)
         {
@@ -88,7 +88,7 @@ namespace ColosseumDuel.Core
             }
 
             float t = Mathf.InverseLerp(slowest, fastest, speed);
-            return Mathf.Lerp(GameConstants.MoveArcWideDegrees, GameConstants.MoveArcNarrowDegrees, t);
+            return Mathf.Lerp(GameConstants.MoveArcSlowestDegrees, GameConstants.MoveArcFastestDegrees, t);
         }
 
         /// <summary>

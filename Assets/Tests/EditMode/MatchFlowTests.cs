@@ -153,20 +153,56 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(sharpest * 2f, turnedSoFar, 5f,
                 "the bend was cut short, or it was never a bend at all");
 
-            // And what that turn is worth to the other one. A back, and only just - the turn alone
-            // is 130 degrees where the back sector begins at 135, so it is the ground he covers
-            // that carries him the rest of the way round. Running away is worth more than turning
-            // away, which is exactly the trade the bend was introduced to create.
-            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
-                "running away round a bend should end with your spine to the man you left");
-            Assert.Less(sharpest * 2f, 135f,
-                "and it is the running that did it, not the turning - the turn alone falls short");
+            // And what that turn is worth to the other one. Brutius is the slowest man in the game
+            // and so has the narrowest arc: 75 degrees, of which he uses half on the way out and
+            // half on the way in. That is nowhere near the 135 the back sector begins at, and the
+            // little ground he covers does not make up the difference - he can offer a flank and no
+            // more. What a quick gladiator can do from the same spot is the next test.
+            Assert.AreEqual(HitSector.Side, p1.SectorHitFrom(bot.Pos),
+                "the heaviest man in the game cannot turn his back inside one phase");
 
             // She never moved, and a gladiator who stands still keeps the heading he last ran on.
             Assert.AreEqual(0f, Vector2.Angle(bot.Facing, Vector2.down), 0.01f,
                 "standing still is not a reason to swivel");
 
             Assert.Less(p1.Pos.y, bot.Pos.y, "he really did move away, so this was not vacuous");
+        }
+
+        /// <summary>
+        /// Whether a gladiator can get his back to somebody in one phase is a question about how
+        /// fast he is, and that is the whole point of tying the arc to speed.
+        ///
+        /// Both halves of it matter. A quick man turns 130 degrees and covers 300 units, and between
+        /// the turning and the running he ends the phase spine-on. The heavy one does neither and
+        /// ends it side-on - see the test above, which is the same order given to Brutius.
+        /// </summary>
+        [Test]
+        public void AQuickGladiatorCanGetHisBackTurnedInOnePhase()
+        {
+            var m = NewMatch();
+            m.SubmitPick(PlayerSide.P1, GladiatorId.Hilius);   // the fastest, and so the widest arc
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            p1.Pos = Vector2.zero;
+            bot.Pos = new Vector2(0f, 200f);
+
+            float sharpest = MoveEnvelope.For(p1).HalfAngleDegrees;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
+                "running away at speed should end with your spine to the man you left");
+
+            // And it took both. The turn alone is short of the 135 degrees the back begins at, so
+            // the ground he covered is what carried him the rest of the way round - which is why
+            // this is a fact about running away rather than about turning away.
+            Assert.Less(sharpest * 2f, 135f,
+                "if the turn alone were enough this would prove nothing about the running");
         }
 
         [Test]

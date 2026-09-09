@@ -16,18 +16,19 @@ namespace ColosseumDuel.Tests
             => new GladiatorInstance(def) { Pos = Vector2.zero, Facing = facing };
 
         [Test]
-        public void TheFasterHeIsTheFurtherHeReachesAndTheWorseHeTurns()
+        public void TheFasterHeIsTheFurtherHeReachesAndTheWiderHeTurns()
         {
             var slow = MoveEnvelope.For(Standing(GladiatorDef.Brutius, Vector2.up));   // speed 10
             var quick = MoveEnvelope.For(Standing(GladiatorDef.Hilius, Vector2.up));   // speed 20
 
             Assert.Greater(quick.OuterRadius, slow.OuterRadius,
                 "the quick one covers more ground in a phase");
-            Assert.Less(quick.ArcDegrees, slow.ArcDegrees,
-                "and pays for it by committing harder to the heading he set off on");
+            Assert.Greater(quick.ArcDegrees, slow.ArcDegrees,
+                "and swings wider round with it - both dimensions run the same way");
 
-            // Not a rounding difference - the trade has to be worth noticing.
-            Assert.Greater(slow.ArcDegrees - quick.ArcDegrees, 40f);
+            // Not a rounding difference. Speed is a straight advantage at moving and is paid for on
+            // the other stats; a difference too small to see would make it neither.
+            Assert.Greater(quick.ArcDegrees - slow.ArcDegrees, 40f);
         }
 
         /// <summary>The far edge is exactly the run he is about to make, not a number of its own.</summary>
@@ -58,7 +59,8 @@ namespace ColosseumDuel.Tests
 
             var after = MoveEnvelope.For(g);
             Assert.Greater(after.OuterRadius, before.OuterRadius * 1.4f);
-            Assert.Less(after.ArcDegrees, before.ArcDegrees);
+            Assert.Greater(after.ArcDegrees, before.ArcDegrees,
+                "and opens the arc with it, rather than trading one against the other");
         }
 
         [Test]
