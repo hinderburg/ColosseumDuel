@@ -123,12 +123,122 @@ namespace ColosseumDuel.EditorTools
         {
             ConfigureRenderPipeline();
             ConfigurePlayerSettings();
+            CapImportedTextures();
             BuildViewPalette();
             RebuildArenaScene();
             AssetDatabase.SaveAssets();
             Debug.Log("[Colosseum] Bootstrap finished.");
         }
 
+
+        // ------------------------------------------------------------------
+        // texture budget: what the download actually weighs
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// The Asset Store packs, as they are named on disk. Everything under one of these is
+        /// third-party content imported by hand and absent from a fresh clone, which is exactly why
+        /// its import settings have to be applied by a script rather than committed.
+        /// </summary>
+        private static readonly string[] ImportedPacks =
+        {
+            "Assets/Epic Toon FX/",
+            "Assets/DoubleL/",
+            "Assets/LoafbrrAssets/",
+            "Assets/Low Poly Trim Sheet Asset Collection/",
+            "Assets/Matthew Guz/",
+            "Assets/Crusader_Castle/",
+            "Assets/ExplosiveLLC/",
+            "Assets/Modern GDR - Free icons pack/",
+        };
+
+        /// <summary>
+        /// How large a texture from an imported pack is allowed to be, in pixels on its long edge.
+        ///
+        /// Five hundred and twelve for everything, because nothing in this game is ever seen large:
+        /// the camera looks down at a phone-shaped frame 576 pixels across, a gladiator is about a
+        /// fifth of that tall and a sword is fifty pixels long. The packs ship 2K source art, which
+        /// is the right thing for them to ship and four times the pixels this game can display in
+        /// each direction.
+        /// </summary>
+        private const int PackTextureMaxSize = 512;
+
+        /// <summary>
+        /// Paths that get a different cap from the blanket one, longest match first.
+        ///
+        /// Two kinds of exception. The icon atlas is sliced into sprites drawn at 24 to 40 pixels,
+        /// but there are a hundred of them on one sheet, so the sheet needs to stay larger than any
+        /// one icon - halving it is enough and taking it to 512 would visibly soften the HUD.
+        ///
+        /// The rest is demo content that is never displayed and cannot be excluded, because it sits
+        /// in a folder called Resources and Unity ships everything in one of those whether anything
+        /// references it or not. It cannot be dropped without deleting somebody's licensed files, so
+        /// it is shrunk to nothing instead - four megabytes of a stranger's example scene was the
+        /// third largest thing in the build.
+        /// </summary>
+        private static readonly (string Path, int MaxSize)[] TextureExceptions =
+        {
+            ("Assets/Modern GDR - Free icons pack/01_Demo/", 32),
+            ("Assets/Modern GDR - Free icons pack/00_Atlas/", 1024),
+        };
+
+        /// <summary>
+        /// Brings every imported pack texture down to something this game can actually display.
+        ///
+        /// Textures were 93% of the build - 75 MB of an 80 MB payload - and the download was most
+        /// of a minute on a decent connection. Compression was never the problem and has been on
+        /// the whole time (gzip with Unity's JS fallback, since Pages cannot send an encoding
+        /// header): gzip has nothing to do with GPU-compressed texture data, which is already
+        /// packed. The only way to make a texture smaller is to have fewer pixels in it.
+        ///
+        /// Run from RunAll and again from BuildWebGL, so a build cannot go out at full size just
+        /// because somebody re-imported a pack since the last bootstrap. Idempotent, and it only
+        /// ever lowers a cap - a texture already smaller than its budget is left alone.
+        /// </summary>
+        [MenuItem("Tools/Colosseum/Cap imported texture sizes", priority = 30)]
+        public static void CapImportedTextures()
+        {
+            int changed = 0;
+            long saved = 0;
+
+            foreach (string guid in AssetDatabase.FindAssets("t:Texture2D"))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                int cap = TextureCapFor(path);
+                if (cap <= 0) continue;
+
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer)) continue;
+                if (importer.maxTextureSize <= cap) continue;
+
+                // Rough, and only for the log line: area scales with the square of the edge.
+                saved += (long)importer.maxTextureSize * importer.maxTextureSize
+                         - (long)cap * cap;
+
+                importer.maxTextureSize = cap;
+                importer.SaveAndReimport();
+                changed++;
+            }
+
+            Debug.Log($"[Colosseum] Capped {changed} pack textures (about {saved / 1_000_000f:0.#} " +
+                      "megapixels of source art the camera could never show).");
+        }
+
+        /// <summary>
+        /// The cap for a path, or zero for anything this is not allowed to touch - the project's own
+        /// art, which is drawn at the size it is used, and everything in Packages.
+        /// </summary>
+        private static int TextureCapFor(string path)
+        {
+            foreach (var exception in TextureExceptions)
+                if (path.StartsWith(exception.Path, StringComparison.Ordinal))
+                    return exception.MaxSize;
+
+            foreach (string pack in ImportedPacks)
+                if (path.StartsWith(pack, StringComparison.Ordinal))
+                    return PackTextureMaxSize;
+
+            return 0;
+        }
         // ------------------------------------------------------------------
         // render pipeline
         // ------------------------------------------------------------------
@@ -243,9 +353,9 @@ namespace ColosseumDuel.EditorTools
             // (they cost ~4 MB of wasm); switch to FullWithStacktrace while chasing a live bug.
             PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.FullWithoutStacktrace;
 
-            // Download size matters a lot here: compression is off (see above), so whatever the
-            // build weighs is what a player waits for. Embedded debug symbols alone were most of a
-            // 46 MB wasm.
+            // Download size matters a lot here, and gzip does nothing for a wasm full of symbols -
+            // they compress, but there is no reason to ship them at all. Embedded debug symbols
+            // alone were most of a 46 MB wasm. See CapImportedTextures for the other 93%.
             PlayerSettings.WebGL.debugSymbolMode = WebGLDebugSymbolMode.Off;
             PlayerSettings.stripEngineCode = true;
             // Low, not High: this project builds most of its objects at runtime, and aggressive
@@ -260,7 +370,8 @@ namespace ColosseumDuel.EditorTools
             SetActiveInputHandling(0);
 
             AssetDatabase.SaveAssets();
-            Debug.Log("[Colosseum] Player settings configured (WebGL compression disabled, input handling = Both).");
+            Debug.Log("[Colosseum] Player settings configured (WebGL gzip with JS fallback, "
+                      + "Input Manager only).");
         }
 
         /// <summary>0 = old Input Manager, 1 = new Input System, 2 = both. No public API exists.</summary>
@@ -701,9 +812,12 @@ namespace ColosseumDuel.EditorTools
 
         private static void BuildWebGL(string outputPath)
         {
-            // Re-assert the settings a Pages deploy depends on, so a build can never go out with
-            // compression on just because someone flipped it in the inspector.
+            // Re-assert the settings a Pages deploy depends on, so a build can never go out on the
+            // wrong compression because someone flipped it in the inspector - or at full texture
+            // size because a pack was re-imported since the last bootstrap, which is the difference
+            // between a fifteen megabyte download and a sixty megabyte one.
             ConfigurePlayerSettings();
+            CapImportedTextures();
 
             var scenes = EditorBuildSettings.scenes
                 .Where(s => s.enabled)
