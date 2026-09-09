@@ -24,17 +24,36 @@ namespace ColosseumDuel.Tests
         private static Vector2 At(float degrees, float distance)
             => MoveEnvelope.Rotate(Vector2.up, degrees) * distance;
 
+        /// <summary>
+        /// The three strike zones nest: twin swords inside sword and shield inside the mace, on
+        /// both axes at once.
+        ///
+        /// Sword and shield used to reach exactly as far as the twin swords, which left it with
+        /// only the damage it takes to tell it apart from them. It sits between the other two on
+        /// every axis now, and this is what says so - written as an ordering rather than as three
+        /// numbers, because the numbers have moved four times and the ordering is the design.
+        /// </summary>
         [Test]
-        public void TheMaceStrikesFurtherAndWiderThanTheBlades()
+        public void TheThreeStrikeZonesNestFromTheBladesOutToTheMace()
         {
             var swords = WeaponDef.DualSwords;
             var shield = WeaponDef.SwordAndShield;
             var mace = WeaponDef.TwoHandedMace;
 
-            Assert.Greater(mace.Reach, shield.Reach);
+            Assert.Greater(mace.Reach, shield.Reach, "the mace should out-reach the shield");
+            Assert.Greater(shield.Reach, swords.Reach, "and the shield should out-reach the blades");
+
             Assert.Greater(mace.SwingArcDegrees, shield.SwingArcDegrees);
             Assert.Greater(shield.SwingArcDegrees, swords.SwingArcDegrees,
                 "the twin swords are the smallest zone in the game, as the mace is the largest");
+
+            // And the middle one really is in the middle rather than a hair off one end: a
+            // difference too small to feel is a stat that is not there.
+            float span = mace.Reach - swords.Reach;
+            Assert.Greater(shield.Reach - swords.Reach, span * 0.25f,
+                "the shield is close enough to the blades to be the blades");
+            Assert.Greater(mace.Reach - shield.Reach, span * 0.25f,
+                "the shield is close enough to the mace to be the mace");
         }
 
         [Test]

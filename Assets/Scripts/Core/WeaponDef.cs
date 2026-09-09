@@ -15,8 +15,11 @@ namespace ColosseumDuel.Core
     /// but lands once. Sword and shield sits between them and is the only one that answers back by
     /// halving what it takes.
     ///
-    /// The two that carry a sword reach the same distance, because they carry the same sword: what
-    /// separates them is the second blade against the shield, not how far either can lean.
+    /// Sword and shield sits between the other two on every axis now, reach included. It used to
+    /// reach exactly as far as the twin swords, on the argument that it carries the same sword -
+    /// which is true of the blade and not of the man behind it: one fighter works two short blades
+    /// in close, the other leans into a single blow from behind a shield. Set for balance rather
+    /// than measured off the model, and the only one of the three that is.
     /// </summary>
     public sealed class WeaponDef
     {
@@ -52,10 +55,15 @@ namespace ColosseumDuel.Core
         /// Every one of these used to be short of its own weapon - the twin swords by half, which
         /// on screen is a blade passing through a man who takes no damage.
         ///
-        /// Five units on top of what the models measure, across all three. A swing sweeps, so the
-        /// weapon covers ground the tip is not standing on at the moment the blow resolves, and
+        /// Five units on top of what the models measure, for two of the three. A swing sweeps, so
+        /// the weapon covers ground the tip is not standing on at the moment the blow resolves, and
         /// matching the reach to the still pose left a margin where a blow visibly should have
         /// landed and did not.
+        ///
+        /// Sword and shield is the exception and is set for balance: it reaches half again as far
+        /// as the sword it carries, so that it sits between the other two on this axis as it does
+        /// on every other. That is a lie about the model, and a deliberate one - the alternative
+        /// was an archetype whose only distinguishing feature was the damage it takes.
         /// </summary>
         public readonly float Reach;
 
@@ -109,7 +117,7 @@ namespace ColosseumDuel.Core
         public static readonly WeaponDef SwordAndShield = new WeaponDef(
             WeaponKind.SwordAndShield, "Sword and shield", damageMultiplier: 1f, attacks: 1,
             incomingDamageMultiplier: GameConstants.ShieldDamageMult, bleeds: false, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 25f, swingArcDegrees: 115f,   // 57 - the same sword, so the same reach
+            reach: GameConstants.GladiatorRadius * 2f + 52f, swingArcDegrees: 100f,   // 84 - halfway between the blades and the hammer
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
