@@ -106,6 +106,21 @@ namespace ColosseumDuel.Core
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
         public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
 
+        // --- how far and how sharply a gladiator may be ordered to turn ---
+
+        /// <summary>
+        /// The arc of ground a gladiator may be ordered onto, at the slowest speed in the game and
+        /// at the fastest. See MoveEnvelope, which interpolates between them.
+        ///
+        /// The wide end is deliberately most of a circle: a heavy man is slow, and taking his
+        /// choices away as well as his ground would be two punishments for one stat. The narrow end
+        /// is where the trade lives - a quick gladiator covers twice the distance and commits to a
+        /// heading while he does it, which is what gives an opponent a back to get round behind.
+        /// </summary>
+        public const float MoveArcWideDegrees = 250f;
+
+        public const float MoveArcNarrowDegrees = 130f;
+
         /// <summary>
         /// What a blow is worth for landing behind a gladiator, and for landing on his flank.
         ///

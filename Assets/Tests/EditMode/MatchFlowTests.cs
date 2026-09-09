@@ -112,7 +112,12 @@ namespace ColosseumDuel.Tests
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
 
-            // Straight backwards, away from the opponent, at full power.
+            // Straight backwards, away from the opponent, at full power. Nobody can turn that far in
+            // one phase any more, so what is expected is the sharpest turn his own envelope allows -
+            // captured now, while he is still standing where the arc was struck from.
+            var expected = MoveEnvelope.For(p1).ClampAim(Vector2.down);
+            var expectedBot = MoveEnvelope.For(bot).ClampAim(Vector2.right);
+
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.right, 1f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
@@ -122,16 +127,25 @@ namespace ColosseumDuel.Tests
                 m.Tick(Dt);
                 if (!p1.Alive || !bot.Alive) break;
 
-                Assert.AreEqual(1f, Vector2.Dot(p1.Facing, Vector2.down), 0.001f,
-                    "he was ordered backwards and should be looking backwards");
-                Assert.AreEqual(1f, Vector2.Dot(bot.Facing, Vector2.right), 0.001f,
+                Assert.AreEqual(0f, Vector2.Angle(p1.Facing, expected), 0.01f,
+                    "he was ordered backwards and should be looking as far back as he can turn");
+                Assert.AreEqual(0f, Vector2.Angle(bot.Facing, expectedBot), 0.01f,
                     "she was ordered sideways and should be looking sideways");
             }
 
-            // And that is a back turned, not just a number: the man retreating is showing the other
-            // one his spine, which is the sector that costs.
-            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
-                "running away from somebody should present your back to them");
+            // The turn really was cut short: Brutius spans 250 degrees, so half of that is as far
+            // round as an order to reverse gets him. A test that let the order through unchanged
+            // would pass here by accident.
+            Assert.AreEqual(GameConstants.MoveArcWideDegrees * 0.5f, Vector2.Angle(Vector2.up, p1.Facing),
+                0.01f, "the reverse was clamped to his own arc rather than obeyed");
+
+            // And what that turn is worth to the other one. Not a back: the back begins 135 degrees
+            // round, and half of his 250-degree arc is 125, so a man who starts the phase looking
+            // at his opponent cannot show them his spine inside one phase however he runs. He can
+            // give them his flank, and does. Turning your back on somebody now takes two decisions,
+            // which is the whole reason the arc is there.
+            Assert.AreEqual(HitSector.Side, p1.SectorHitFrom(bot.Pos),
+                "the sharpest turn away from a man in front of you is a flank, not a back");
 
             Assert.Less(p1.Pos.y, bot.Pos.y, "he really did move away, so this was not vacuous");
         }
@@ -184,6 +198,12 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-gap * 0.5f, 0f);
             bot.Pos = new Vector2(gap * 0.5f, 0f);
 
+            // Squared up. A gladiator guards facing the way he last ran, and these two have been
+            // set down across the short axis of an arena they spawned along - so left as they are,
+            // each has the other abeam, which is outside every swing arc there is.
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+
             float p1Hp = p1.Hp, botHp = bot.Hp;
 
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
@@ -214,10 +234,17 @@ namespace ColosseumDuel.Tests
 
             // Side by side across his path, far enough apart that they never collide, and starting
             // half a dash short of her so a full dash carries him the same distance out the far
-            // side. Half a dash rather than a fixed hundred and twenty units: the reach is what
-            // sets the lateral gap, so a fixed run length quietly stops clearing it the moment the
-            // reach grows, and the test fails on its own geometry rather than on the rule.
-            float miss = (GameConstants.CollideDistance + WeaponDef.DualSwords.Reach) * 0.5f;
+            // side. Both distances are derived rather than written down, so the test keeps failing
+            // on the rule instead of on its own geometry when the numbers are retuned.
+            //
+            // The widest a pass can miss by and still land is reach times the sine of the half arc:
+            // at exactly that gap, the moment she comes inside his reach is the moment she reaches
+            // the edge of his swing, and any wider and she is abeam before he can answer. Four
+            // fifths of it, so the test sits inside the rule rather than on its boundary.
+            float halfArc = WeaponDef.DualSwords.SwingArcDegrees * 0.5f * Mathf.Deg2Rad;
+            float miss = WeaponDef.DualSwords.Reach * Mathf.Sin(halfArc) * 0.8f;
+            Assert.Greater(miss, GameConstants.CollideDistance,
+                "and still wide enough that running past is a pass and not a crash");
             p1.Pos = new Vector2(-miss, -p1.DashReach() * 0.5f);
             bot.Pos = new Vector2(0f, 0f);
             float botHp = bot.Hp;
@@ -248,6 +275,12 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-gap * 0.5f, 0f);
             bot.Pos = new Vector2(gap * 0.5f, 0f);
 
+            // Squared up. A gladiator guards facing the way he last ran, and these two have been
+            // set down across the short axis of an arena they spawned along - so left as they are,
+            // each has the other abeam, which is outside every swing arc there is.
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+
             float p1Hp = p1.Hp, botHp = bot.Hp;
 
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
@@ -276,6 +309,12 @@ namespace ColosseumDuel.Tests
             Assert.Greater(gap, WeaponDef.DualSwords.Reach, "the gap has to be past the short weapon");
             p1.Pos = new Vector2(-gap * 0.5f, 0f);
             bot.Pos = new Vector2(gap * 0.5f, 0f);
+
+            // Squared up. A gladiator guards facing the way he last ran, and these two have been
+            // set down across the short axis of an arena they spawned along - so left as they are,
+            // each has the other abeam, which is outside every swing arc there is.
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
 
             float p1Hp = p1.Hp, botHp = bot.Hp;
 

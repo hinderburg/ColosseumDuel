@@ -93,6 +93,13 @@ namespace ColosseumDuel.Tests
 
             p1.Pos = new Vector2(-gap * 0.5f, 0f);
             bot.Pos = new Vector2(gap * 0.5f, 0f);
+
+            // Squared up on each other. They are standing across the arena from where they spawned,
+            // and a man guards facing the way he last ran - so without this both are looking down
+            // the long axis with the opponent abeam, which is outside every swing arc in the game.
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 

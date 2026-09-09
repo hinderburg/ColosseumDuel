@@ -59,10 +59,26 @@ namespace ColosseumDuel.Core
         /// </summary>
         public readonly float Reach;
 
+        /// <summary>
+        /// How wide a swing sweeps, in degrees, centred on where he is looking.
+        ///
+        /// Reach alone made the strike zone a ring, and a ring has no front - a man could be run
+        /// down from behind by somebody who never turned to face him. Paired with reach it makes the
+        /// zone a wedge that has to be pointed at somebody, which is what the green arc on the
+        /// control is for: choosing a heading is choosing who can be hit.
+        ///
+        /// The three widen in the same order they lengthen. Twin swords are two short blades worked
+        /// close in; a hammer swung on a full turn covers most of the ground in front of the man
+        /// swinging it. Anything pressed against his body is inside every one of them - see
+        /// GladiatorInstance.CanStrikeFrom.
+        /// </summary>
+        public readonly float SwingArcDegrees;
+
         public readonly string Description;
 
         public WeaponDef(WeaponKind kind, string name, float damageMultiplier, int attacks,
-            float incomingDamageMultiplier, bool bleeds, float knockback, float reach, string description)
+            float incomingDamageMultiplier, bool bleeds, float knockback, float reach, float swingArcDegrees,
+            string description)
         {
             Kind = kind;
             Name = name;
@@ -72,6 +88,7 @@ namespace ColosseumDuel.Core
             Bleeds = bleeds;
             Knockback = knockback;
             Reach = reach;
+            SwingArcDegrees = swingArcDegrees;
             Description = description;
         }
 
@@ -79,25 +96,25 @@ namespace ColosseumDuel.Core
         public static readonly WeaponDef Unarmed = new WeaponDef(
             WeaponKind.None, "Unarmed", damageMultiplier: 0.5f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: 0f,
-            reach: GameConstants.CollideDistance,
+            reach: GameConstants.CollideDistance, swingArcDegrees: 90f,
             description: "Nothing but fists");
 
         public static readonly WeaponDef DualSwords = new WeaponDef(
             WeaponKind.DualSwords, "Twin swords", damageMultiplier: 0.7f, attacks: 2,
             incomingDamageMultiplier: 1f, bleeds: true, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 25f,   // 57
+            reach: GameConstants.GladiatorRadius * 2f + 25f, swingArcDegrees: 90f,   // 57
             description: "Two light blows, and the wound keeps bleeding");
 
         public static readonly WeaponDef SwordAndShield = new WeaponDef(
             WeaponKind.SwordAndShield, "Sword and shield", damageMultiplier: 1f, attacks: 1,
             incomingDamageMultiplier: GameConstants.ShieldDamageMult, bleeds: false, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 25f,   // 57 - the same sword, so the same reach
+            reach: GameConstants.GladiatorRadius * 2f + 25f, swingArcDegrees: 105f,   // 57 - the same sword, so the same reach
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
             WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.5f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: GameConstants.MaceKnockback,
-            reach: GameConstants.GladiatorRadius * 2f + 78f,   // 110
+            reach: GameConstants.GladiatorRadius * 2f + 78f, swingArcDegrees: 150f,   // 110
             description: "One heavy blow that throws them back");
 
         /// <summary>The three a gladiator can be trained in, in the order the UI lists them.</summary>

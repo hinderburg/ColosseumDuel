@@ -77,6 +77,16 @@ namespace ColosseumDuel.Tests
             float gap = Mathf.Min(State.P1.Active.WeaponDef.Reach, State.Bot.Active.WeaponDef.Reach) * 0.7f;
             State.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
             State.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
+
+
+            // Squared up on each other. A blow only lands inside the swinger's own arc now, and a
+
+            // gladiator faces the way he last ran - so set down across the short axis of an arena they
+
+            // spawned along, these two would be looking past one another with nobody in reach.
+
+            State.P1.Active.Facing = Vector2.right;
+            State.Bot.Active.Facing = Vector2.left;
             _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
             _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 

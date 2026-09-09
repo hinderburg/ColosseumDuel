@@ -171,6 +171,42 @@ namespace ColosseumDuel.Core
             return HitSector.Side;
         }
 
+        /// <summary>
+        /// Whether a blow of his would land on somebody standing there, with him standing here.
+        ///
+        /// Takes both positions rather than reading Pos, because the interesting case is a blow
+        /// struck in passing: the action phase asks this about the moment the two came nearest,
+        /// which is somewhere inside a substep and not where either of them ended it.
+        ///
+        /// Two conditions, and the second is the new one. Far enough is still reach. Pointed at him
+        /// is the weapon's swing arc about the way he is looking - and since he looks where he runs,
+        /// this is what makes a heading a weapon: a man cannot be cut down by somebody who ran past
+        /// without ever turning towards him.
+        /// </summary>
+        public bool CanStrikeFrom(Vector2 myPos, Vector2 targetPos)
+            => WithinSwing(myPos, Facing, WeaponDef, targetPos);
+
+        /// <summary>
+        /// The same test with everything spelled out, for the strike prediction - which walks a
+        /// future in which he is holding a weapon he has not picked up yet and running a heading he
+        /// does not have yet, so it cannot ask a gladiator about himself.
+        /// </summary>
+        public static bool WithinSwing(Vector2 from, Vector2 facing, WeaponDef weapon, Vector2 target)
+        {
+            var toTarget = target - from;
+            float distance = toTarget.magnitude;
+            if (distance > weapon.Reach) return false;
+
+            // A body pressed against his own is inside every arc there is. Without this a collision
+            // - two men who have run into each other - could resolve as a miss because one of them
+            // was looking over the other's shoulder, which is not something either of them would
+            // recognise as happening.
+            if (distance <= GameConstants.CollideDistance) return true;
+
+            var look = facing.sqrMagnitude > 0.000001f ? facing.normalized : Vector2.up;
+            return Vector2.Angle(look, toTarget) <= weapon.SwingArcDegrees * 0.5f;
+        }
+
         public float EffectiveSpeed()
         {
             float speed = Def.Speed;

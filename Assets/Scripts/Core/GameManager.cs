@@ -329,9 +329,16 @@ namespace ColosseumDuel.Core
         {
             var points = new List<Vector2>();
             Vector2 pos = g.Pos;
+
+            // Clamped through the same envelope the action phase will clamp the order through, so
+            // the preview cannot promise a turn he is not going to make. Doing it here rather than
+            // in the caller means every drawing of a run gets it, including the one left on screen
+            // after the order was given.
+            var heading = MoveEnvelope.For(g).ClampAim(aimDirection.normalized);
+
             // PlannedSpeed, not EffectiveSpeed: an armed ability has not fired yet, and this is a
             // drawing of what is about to happen rather than of what is happening.
-            Vector2 vel = aimDirection.normalized * (g.PlannedSpeed() * GameConstants.SpeedScale * Mathf.Clamp01(power));
+            Vector2 vel = heading * (g.PlannedSpeed() * GameConstants.SpeedScale * Mathf.Clamp01(power));
             float t = 0f;
             points.Add(pos);
             while (t < GameConstants.ActionTime)
@@ -461,11 +468,24 @@ namespace ColosseumDuel.Core
                 AbilityFired?.Invoke(side);
             }
 
-            // Facing is not set here any more - see FaceOpponents. A gladiator never turns his back
-            // on the other one, whichever way he is running.
-            g.Vel = g.PlannedAction == ActionType.Move
-                ? g.PlannedAimDirection * (g.EffectiveSpeed() * GameConstants.SpeedScale * g.PlannedPower)
-                : Vector2.zero; // Defend, or no plan at all - stand still
+            // Facing is not set here - see FaceTravel, which runs once both sides have been given
+            // their velocity. It still holds last cycle's heading at this point, which is exactly
+            // what the envelope has to be measured from: the arc drawn during planning was struck
+            // about the way he was already looking.
+            //
+            // The turn is clamped here rather than only where the order is given, so it is a rule of
+            // the world and not a manner of the interface. The bot files aims through the same
+            // field, and an order that reached this line by any other route - a test, a replay -
+            // would otherwise be allowed a turn no player could ask for.
+            if (g.PlannedAction == ActionType.Move)
+            {
+                var aim = MoveEnvelope.For(g).ClampAim(g.PlannedAimDirection);
+                g.Vel = aim * (g.EffectiveSpeed() * GameConstants.SpeedScale * g.PlannedPower);
+            }
+            else
+            {
+                g.Vel = Vector2.zero; // Defend, or no plan at all - stand still
+            }
         }
 
         /// <summary>
@@ -520,7 +540,8 @@ namespace ColosseumDuel.Core
             if (a == null || b == null || !a.Alive || !b.Alive) return;
 
             Vector2 posA = a.Pos, velA = a.Vel, posB = b.Pos, velB = b.Vel;
-            float reachA = a.WeaponDef.Reach, reachB = b.WeaponDef.Reach;
+            Vector2 lookA = a.Facing, lookB = b.Facing;
+            WeaponDef armedA = a.WeaponDef, armedB = b.WeaponDef;
 
             int steps = Mathf.CeilToInt(GameConstants.ActionTime / PredictionStep);
             float t = 0f;
@@ -537,14 +558,21 @@ namespace ColosseumDuel.Core
 
                 t += PredictionStep;
 
-                // What he will be holding by the time he gets there.
-                reachA = Mathf.Max(reachA, ReachOfItemAt(posA));
-                reachB = Mathf.Max(reachB, ReachOfItemAt(posB));
+                // What he will be holding by the time he gets there, and the way he will be
+                // looking once he is moving - both of them the future, not the present.
+                armedA = LongerOf(armedA, WeaponAt(posA));
+                armedB = LongerOf(armedB, WeaponAt(posB));
+                if (velA.sqrMagnitude > 0.000001f) lookA = velA.normalized;
+                if (velB.sqrMagnitude > 0.000001f) lookB = velB.normalized;
 
-                float distance = ClosestApproach(wasA, posA, wasB, posB);
+                float distance = ClosestApproach(wasA, posA, wasB, posB, out float when);
+                var metA = Vector2.Lerp(wasA, posA, when);
+                var metB = Vector2.Lerp(wasB, posB, when);
 
-                if (State.P1.StrikeEta < 0f && distance <= reachA) State.P1.StrikeEta = t;
-                if (State.Bot.StrikeEta < 0f && distance <= reachB) State.Bot.StrikeEta = t;
+                if (State.P1.StrikeEta < 0f && GladiatorInstance.WithinSwing(metA, lookA, armedA, metB))
+                    State.P1.StrikeEta = t;
+                if (State.Bot.StrikeEta < 0f && GladiatorInstance.WithinSwing(metB, lookB, armedB, metA))
+                    State.Bot.StrikeEta = t;
 
                 // A collision is an exchange, and both sides swing in it whatever their reach.
                 if (distance <= GameConstants.CollideDistance)
@@ -559,24 +587,32 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// The reach of a weapon lying close enough to be swept up at this point, or zero.
+        /// The weapon lying close enough to be swept up at this point, or null.
         ///
-        /// Zero rather than a miss, so callers can take the larger of this and what they carry: a
+        /// Null rather than a miss, so callers can take the longer of this and what they carry: a
         /// fighter never picks up something shorter than the weapon in his hands and loses reach.
         /// </summary>
-        private float ReachOfItemAt(Vector2 pos)
+        private WeaponDef WeaponAt(Vector2 pos)
         {
             var items = State.Items?.Items;
-            if (items == null) return 0f;
+            if (items == null) return null;
 
-            float best = 0f;
+            WeaponDef best = null;
             foreach (var item in items)
             {
                 if (item == null) continue;
                 if (Vector2.Distance(pos, item.Pos) > GameConstants.PickupDistance) continue;
-                best = Mathf.Max(best, WeaponDef.Get(item.Kind).Reach);
+                best = LongerOf(best, WeaponDef.Get(item.Kind));
             }
             return best;
+        }
+
+        /// <summary>Whichever of the two strikes further. Either may be null.</summary>
+        private static WeaponDef LongerOf(WeaponDef a, WeaponDef b)
+        {
+            if (a == null) return b;
+            if (b == null) return a;
+            return b.Reach > a.Reach ? b : a;
         }
 
         /// <summary>
@@ -608,7 +644,8 @@ namespace ColosseumDuel.Core
                 return;
             }
 
-            ResolveReachAttacks(a, b, ClosestApproach(wasA, a.Pos, wasB, b.Pos));
+            float nearest = ClosestApproach(wasA, a.Pos, wasB, b.Pos, out float when);
+            ResolveReachAttacks(a, b, Vector2.Lerp(wasA, a.Pos, when), Vector2.Lerp(wasB, b.Pos, when), nearest);
         }
 
         /// <summary>
@@ -623,16 +660,21 @@ namespace ColosseumDuel.Core
         /// Both move at a constant velocity across a substep, so the distance between them is a
         /// quadratic in time and its minimum is one division.
         /// </summary>
-        private static float ClosestApproach(Vector2 fromA, Vector2 toA, Vector2 fromB, Vector2 toB)
+        private static float ClosestApproach(Vector2 fromA, Vector2 toA, Vector2 fromB, Vector2 toB,
+            out float at)
         {
             var separation = fromA - fromB;
             var closing = (toA - fromA) - (toB - fromB);
 
             float speedSq = closing.sqrMagnitude;
-            if (speedSq < 0.000001f) return separation.magnitude;
+            if (speedSq < 0.000001f)
+            {
+                at = 0f;
+                return separation.magnitude;
+            }
 
-            float t = Mathf.Clamp01(-Vector2.Dot(separation, closing) / speedSq);
-            return (separation + closing * t).magnitude;
+            at = Mathf.Clamp01(-Vector2.Dot(separation, closing) / speedSq);
+            return (separation + closing * at).magnitude;
         }
 
         private void StepGladiator(GladiatorInstance g, float dt)
@@ -723,16 +765,23 @@ namespace ColosseumDuel.Core
         /// AttacksRemainingThisCycle, so a gladiator who swings on the substep he comes into range
         /// has nothing left to swing again with while he is still there. The budget is the cooldown.
         ///
-        /// Each side is checked against its own reach, so a mace user really can land a blow from a
-        /// distance a pair of short blades cannot answer from. That asymmetry is the reason reach is
-        /// a stat rather than a constant.
+        /// Each side is checked against its own weapon, so a mace user really can land a blow from a
+        /// distance a pair of short blades cannot answer from - and from an angle they cannot either.
+        /// That asymmetry is the reason reach and swing arc are stats rather than constants.
+        ///
+        /// The pair of positions is where the two came nearest during the substep, not where they
+        /// ended it. A blow struck in passing is struck somewhere in the middle of a step, and the
+        /// wedge has to be tested at that moment or a charge that swept through somebody would be
+        /// judged on the angle it had after it had gone past.
         /// </summary>
-        private void ResolveReachAttacks(GladiatorInstance a, GladiatorInstance b, float distance)
+        private void ResolveReachAttacks(GladiatorInstance a, GladiatorInstance b,
+            Vector2 atA, Vector2 atB, float distance)
         {
             if (a == null || b == null || !a.Alive || !b.Alive) return;
+            if (distance > Mathf.Max(a.WeaponDef.Reach, b.WeaponDef.Reach)) return;
 
-            bool aReaches = a.AttacksRemainingThisCycle > 0 && distance <= a.WeaponDef.Reach;
-            bool bReaches = b.AttacksRemainingThisCycle > 0 && distance <= b.WeaponDef.Reach;
+            bool aReaches = a.AttacksRemainingThisCycle > 0 && a.CanStrikeFrom(atA, atB);
+            bool bReaches = b.AttacksRemainingThisCycle > 0 && b.CanStrikeFrom(atB, atA);
             if (!aReaches && !bReaches) return;
 
             ExchangeBlows(a, b, aReaches, bReaches);
