@@ -123,5 +123,65 @@ namespace ColosseumDuel.Gameplay.View
             mesh.RecalculateBounds();
             return mesh;
         }
+
+        /// <summary>
+        /// A wedge of an annulus, lying flat, centred on +Z so the object's own forward points down
+        /// the middle of it.
+        ///
+        /// The two zones on the control are both this shape at different sizes: the ground a
+        /// gladiator may be sent onto, and the ground his weapon covers. Built about forward rather
+        /// than about +X, which the full ring is, so pointing one at a heading is just setting the
+        /// transform's rotation - there is no offset to remember at every call site.
+        /// </summary>
+        public static Mesh CreateAnnulusSector(float innerRadius, float outerRadius,
+            float arcDegrees, int segments = 64)
+        {
+            segments = Mathf.Max(2, segments);
+            float half = Mathf.Clamp(arcDegrees, 0f, 360f) * 0.5f * Mathf.Deg2Rad;
+
+            int rings = segments + 1;   // one more than the gaps between them: an arc does not wrap
+            var vertices = new Vector3[rings * 2];
+            var uvs = new Vector2[rings * 2];
+            var normals = new Vector3[rings * 2];
+            var triangles = new int[segments * 6];
+
+            for (int i = 0; i < rings; i++)
+            {
+                float t = i / (float)segments;
+                float angle = Mathf.Lerp(-half, half, t);
+                float sin = Mathf.Sin(angle), cos = Mathf.Cos(angle);
+
+                vertices[i * 2] = new Vector3(sin * innerRadius, 0f, cos * innerRadius);
+                vertices[i * 2 + 1] = new Vector3(sin * outerRadius, 0f, cos * outerRadius);
+                uvs[i * 2] = new Vector2(t, 0f);
+                uvs[i * 2 + 1] = new Vector2(t, 1f);
+                normals[i * 2] = Vector3.up;
+                normals[i * 2 + 1] = Vector3.up;
+            }
+
+            for (int i = 0; i < segments; i++)
+            {
+                int inner = i * 2, outer = i * 2 + 1;
+                int nextInner = inner + 2, nextOuter = outer + 2;
+
+                // Wound so the front face looks up at the camera. Angles here run from +Z towards
+                // +X, which seen from above is clockwise, so the order that works for the full ring
+                // builds a sector that is silently invisible.
+                triangles[i * 6] = inner;
+                triangles[i * 6 + 1] = outer;
+                triangles[i * 6 + 2] = nextInner;
+                triangles[i * 6 + 3] = nextInner;
+                triangles[i * 6 + 4] = outer;
+                triangles[i * 6 + 5] = nextOuter;
+            }
+
+            var mesh = new Mesh { name = $"Sector_{innerRadius:0.0}_{outerRadius:0.0}_{arcDegrees:0}" };
+            mesh.vertices = vertices;
+            mesh.uv = uvs;
+            mesh.normals = normals;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            return mesh;
+        }
     }
 }

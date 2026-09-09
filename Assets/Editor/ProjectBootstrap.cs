@@ -344,6 +344,14 @@ namespace ColosseumDuel.EditorTools
                 ProceduralTextures.EnsureArrowHead(TexturesDir + "/ArrowHead.png"), Vector2.one);
 
             palette.PullLine = TransparentUnlit("PullLine", new Color(1f, 1f, 1f, 0.75f));
+
+            // The control itself, drawn on the sand. Green for ground he can be sent onto, red for
+            // ground his weapon covers - and both faint enough to read as light on the floor rather
+            // than as paint, because the fight has to stay legible through them. The rim on the far
+            // edge carries the shape: a flat wash has no boundary, and the boundary is the rule.
+            palette.MoveZone = TransparentUnlit("MoveZone", new Color(0.24f, 0.72f, 0.36f, 0.22f));
+            palette.MoveZoneEdge = TransparentUnlit("MoveZoneEdge", new Color(0.45f, 0.95f, 0.55f, 0.68f));
+            palette.StrikeZone = TransparentUnlit("StrikeZone", new Color(0.88f, 0.20f, 0.18f, 0.44f));
             palette.Burst = TransparentUnlit("Burst", Color.white);
 
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with

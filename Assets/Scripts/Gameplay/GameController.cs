@@ -42,6 +42,9 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Raised whenever the match changes phase. The HUD hooks in here.</summary>
         public event Action<MatchState> PhaseChanged;
 
+        /// <summary>The green arc and red wedge drawn round the player while he is given his orders.</summary>
+        public ControlZoneView ControlZone { get; private set; }
+
         private GladiatorView _playerView;
         private GladiatorView _botView;
 
@@ -151,6 +154,11 @@ namespace ColosseumDuel.Gameplay
             _playerView = GladiatorView.Create("Player", viewRoot, Arena, Arena.Palette.PlayerBody, Arena.Palette.PlayerHelmet);
             _botView = GladiatorView.Create("Bot", viewRoot, Arena, Arena.Palette.BotBody, Arena.Palette.BotHelmet);
 
+            // On the controller rather than on the arena: what it draws is one gladiator's options,
+            // and which gladiator that is only this object knows.
+            ControlZone = gameObject.AddComponent<ControlZoneView>();
+            ControlZone.Bind(Arena);
+
             for (int i = 0; i < GameConstants.ItemCountOnArena; i++)
                 _itemViews.Add(ItemView.Create($"Item_{i}", viewRoot, Arena));
         }
@@ -199,6 +207,11 @@ namespace ColosseumDuel.Gameplay
             bool planning = state.Phase == MatchPhase.Planning;
             _playerView.SetReadyStance(planning);
             _botView.SetReadyStance(planning);
+
+            // The zones belong to the decision being made, so they go up and down with the phase
+            // that makes it. The bot gets none: they are the player's options, and drawing the
+            // opponent's would hand over the half of the guess the blind planning phase is for.
+            if (ControlZone != null) ControlZone.Sync(state.P1.Active, planning);
 
             Arena.Sync(state);
 

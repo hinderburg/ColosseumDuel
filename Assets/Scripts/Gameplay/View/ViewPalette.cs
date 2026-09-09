@@ -42,6 +42,18 @@ namespace ColosseumDuel.Gameplay.View
         public Material PullLine;
 
         /// <summary>
+        /// The green arc on the sand: the ground the player's gladiator can be ordered onto this
+        /// cycle. See ControlZoneView, and MoveEnvelope for the rule it draws.
+        /// </summary>
+        public Material MoveZone;
+
+        /// <summary>The brighter rim along the far edge of that arc - where one dash runs out.</summary>
+        public Material MoveZoneEdge;
+
+        /// <summary>The red wedge over it: the ground his weapon covers, and so who he can hit.</summary>
+        public Material StrikeZone;
+
+        /// <summary>
         /// Transparent unlit material for the expanding impact/ability rings. Shared, with per-ring
         /// alpha driven through a MaterialPropertyBlock.
         /// </summary>

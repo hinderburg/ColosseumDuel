@@ -374,11 +374,20 @@ namespace ColosseumDuel.Gameplay
             if (g == null) return false;
             if (!TryScreenToVirtual(screenPos, out var target)) return false;
 
+            // Folded into the arc he can actually run through before anything is measured off it. A
+            // tap outside the zone is not a mis-click to be thrown away: it is a request to go as
+            // far that way as he can, and it is answered with the closest thing he can do.
+            var envelope = MoveEnvelope.For(g);
+            target = envelope.Clamp(target);
+
             var toTarget = target - g.Pos;
             float distance = toTarget.magnitude;
             if (distance < 0.0001f) return false;
 
-            float reach = g.DashReach();
+            // The zone's own far edge, not DashReach: with the speed ability armed the two differ
+            // by half again, and taking the power off the shorter of them would put full power
+            // two-thirds of the way along the arc the player is looking at.
+            float reach = envelope.OuterRadius;
             float power = reach > 0.0001f ? Mathf.Clamp01(distance / reach) : 1f;
             if (power <= MinPowerToSubmit) return false;
 

@@ -26,6 +26,9 @@ MonoBehaviour:
   BarRage: {fileID: 2100000, guid: 969767cabbb9fd840b7ec7d01f5af92f, type: 2}
   Trajectory: {fileID: 2100000, guid: 0904c02e5cb8f324a851dd407171ddc0, type: 2}
   PullLine: {fileID: 2100000, guid: 58cbe8c21ef617d4999c325afbb14218, type: 2}
+  MoveZone: {fileID: 2100000, guid: 53ac56d9cfc74b644bd16cb694512668, type: 2}
+  MoveZoneEdge: {fileID: 2100000, guid: 39d0af1552a154b498548cbf23004969, type: 2}
+  StrikeZone: {fileID: 2100000, guid: ddf16c6194393a949b3c037af35167a1, type: 2}
   Burst: {fileID: 2100000, guid: 61487793139d73742b5bb77a01e7503d, type: 2}
   HudFont: {fileID: 12800000, guid: d3fb6687adc8e6148adead412fb389b7, type: 3}
   Skull: {fileID: -150716834, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
