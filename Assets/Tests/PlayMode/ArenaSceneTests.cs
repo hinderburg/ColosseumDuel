@@ -143,9 +143,11 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(spikes.All(s => s.localPosition.y < 0f),
                 "nothing should be up while the whole arena is still safe");
 
-            // Cycle 8: the stages at 0.75-1.00 and 0.50-0.75 are live, so everything past half way
-            // out is dangerous and everything inside it is not.
-            _controller.Manager.State.Cycle = 8;
+            // Far enough in that the two outer stages are live, so everything past half way out is
+            // dangerous and everything inside it is not. Derived, because the pacing has moved
+            // twice and a written-down cycle number stopped being the answer both times.
+            _controller.Manager.State.Cycle = GameConstants.HazardSafeCycles + 1
+                                             + GameConstants.HazardRingInterval;
             yield return RunSeconds(1.5f); // they rise rather than snap up
 
             foreach (var spike in spikes)

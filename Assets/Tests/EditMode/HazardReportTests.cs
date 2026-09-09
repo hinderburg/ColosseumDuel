@@ -44,6 +44,9 @@ namespace ColosseumDuel.Tests
         private static Vector2 InTheSpikes()
             => new Vector2(0f, GameConstants.ArenaRadius * GameConstants.ArenaElongation * 0.92f);
 
+        /// <summary>The first cycle on which anything burns at all.</summary>
+        private static int FirstBurningCycle => GameConstants.HazardSafeCycles + 1;
+
         [Test]
         public void APhaseInTheSpikesIsAnnouncedOnTheBeat_AndAddsUpToThePhasesCost()
         {
@@ -57,7 +60,10 @@ namespace ColosseumDuel.Tests
                 burnt.Add(amount);
             };
 
-            m.State.Cycle = 7;   // only the outer ring burns; from cycle 11 the whole arena does
+            // The cycle the outer ring bites on, and only that one: further in is still safe until
+            // the ring after it. Derived, because the pacing has moved twice and a written-down 7
+            // stopped being the answer both times.
+            m.State.Cycle = FirstBurningCycle;
             m.State.P1.Active.Pos = InTheSpikes();
             m.State.Bot.Active.Pos = Vector2.zero;   // inside the outer ring, so he is not burning
 
@@ -94,7 +100,10 @@ namespace ColosseumDuel.Tests
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
-            m.State.Cycle = 7;   // only the outer ring burns; from cycle 11 the whole arena does
+            // The cycle the outer ring bites on, and only that one: further in is still safe until
+            // the ring after it. Derived, because the pacing has moved twice and a written-down 7
+            // stopped being the answer both times.
+            m.State.Cycle = FirstBurningCycle;
             m.State.P1.Active.Pos = InTheSpikes();
             m.State.Bot.Active.Pos = Vector2.zero;
 

@@ -195,7 +195,24 @@ namespace ColosseumDuel.Core
         /// expensive to stand.
         /// </summary>
         public const float HazardDamagePerPhase = 65f;
-        public const int HazardSafeCycles = 6;            // arena is fully safe for the first 6 full cycles
+
+        /// <summary>
+        /// How many full cycles the arena stays safe before the first ring bites.
+        ///
+        /// Raised from six. Six put the first ring down while two fighters were often still closing
+        /// - the approach takes cycles now that a run bends - so the arena was deciding fights that
+        /// had not started yet.
+        /// </summary>
+        public const int HazardSafeCycles = 8;
+
+        /// <summary>
+        /// Cycles between one ring closing and the next.
+        ///
+        /// It used to be one, which gave the whole shrink four cycles from first ring to dead
+        /// centre: less time than two gladiators need to cross the arena, so the ending was the
+        /// arena rather than either of them. At three there is a fight between each closing.
+        /// </summary>
+        public const int HazardRingInterval = 3;
 
         // --- squads ---
         public const int SquadSize = 3;

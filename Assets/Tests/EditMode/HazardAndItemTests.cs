@@ -11,8 +11,12 @@ namespace ColosseumDuel.Tests
     {
         private static Vector2 AtRadiusFraction(float f) => new Vector2(GameConstants.ArenaRadius * f, 0f);
 
+        /// <summary>The cycle the nth ring bites on, counting from zero.</summary>
+        private static int RingCycle(int index)
+            => GameConstants.HazardSafeCycles + 1 + index * GameConstants.HazardRingInterval;
+
         [Test]
-        public void ArenaIsCompletelySafeForTheFirstSixCycles()
+        public void ArenaIsCompletelySafeForTheSafeCycles()
         {
             for (int cycle = 1; cycle <= GameConstants.HazardSafeCycles; cycle++)
                 for (float f = 0f; f <= 1f; f += 0.1f)
@@ -20,34 +24,57 @@ namespace ColosseumDuel.Tests
                         $"cycle {cycle}, radius fraction {f:0.0} should still be safe");
         }
 
+        /// <summary>
+        /// The rings come in from the wall, one every HazardRingInterval cycles, and each one leaves
+        /// the ground inside it alone until its own turn comes round.
+        /// </summary>
         [Test]
-        public void RingsCloseInFromTheEdgeStartingOnCycle7()
+        public void RingsCloseInFromTheEdgeOneEveryInterval()
         {
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.9f), 7));
-            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), 7));
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.9f), RingCycle(0)));
+            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), RingCycle(0)));
 
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), 8));
-            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), 8));
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), RingCycle(1)));
+            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), RingCycle(1)));
 
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), 9));
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), RingCycle(2)));
         }
 
+        /// <summary>
+        /// And the middle of the arena stays standable until the last of them.
+        ///
+        /// The gap between one ring and the next is the whole of the pacing: it used to be one
+        /// cycle, which took the arena from first ring to nowhere-to-stand in less time than two
+        /// gladiators need to cross it. Asserted as a gap rather than as a cycle number so it keeps
+        /// meaning that when the numbers move again.
+        /// </summary>
         [Test]
-        public void TheCoreStaysSafeTwoCyclesLongerThanTheLastRing()
+        public void TheMiddleIsTheLastGroundToGo()
         {
-            Assert.IsFalse(HazardSystem.IsInActiveHazard(Vector2.zero, 10));
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(Vector2.zero, 11),
+            int last = RingCycle(3);
+
+            Assert.IsFalse(HazardSystem.IsInActiveHazard(Vector2.zero, last - 1),
+                "the middle should still be standable the cycle before the last ring");
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(Vector2.zero, last),
                 "by now there is nowhere left to stand");
+
+            Assert.AreEqual(GameConstants.HazardRingInterval, RingCycle(1) - RingCycle(0),
+                "the rings are meant to arrive a fixed number of cycles apart");
         }
 
         [Test]
         public void NextStageIsTelegraphedOneCycleAhead()
         {
-            var upcoming = HazardSystem.UpcomingStage(6);
-            Assert.IsTrue(upcoming.HasValue, "during cycle 6 the UI must be able to warn about cycle 7");
+            int first = RingCycle(0);
+
+            var upcoming = HazardSystem.UpcomingStage(first - 1);
+            Assert.IsTrue(upcoming.HasValue,
+                $"during cycle {first - 1} the UI must be able to warn about cycle {first}");
             Assert.AreEqual(1.00f, upcoming.Value.OuterFraction, 0.0001f);
 
-            Assert.IsFalse(HazardSystem.UpcomingStage(3).HasValue, "nothing to warn about that early");
+            Assert.IsFalse(HazardSystem.UpcomingStage(first - 2).HasValue,
+                "the warning is one cycle out, not a standing notice");
+            Assert.IsFalse(HazardSystem.UpcomingStage(1).HasValue, "nothing to warn about that early");
         }
     }
 

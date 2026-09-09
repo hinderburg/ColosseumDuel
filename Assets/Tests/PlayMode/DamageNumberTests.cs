@@ -160,8 +160,8 @@ namespace ColosseumDuel.Tests
         {
             var state = _controller.Manager.State;
 
-            // Far enough into the match that the rings are live, and standing in one.
-            state.Cycle = 7;
+            // Far enough into the match that the outer ring is live, and standing in it.
+            state.Cycle = GameConstants.HazardSafeCycles + 1;
             state.P1.Active.Pos = new Vector2(0f, GameConstants.ArenaRadius * GameConstants.ArenaElongation * 0.92f);
 
             // The opponent goes dead centre, which the outer ring has not reached.
