@@ -50,6 +50,20 @@ namespace ColosseumDuel.Tests
 
             m.State.P1.Active.Pos = new Vector2(-40f, 0f);
             m.State.Bot.Active.Pos = new Vector2(40f, 0f);
+
+
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+
+            // would each curve away rather than meet.
+
+
+            m.State.P1.Active.Facing = Vector2.right;
+            m.State.Bot.Active.Facing = Vector2.left;
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
 

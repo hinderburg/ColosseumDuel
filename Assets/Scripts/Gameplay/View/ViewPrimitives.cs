@@ -135,6 +135,24 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public static Mesh CreateAnnulusSector(float innerRadius, float outerRadius,
             float arcDegrees, int segments = 64)
+            => CreateAnnulusSector(_ => innerRadius, _ => outerRadius, arcDegrees, segments);
+
+        public static Mesh CreateAnnulusSector(float innerRadius, System.Func<float, float> outerAt,
+            float arcDegrees, int segments = 64)
+            => CreateAnnulusSector(_ => innerRadius, outerAt, arcDegrees, segments);
+
+        /// <summary>
+        /// The same wedge with edges that move: each function is asked, for a turn in degrees off
+        /// the middle, how far out its edge sits there.
+        ///
+        /// The green zone needs this and the red one does not. A weapon reaches the same distance
+        /// whichever way it is swung, but ground bent round towards costs more of a dash than
+        /// ground straight ahead, so the edge of what a gladiator can reach draws in towards the
+        /// sides - a leaf rather than a wedge. Drawn with a flat edge it would offer corners he
+        /// cannot get to, which is the one thing the zone exists to stop the player believing.
+        /// </summary>
+        public static Mesh CreateAnnulusSector(System.Func<float, float> innerAt,
+            System.Func<float, float> outerAt, float arcDegrees, int segments = 64)
         {
             segments = Mathf.Max(2, segments);
             float half = Mathf.Clamp(arcDegrees, 0f, 360f) * 0.5f * Mathf.Deg2Rad;
@@ -150,6 +168,10 @@ namespace ColosseumDuel.Gameplay.View
                 float t = i / (float)segments;
                 float angle = Mathf.Lerp(-half, half, t);
                 float sin = Mathf.Sin(angle), cos = Mathf.Cos(angle);
+
+                float degrees = angle * Mathf.Rad2Deg;
+                float innerRadius = innerAt(degrees);
+                float outerRadius = outerAt(degrees);
 
                 vertices[i * 2] = new Vector3(sin * innerRadius, 0f, cos * innerRadius);
                 vertices[i * 2 + 1] = new Vector3(sin * outerRadius, 0f, cos * outerRadius);
@@ -175,7 +197,7 @@ namespace ColosseumDuel.Gameplay.View
                 triangles[i * 6 + 5] = nextOuter;
             }
 
-            var mesh = new Mesh { name = $"Sector_{innerRadius:0.0}_{outerRadius:0.0}_{arcDegrees:0}" };
+            var mesh = new Mesh { name = $"Sector_{innerAt(0f):0.0}_{outerAt(0f):0.0}_{arcDegrees:0}" };
             mesh.vertices = vertices;
             mesh.uv = uvs;
             mesh.normals = normals;

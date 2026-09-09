@@ -59,6 +59,16 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
 
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+            // would each curve away rather than meet.
+
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
@@ -125,6 +135,16 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
 
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+            // would each curve away rather than meet.
+
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
@@ -155,6 +175,20 @@ namespace ColosseumDuel.Tests
 
             p1.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
+
+
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+
+            // would each curve away rather than meet.
+
+
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
 
             // Everything off the sand except a mace, laid squarely on his path.
             m.State.Items.Items.Clear();

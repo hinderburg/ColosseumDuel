@@ -105,47 +105,66 @@ namespace ColosseumDuel.Tests
         {
             // They used to look at each other whatever they were doing, which read well and made
             // the direction a man faces mean nothing. It means something now: it decides which of
-            // him a blow lands on, so turning your back on the other one is a thing you can do.
+            // him a blow lands on, and it is not a thing he can set freely either - he leaves along
+            // the heading he already has and bends round from there.
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
 
-            // Straight backwards, away from the opponent, at full power. Nobody can turn that far in
-            // one phase any more, so what is expected is the sharpest turn his own envelope allows -
-            // captured now, while he is still standing where the arc was struck from.
-            var expected = MoveEnvelope.For(p1).ClampAim(Vector2.down);
-            var expectedBot = MoveEnvelope.For(bot).ClampAim(Vector2.right);
+            // On open sand in the middle, well clear of the wall. A bounce reflects the run and
+            // the bend carries on turning from there, so a wall in the way would make the total
+            // turn a fact about the arena rather than about him.
+            p1.Pos = Vector2.zero;
+            bot.Pos = new Vector2(0f, 200f);
 
+            var envelope = MoveEnvelope.For(p1);
+            float sharpest = envelope.HalfAngleDegrees;
+
+            // Straight backwards, away from the opponent, at full power. Nobody can turn that far in
+            // one phase, so what he actually does is the sharpest bend he has.
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 1f, false);
-            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.right, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
 
-            for (int i = 0; i < 20 && m.State.Phase == MatchPhase.Action; i++)
+            // He sets off looking exactly where he was already looking. There is no pivot: the turn
+            // is done during the run, which is the whole difference between an order and a swivel.
+            Assert.AreEqual(0f, Vector2.Angle(p1.Facing, Vector2.up), 1.5f,
+                "he should leave along the heading he came in with");
+
+            float turnedSoFar = 0f;
+            for (int i = 0; i < 400 && m.State.Phase == MatchPhase.Action; i++)
             {
                 m.Tick(Dt);
                 if (!p1.Alive || !bot.Alive) break;
 
-                Assert.AreEqual(0f, Vector2.Angle(p1.Facing, expected), 0.01f,
-                    "he was ordered backwards and should be looking as far back as he can turn");
-                Assert.AreEqual(0f, Vector2.Angle(bot.Facing, expectedBot), 0.01f,
-                    "she was ordered sideways and should be looking sideways");
+                float turned = Vector2.Angle(Vector2.up, p1.Facing);
+                Assert.GreaterOrEqual(turned, turnedSoFar - 1f, "he only ever turns one way here");
+                Assert.LessOrEqual(turned, sharpest * 2f + 5f,
+                    "and never further round than twice the sharpest turn he is allowed");
+                turnedSoFar = turned;
             }
 
-            // The turn really was cut short: Brutius spans 250 degrees, so half of that is as far
-            // round as an order to reverse gets him. A test that let the order through unchanged
-            // would pass here by accident.
-            Assert.AreEqual(GameConstants.MoveArcWideDegrees * 0.5f, Vector2.Angle(Vector2.up, p1.Facing),
-                0.01f, "the reverse was clamped to his own arc rather than obeyed");
+            // Twice the sharpest turn by the end: half of it done on the way out and half on the
+            // way in, which is what a circle through a point does.
+            // Within a few degrees rather than exactly: the last tick of a phase overshoots its own
+            // end by up to a frame, and a frame of a one-second phase is a sixtieth of the turn.
+            Assert.AreEqual(sharpest * 2f, turnedSoFar, 5f,
+                "the bend was cut short, or it was never a bend at all");
 
-            // And what that turn is worth to the other one. Not a back: the back begins 135 degrees
-            // round, and half of his 250-degree arc is 125, so a man who starts the phase looking
-            // at his opponent cannot show them his spine inside one phase however he runs. He can
-            // give them his flank, and does. Turning your back on somebody now takes two decisions,
-            // which is the whole reason the arc is there.
-            Assert.AreEqual(HitSector.Side, p1.SectorHitFrom(bot.Pos),
-                "the sharpest turn away from a man in front of you is a flank, not a back");
+            // And what that turn is worth to the other one. A back, and only just - the turn alone
+            // is 130 degrees where the back sector begins at 135, so it is the ground he covers
+            // that carries him the rest of the way round. Running away is worth more than turning
+            // away, which is exactly the trade the bend was introduced to create.
+            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
+                "running away round a bend should end with your spine to the man you left");
+            Assert.Less(sharpest * 2f, 135f,
+                "and it is the running that did it, not the turning - the turn alone falls short");
+
+            // She never moved, and a gladiator who stands still keeps the heading he last ran on.
+            Assert.AreEqual(0f, Vector2.Angle(bot.Facing, Vector2.down), 0.01f,
+                "standing still is not a reason to swivel");
 
             Assert.Less(p1.Pos.y, bot.Pos.y, "he really did move away, so this was not vacuous");
         }
@@ -337,6 +356,16 @@ namespace ColosseumDuel.Tests
             var bot = m.State.Bot.Active;
             p1.Pos = new Vector2(-40f, 0f);
             bot.Pos = new Vector2(40f, 0f);
+
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+            // would each curve away rather than meet.
+
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
             float p1Hp = p1.Hp, botHp = bot.Hp;
 
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
@@ -562,6 +591,11 @@ namespace ColosseumDuel.Tests
             // meets no wall: a bounce would measure the arena rather than the dash.
             p1.Pos = new Vector2(-expected * 0.5f, 0f);
             bot.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.9f);
+
+            // And pointed along the dash. A run leaves along the nose and bends onto its target, so
+            // ordered across his own heading he would arc, and the straight line from start to
+            // finish would be the chord of that arc rather than the ground he covered.
+            p1.Facing = Vector2.right;
             var start = p1.Pos;
 
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
@@ -674,6 +708,16 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-40f, 0f);
             bot.Pos = new Vector2(40f, 0f);
 
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+            // would each curve away rather than meet.
+
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
@@ -708,6 +752,16 @@ namespace ColosseumDuel.Tests
             bot.Hp = 1f;
             p1.Pos = new Vector2(-40f, 0f);
             bot.Pos = new Vector2(40f, 0f);
+
+
+            // Pointed along the charge they are about to be given. A run leaves along the nose and
+
+            // bends onto its target, so two men set down across an axis they did not spawn along
+
+            // would each curve away rather than meet.
+
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
 
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);

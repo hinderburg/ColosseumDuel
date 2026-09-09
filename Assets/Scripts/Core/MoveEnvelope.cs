@@ -91,13 +91,60 @@ namespace ColosseumDuel.Core
             return Mathf.Lerp(GameConstants.MoveArcWideDegrees, GameConstants.MoveArcNarrowDegrees, t);
         }
 
+        /// <summary>
+        /// How much of one dash it costs to run to a point this far off his nose.
+        ///
+        /// A gladiator leaves along the way he is already facing and bends round onto the point -
+        /// he does not pivot on the spot and set off - so the ground he covers getting somewhere is
+        /// the arc, not the straight line to it, and the arc is always the longer of the two. At
+        /// forty-five degrees off the nose it costs a tenth more than the chord; at sixty-five, a
+        /// quarter more.
+        ///
+        /// The ratio is theta over sine theta, and it is one at dead ahead. Written this way so it
+        /// stays a curve through zero rather than a special case with a hole in it.
+        /// </summary>
+        public static float ArcCostFactor(float turnDegrees)
+        {
+            float theta = Mathf.Abs(turnDegrees) * Mathf.Deg2Rad;
+            if (theta < 0.0001f) return 1f;
+            return theta / Mathf.Sin(theta);
+        }
+
+        /// <summary>
+        /// How far out the far edge sits at this much turn, in virtual units.
+        ///
+        /// Not a constant radius, which is what makes the zone a leaf rather than a plain wedge: a
+        /// dash spent bending round covers less ground than a dash spent going straight, so the
+        /// edge draws in towards the sides. Drawn as a plain wedge it would offer corners he cannot
+        /// actually get to - the one thing the zone exists to stop the player believing.
+        /// </summary>
+        public float ReachAtTurn(float turnDegrees) => OuterRadius / ArcCostFactor(turnDegrees);
+
+        /// <summary>
+        /// The turn from his nose onto a point, in degrees, signed anticlockwise. Clamped to the
+        /// sharpest he has, so a point behind him answers with the sharpest turn rather than a
+        /// refusal.
+        /// </summary>
+        public float TurnOnto(Vector2 target)
+        {
+            var offset = target - Origin;
+            if (offset.sqrMagnitude < 0.000001f) return 0f;
+            return Mathf.Clamp(Vector2.SignedAngle(Facing, offset),
+                -HalfAngleDegrees, HalfAngleDegrees);
+        }
+
         /// <summary>Whether a point is somewhere he could be ordered to run.</summary>
         public bool Contains(Vector2 point)
         {
             var offset = point - Origin;
             if (offset.sqrMagnitude < 0.000001f) return true;
-            if (offset.magnitude > OuterRadius) return false;
-            return Vector2.Angle(Facing, offset) <= HalfAngleDegrees;
+
+            float turn = Vector2.SignedAngle(Facing, offset);
+            // A hair of slack on the angle: the point most often asked about is one this same
+            // struct just produced at exactly the half-angle, and asking whether it is inside
+            // itself must not come back no because the last digit went the wrong way.
+            if (Mathf.Abs(turn) > HalfAngleDegrees + 0.001f) return false;
+            return offset.magnitude <= ReachAtTurn(turn) + 0.001f;
         }
 
         /// <summary>
@@ -115,16 +162,53 @@ namespace ColosseumDuel.Core
             float distance = offset.magnitude;
             if (distance < 0.000001f) return Origin;
 
-            float turn = Mathf.Clamp(Vector2.SignedAngle(Facing, offset),
-                -HalfAngleDegrees, HalfAngleDegrees);
+            float turn = TurnOnto(target);
 
             // Only the far edge clamps. The hole in the middle is where he stands, not a wall - see
             // InnerRadius - so a short order stays short and is rejected by the caller as too small
             // to be a run, which is how standing still has always been ordered.
-            float carried = Mathf.Min(distance, OuterRadius);
+            float carried = Mathf.Min(distance, ReachAtTurn(turn));
 
-            var direction = Rotate(Facing, turn);
-            return Origin + direction * carried;
+            return Origin + Rotate(Facing, turn) * carried;
+        }
+
+        /// <summary>
+        /// What share of one dash a run to this point spends. One is everything he has.
+        ///
+        /// Measured along the arc rather than across the chord, which is the whole difference the
+        /// turn makes: two points the same distance away cost differently depending on how far
+        /// round they are.
+        /// </summary>
+        public float PowerOnto(Vector2 target)
+        {
+            if (OuterRadius < 0.0001f) return 0f;
+
+            var offset = target - Origin;
+            float chord = offset.magnitude;
+            if (chord < 0.000001f) return 0f;
+
+            float travelled = chord * ArcCostFactor(TurnOnto(target));
+            return Mathf.Clamp01(travelled / OuterRadius);
+        }
+
+        /// <summary>
+        /// How sharply he has to bend to land on a point, as signed curvature - one over the radius
+        /// of the turn, positive anticlockwise, zero for a straight run.
+        ///
+        /// This is the whole of what the action phase is told about the shape of a run. There is
+        /// exactly one circle that leaves his nose without a kink and passes through the point, and
+        /// its total turn is twice the angle to that point: he does half the turning on the way out
+        /// and half on the way in, which is why an order to a point sixty-five degrees round ends
+        /// with him facing a hundred and thirty degrees from where he started.
+        ///
+        /// Divided by the ground actually covered rather than by a full dash, so a half-power order
+        /// completes the same turn in half the distance - a tighter circle. Otherwise a short order
+        /// would arrive under-turned and somewhere other than where it was pointed.
+        /// </summary>
+        public static float CurvatureFor(float turnDegrees, float runLength)
+        {
+            if (runLength < 0.0001f) return 0f;
+            return 2f * turnDegrees * Mathf.Deg2Rad / runLength;
         }
 
         /// <summary>

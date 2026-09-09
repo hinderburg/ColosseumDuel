@@ -112,14 +112,15 @@ namespace ColosseumDuel.Core
         /// The arc of ground a gladiator may be ordered onto, at the slowest speed in the game and
         /// at the fastest. See MoveEnvelope, which interpolates between them.
         ///
-        /// The wide end is deliberately most of a circle: a heavy man is slow, and taking his
-        /// choices away as well as his ground would be two punishments for one stat. The narrow end
-        /// is where the trade lives - a quick gladiator covers twice the distance and commits to a
-        /// heading while he does it, which is what gives an opponent a back to get round behind.
+        /// A hundred and thirty degrees is the widest the game allows anybody, because he does not
+        /// pivot and set off - he leaves along his nose and bends round, and half of the arc is how
+        /// far round he can bend. The narrow end is where the trade lives: a quick gladiator covers
+        /// twice the distance and commits harder to the heading he set off on, which is what gives
+        /// an opponent a back to get round behind.
         /// </summary>
-        public const float MoveArcWideDegrees = 250f;
+        public const float MoveArcWideDegrees = 130f;
 
-        public const float MoveArcNarrowDegrees = 130f;
+        public const float MoveArcNarrowDegrees = 75f;
 
         /// <summary>
         /// What a blow is worth for landing behind a gladiator, and for landing on his flank.

@@ -22,6 +22,16 @@ namespace ColosseumDuel.Core
         public Vector2 Pos;
         public Vector2 Vel;
 
+        /// <summary>
+        /// How sharply his run bends this cycle: signed curvature, one over the radius of the turn,
+        /// positive anticlockwise. Zero is a straight charge.
+        ///
+        /// Set once when the phase starts and held for it, because the shape of a run is a decision
+        /// made during planning rather than something steered while it happens. See
+        /// MoveEnvelope.CurvatureFor for where the number comes from.
+        /// </summary>
+        public float Curvature;
+
         /// <summary>Unit vector the model should face. Set by the simulation: towards the opponent
         /// while defending (per the design doc), along the run direction while moving.</summary>
         public Vector2 Facing = Vector2.right;
@@ -261,6 +271,7 @@ namespace ColosseumDuel.Core
             PlannedAction = ActionType.None;
             PlannedAimDirection = Vector2.zero;
             PlannedPower = 0f;
+            Curvature = 0f;
 
             AbilityArmed = false;
             DealtDamageThisCycle = false;
@@ -294,6 +305,7 @@ namespace ColosseumDuel.Core
         {
             // Winner persists with current HP (not healed) - only a freshly-picked gladiator gets this.
             Vel = Vector2.zero;
+            Curvature = 0f;
             PlannedAction = ActionType.None;
             AbilityArmed = false;
             Buff = default;

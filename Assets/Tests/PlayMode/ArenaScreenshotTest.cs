@@ -220,6 +220,61 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// The same frame with the tap out at the edge of the zone, so the bend shows.
+        ///
+        /// A gladiator leaves along his nose and turns onto where he was sent, and the whole reason
+        /// the zone has a width is that the turn is limited. Straight ahead the two look identical,
+        /// which is why the frame that ships alongside this one cannot show it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCurvedRunRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+            var input = Object.FindFirstObjectByType<PlayerInputController>();
+            var camera = Camera.main;
+
+            var cameraDriver = camera.GetComponent<DeathCameraView>();
+            if (cameraDriver != null) cameraDriver.enabled = false;
+
+            controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.3f);
+
+            var player = controller.Manager.State.P1.Active;
+            var bot = controller.Manager.State.Bot.Active;
+            player.Pos = new Vector2(-40f, -200f);
+            bot.Pos = new Vector2(120f, -60f);
+            yield return null;
+
+            input.Scheme = ControlScheme.Tap;
+
+            // Right out at the far corner of the arc, which is where the bend is at its sharpest.
+            var envelope = MoveEnvelope.For(player);
+            float turn = -envelope.HalfAngleDegrees * 0.95f;   // round to his right, into the frame
+            var target = player.Pos
+                         + MoveEnvelope.Rotate(player.Facing, turn) * (envelope.ReachAtTurn(turn) * 0.95f);
+            input.TapTo(camera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
+            yield return null;
+
+            // FrameOnPair centres on the middle of the span it is given, measured rightwards from
+            // the point passed in - it was built for the reach frames, where the subject stands at
+            // the left edge. Shifted back by half the span so the run sits in the middle instead.
+            const float span = 260f;
+            var middle = (player.Pos + target) * 0.5f - new Vector2(span * 0.5f, 0f);
+            FrameOnPair(camera, controller.Arena, middle, span, 0f);
+            yield return null;
+
+            yield return Capture(SuffixPath("-curve"));
+
+            if (cameraDriver != null) cameraDriver.enabled = true;
+        }
+
+        /// <summary>
         /// One frame per weapon: a fighter mid-swing, the ring at the distance that weapon is
         /// allowed to strike from, and an opponent standing exactly on it.
         ///

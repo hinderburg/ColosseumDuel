@@ -116,9 +116,15 @@ namespace ColosseumDuel.Gameplay.View
 
             if (!Mathf.Approximately(outer, _builtOuter) || !Mathf.Approximately(arc, _builtArc))
             {
-                _move.sharedMesh = ViewPrimitives.CreateAnnulusSector(inner, outer, arc);
+                // The far edge draws in towards the sides, because a dash spent bending round
+                // covers less ground than a dash spent going straight. Sampled off the envelope
+                // itself rather than reproduced here, so the picture and the rule cannot disagree.
+                float scale = outer / Mathf.Max(envelope.OuterRadius, 0.0001f);
+                System.Func<float, float> edge = turn => envelope.ReachAtTurn(turn) * scale;
+
+                _move.sharedMesh = ViewPrimitives.CreateAnnulusSector(inner, edge, arc);
                 _moveEdge.sharedMesh = ViewPrimitives.CreateAnnulusSector(
-                    outer * (1f - EdgeThickness), outer, arc);
+                    turn => edge(turn) * (1f - EdgeThickness), edge, arc);
                 _builtOuter = outer;
                 _builtArc = arc;
             }

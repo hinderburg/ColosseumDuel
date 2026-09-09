@@ -330,21 +330,28 @@ namespace ColosseumDuel.Core
             var points = new List<Vector2>();
             Vector2 pos = g.Pos;
 
-            // Clamped through the same envelope the action phase will clamp the order through, so
-            // the preview cannot promise a turn he is not going to make. Doing it here rather than
-            // in the caller means every drawing of a run gets it, including the one left on screen
-            // after the order was given.
-            var heading = MoveEnvelope.For(g).ClampAim(aimDirection.normalized);
-
+            // Built through the same envelope the action phase will build the run from, so the lane
+            // cannot promise a turn he is not going to make. Doing it here rather than in the
+            // caller means every drawing of a run gets it, including the one left on screen after
+            // the order was given.
+            //
             // PlannedSpeed, not EffectiveSpeed: an armed ability has not fired yet, and this is a
             // drawing of what is about to happen rather than of what is happening.
-            Vector2 vel = heading * (g.PlannedSpeed() * GameConstants.SpeedScale * Mathf.Clamp01(power));
+            var envelope = MoveEnvelope.For(g);
+            float share = Mathf.Clamp01(power);
+            float speed = g.PlannedSpeed() * GameConstants.SpeedScale * share;
+
+            Vector2 vel = envelope.Facing * speed;
+            float curvature = MoveEnvelope.CurvatureFor(
+                envelope.TurnOnto(g.Pos + aimDirection),
+                speed * GameConstants.ActionTime);
+
             float t = 0f;
             points.Add(pos);
             while (t < GameConstants.ActionTime)
             {
-                pos += vel * stepSeconds;
-                // Same bounce the action phase will run, so the preview stays a promise.
+                // Same step and same bounce the action phase will run, so the preview stays a promise.
+                StepTravel(ref pos, ref vel, curvature, stepSeconds);
                 ArenaShape.Bounce(ref pos, ref vel, GameConstants.GladiatorRadius);
                 points.Add(pos);
                 t += stepSeconds;
@@ -479,12 +486,22 @@ namespace ColosseumDuel.Core
             // would otherwise be allowed a turn no player could ask for.
             if (g.PlannedAction == ActionType.Move)
             {
-                var aim = MoveEnvelope.For(g).ClampAim(g.PlannedAimDirection);
-                g.Vel = aim * (g.EffectiveSpeed() * GameConstants.SpeedScale * g.PlannedPower);
+                var envelope = MoveEnvelope.For(g);
+                float power = Mathf.Clamp01(g.PlannedPower);
+
+                // He leaves along his nose, not along the aim. The aim is where he is going, and
+                // the way there is a bend - the whole turn is done during the run rather than
+                // instantly on the spot before it, which is what a man running actually does and
+                // what the arc on the sand has been drawing.
+                g.Vel = envelope.Facing * (g.EffectiveSpeed() * GameConstants.SpeedScale * power);
+                g.Curvature = MoveEnvelope.CurvatureFor(
+                    envelope.TurnOnto(g.Pos + g.PlannedAimDirection),
+                    power * g.EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime);
             }
             else
             {
                 g.Vel = Vector2.zero; // Defend, or no plan at all - stand still
+                g.Curvature = 0f;
             }
         }
 
@@ -551,9 +568,9 @@ namespace ColosseumDuel.Core
                 var wasA = posA;
                 var wasB = posB;
 
-                posA += velA * PredictionStep;
+                StepTravel(ref posA, ref velA, a.Curvature, PredictionStep);
                 ArenaShape.Bounce(ref posA, ref velA, GameConstants.GladiatorRadius);
-                posB += velB * PredictionStep;
+                StepTravel(ref posB, ref velB, b.Curvature, PredictionStep);
                 ArenaShape.Bounce(ref posB, ref velB, GameConstants.GladiatorRadius);
 
                 t += PredictionStep;
@@ -660,6 +677,22 @@ namespace ColosseumDuel.Core
         /// Both move at a constant velocity across a substep, so the distance between them is a
         /// quadratic in time and its minimum is one division.
         /// </summary>
+        /// <summary>
+        /// One step of a run along its bend: turn first, then travel.
+        ///
+        /// The one place the shape of a run is integrated, because there are three callers - the
+        /// phase itself, the strike prediction that runs ahead of it, and the lane drawn under the
+        /// player's finger - and the whole point of the last two is that they agree with the first.
+        /// Three copies of this would be three chances for the promise to drift from the fact.
+        /// </summary>
+        private static void StepTravel(ref Vector2 pos, ref Vector2 vel, float curvature, float dt)
+        {
+            if (curvature != 0f && vel.sqrMagnitude > 0.00000001f)
+                vel = MoveEnvelope.Rotate(vel, curvature * vel.magnitude * dt * Mathf.Rad2Deg);
+
+            pos += vel * dt;
+        }
+
         private static float ClosestApproach(Vector2 fromA, Vector2 toA, Vector2 fromB, Vector2 toB,
             out float at)
         {
@@ -681,7 +714,7 @@ namespace ColosseumDuel.Core
         {
             if (g == null || !g.Alive) return;
 
-            g.Pos += g.Vel * dt;
+            StepTravel(ref g.Pos, ref g.Vel, g.Curvature, dt);
             ArenaShape.Bounce(ref g.Pos, ref g.Vel, GameConstants.GladiatorRadius);
 
             // hazard damage - continuous DOT while standing in an active danger ring

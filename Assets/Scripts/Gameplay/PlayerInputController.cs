@@ -384,11 +384,11 @@ namespace ColosseumDuel.Gameplay
             float distance = toTarget.magnitude;
             if (distance < 0.0001f) return false;
 
-            // The zone's own far edge, not DashReach: with the speed ability armed the two differ
-            // by half again, and taking the power off the shorter of them would put full power
-            // two-thirds of the way along the arc the player is looking at.
-            float reach = envelope.OuterRadius;
-            float power = reach > 0.0001f ? Mathf.Clamp01(distance / reach) : 1f;
+            // Measured along the bend he will actually run rather than across the straight line to
+            // the tap, and against the zone's own far edge rather than DashReach - with the speed
+            // ability armed those two differ by half again. Taking either the easy way put full
+            // power well short of the edge the player is looking at.
+            float power = envelope.PowerOnto(target);
             if (power <= MinPowerToSubmit) return false;
 
             DefendArmed = false;

@@ -27,7 +27,7 @@ namespace ColosseumDuel.Tests
                 "and pays for it by committing harder to the heading he set off on");
 
             // Not a rounding difference - the trade has to be worth noticing.
-            Assert.Greater(slow.ArcDegrees - quick.ArcDegrees, 60f);
+            Assert.Greater(slow.ArcDegrees - quick.ArcDegrees, 40f);
         }
 
         /// <summary>The far edge is exactly the run he is about to make, not a number of its own.</summary>
@@ -99,7 +99,8 @@ namespace ColosseumDuel.Tests
             var clamped = envelope.Clamp(asked);
 
             Assert.AreEqual(20f, Vector2.Angle(Vector2.up, clamped), 0.01f);
-            Assert.AreEqual(envelope.OuterRadius, clamped.magnitude, 0.01f);
+            Assert.AreEqual(envelope.ReachAtTurn(20f), clamped.magnitude, 0.01f,
+                "shortened to the far edge as it stands at that much turn, not to a flat radius");
         }
 
         /// <summary>
