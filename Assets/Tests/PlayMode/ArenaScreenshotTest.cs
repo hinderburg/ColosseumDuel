@@ -102,13 +102,12 @@ namespace ColosseumDuel.Tests
             // all - which is how this frame came back with an empty arena and nothing to say so.
             yield return RunUntil(() => controller.Manager.State.Phase == MatchPhase.Planning, 10f);
 
-            // Holding a full-length swipe aimed at the far wall, so the captured frame shows the
-            // lane the run is previewed as, its bounce, and the head on the end of it. Drawn with
-            // the swipe rather than the pull because that is the control the game now opens on.
-            var aim = new Vector2(-0.707f, 0.707f);
-            var anchor = new Vector2(120f, -260f);
-            input.TryBeginSwipe(anchor);
-            input.UpdateDrag(anchor + aim * GameConstants.MaxDragVirtual);
+            // An order in, so the captured frame shows the lane the run is previewed as and the head
+            // on the end of it. Given through the control the game ships on, so the frame is a frame
+            // of what a player sees rather than of a scheme they would have to go and choose.
+            input.Scheme = ControlScheme.Tap;
+            var runTo = player.Pos + new Vector2(-0.707f, 0.707f) * player.DashReach();
+            input.TapTo(input.ArenaCamera.WorldToScreenPoint(controller.Arena.ToWorld(runTo)));
             yield return null;
 
             // A couple of damage numbers in the air, so the frame carries the one part of the HUD
@@ -206,10 +205,10 @@ namespace ColosseumDuel.Tests
             bot.Pos = new Vector2(200f, 260f);
             yield return null;
 
-            input.Scheme = ControlScheme.Swipe;
-            var anchor = new Vector2(-160f, 120f);
-            input.TryBeginSwipe(anchor);
-            input.UpdateDrag(anchor + new Vector2(0f, -GameConstants.MaxDragVirtual));
+            // Through the control the game ships on, so the frame shows what a player sees.
+            input.Scheme = ControlScheme.Tap;
+            var target = player.Pos + new Vector2(0f, player.DashReach());
+            input.TapTo(camera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
             yield return null;
 
             FrameOnPair(camera, controller.Arena, new Vector2(0f, -60f), 320f, 0f);

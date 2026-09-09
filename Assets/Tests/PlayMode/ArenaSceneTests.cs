@@ -174,12 +174,12 @@ namespace ColosseumDuel.Tests
         /// Asserted against the scene, because the scene is what the player gets.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheSceneShipsWithSwipingAsTheControl()
+        public IEnumerator TheSceneShipsWithTappingAsTheControl()
         {
             var input = Object.FindFirstObjectByType<PlayerInputController>();
             Assert.IsNotNull(input, "the Arena scene must contain a PlayerInputController");
-            Assert.AreEqual(ControlScheme.Swipe, input.Scheme,
-                "the scene did not ship on the control the menu opens on");
+            Assert.AreEqual(ControlScheme.Tap, input.Scheme,
+                "the scene did not ship on the control the game is meant to open on");
 
             // A tap has to survive the trip through the scene's own camera and arena scaling, not
             // just through a test rig: aim at where the simulation says the gladiator's own dash

@@ -61,6 +61,9 @@ namespace ColosseumDuel.Gameplay.Hud
         private ArenaView _arena;
         private Canvas _canvas;
 
+        /// <summary>Which control is in play, so the instruction names the gesture it wants.</summary>
+        private PlayerInputController _input;
+
         private readonly List<Hint> _itemHints = new List<Hint>();
         private readonly List<Hint> _trapHints = new List<Hint>();
 
@@ -99,13 +102,15 @@ namespace ColosseumDuel.Gameplay.Hud
             }
         }
 
-        public static TutorialView Create(Transform canvas, ViewPalette palette, ArenaView arena)
+        public static TutorialView Create(Transform canvas, ViewPalette palette, ArenaView arena,
+            PlayerInputController input = null)
         {
             var root = HudFactory.CreateRect("Tutorial", canvas);
             HudFactory.Stretch(root);
 
             var view = root.gameObject.AddComponent<TutorialView>();
             view._arena = arena;
+            view._input = input;
             view._canvas = canvas.GetComponentInParent<Canvas>();
 
             for (int i = 0; i < GameConstants.ItemCountOnArena; i++)
@@ -379,13 +384,36 @@ namespace ColosseumDuel.Gameplay.Hud
             var player = state.P1.Active;
             bool armed = player != null && player.WeaponIsGilded;
 
-            // Says the gesture the game is actually listening for. It said "tap" for as long as
-            // tapping was the control, and kept saying it after the swipe took over - which is a
-            // tutorial teaching the wrong thing, and the ring that used to point at the spot is gone
-            // now, so this line is the only guidance left.
-            _instruction.SetText(armed
-                ? "Gilded and stronger - swipe away from the enemy and charge"
-                : "Swipe away from the gold weapon - you take it on the way");
+            // Says the gesture the game is actually listening for.
+            //
+            // It was a fixed string naming whichever control happened to be default when it was
+            // written, and it has now been wrong in both directions - "tap" after the swipe took
+            // over, then "swipe" after the tap came back. The ring that used to point at the spot is
+            // gone, so this line is the only guidance there is; it reads the scheme.
+            var scheme = _input != null ? _input.Scheme : ControlScheme.Tap;
+            _instruction.SetText(armed ? ChargeOrder(scheme) : FetchOrder(scheme));
+        }
+
+        /// <summary>Go and get the weapon, in the gesture this player is using.</summary>
+        private static string FetchOrder(ControlScheme scheme)
+        {
+            switch (scheme)
+            {
+                case ControlScheme.Drag: return "Pull back from your gladiator, away from the gold weapon";
+                case ControlScheme.Swipe: return "Swipe away from the gold weapon - you take it on the way";
+                default: return "Tap just past the gold weapon - you take it on the way";
+            }
+        }
+
+        /// <summary>And now go and use it.</summary>
+        private static string ChargeOrder(ControlScheme scheme)
+        {
+            switch (scheme)
+            {
+                case ControlScheme.Drag: return "Gilded and stronger - pull back away from the enemy";
+                case ControlScheme.Swipe: return "Gilded and stronger - swipe away from the enemy and charge";
+                default: return "Gilded and stronger - tap toward the enemy and swing";
+            }
         }
 
         private void Place(Hint hint, Vector2? virtualPos, string text)

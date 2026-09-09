@@ -161,7 +161,7 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             var palette = Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null;
             _actionButtons = ActionButtonsView.Create(root, palette, Controller != null ? Controller.Arena : null);
-            _tutorial = TutorialView.Create(root, palette, Controller != null ? Controller.Arena : null);
+            _tutorial = TutorialView.Create(root, palette, Controller != null ? Controller.Arena : null, Input);
 
             _abilityButton = _actionButtons.Ability;
             _defendButton = _actionButtons.Defend;
@@ -169,7 +169,7 @@ namespace ColosseumDuel.Gameplay.Hud
             _defendButton.onClick.AddListener(() => Input?.ToggleDefend());
 
             _hint = HudFactory.CreateLabel("Hint", root,
-                "Swipe anywhere to pull back - he runs the other way, as far as you pull",
+                "Tap the arena and your gladiator runs there",
                 14, TextAnchor.LowerCenter, HudFactory.MutedTextColor);
             // Above the player's corner, for the same reason the phase line sits below the opponent's.
             _hint.rectTransform.anchorMin = new Vector2(0f, 0f);
@@ -402,7 +402,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             // The hint has to say what the chosen control actually is; a line about pulling back is
             // worse than no line at all for a player who picked tapping.
-            _hint.text = HintFor(Input != null ? Input.Scheme : ControlScheme.Swipe);
+            _hint.text = HintFor(Input != null ? Input.Scheme : ControlScheme.Tap);
         }
 
         private static string HintFor(ControlScheme scheme)

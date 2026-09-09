@@ -21,9 +21,9 @@ namespace ColosseumDuel.Gameplay
         public GameController Controller;
         public Camera ArenaCamera;
 
-        [Tooltip("Which control the player is using. Swiping is the default; all three are offered " +
-                 "on the main menu and the choice is remembered between sessions.")]
-        public ControlScheme Scheme = ControlScheme.Swipe;
+        [Tooltip("Which control the player is using. Tapping is the default; the other two work " +
+                 "and are switched here, since the menu no longer offers a choice.")]
+        public ControlScheme Scheme = ControlScheme.Tap;
 
         [Tooltip("How far from the gladiator, in virtual units, a press still counts as grabbing " +
                  "them. Only used by the simulation-space entry point; real presses are measured " +
