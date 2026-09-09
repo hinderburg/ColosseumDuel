@@ -21,11 +21,7 @@ namespace ColosseumDuel.Gameplay
         [Header("Squad setup (defaults to the 3 starting gladiators for both sides)")]
         public bool AutoStartOnPlay = true;
 
-        [Header("Planning slow motion")]
-        [Tooltip("How fast the world runs while the player is planning. The phase still lasts its " +
-                 "full real-time duration - only the visuals slow down.")]
-        [Range(0.05f, 1f)] public float PlanningTimeScale = 0.3f;
-
+        [Header("Knockout slow motion")]
         [Tooltip("How fast the world runs while a knockout plays out. Not as slow as planning: the " +
                  "round-end pause is a fixed length in real seconds, and at a quarter speed the " +
                  "death animation would only be a quarter played when the next round started.")]
@@ -177,18 +173,24 @@ namespace ColosseumDuel.Gameplay
             SyncViews();
         }
 
+        /// <summary>
+        /// The world's speed for the phase it is in.
+        ///
+        /// Planning used to run it at a third. It read well on a still arena and it cost more than
+        /// it was worth: the phase is where the player is looking at the fight to decide what to do
+        /// about it, and at a third speed everything they are reading - where the other man is
+        /// going, how far the torches have burned, how the last exchange finished - arrived late.
+        /// A knockout is the opposite case and keeps its slow motion: there is nothing to decide.
+        /// </summary>
         private void ApplyTimeScale()
         {
-            float target = 1f;
-            if (Manager.State.Phase == MatchPhase.Planning) target = PlanningTimeScale;
-            else if (Manager.State.Phase == MatchPhase.RoundEnd) target = DeathTimeScale;
-
+            float target = Manager.State.Phase == MatchPhase.RoundEnd ? DeathTimeScale : 1f;
             if (!Mathf.Approximately(Time.timeScale, target)) Time.timeScale = target;
         }
 
         private void OnDisable()
         {
-            // Time.timeScale is global. Leaving it at a third would follow the scene out and slow
+            // Time.timeScale is global. Leaving it low would follow the scene out and slow
             // down whatever loads next - including the rest of a test run.
             Time.timeScale = 1f;
         }

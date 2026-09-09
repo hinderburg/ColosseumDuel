@@ -10,10 +10,13 @@ using UnityEngine.TestTools;
 namespace ColosseumDuel.Tests
 {
     /// <summary>
-    /// The planning phase runs the world in slow motion, and the wall torches are what makes that
-    /// visible on an otherwise motionless arena.
+    /// The planning phase: how long it lasts, and how fast the world runs while it does.
+    ///
+    /// It used to run the world at a third speed. That is gone - the phase is where the player
+    /// reads the fight to decide what to do about it, and at a third speed everything they were
+    /// reading arrived late - and these are what would catch it coming back.
     /// </summary>
-    public class PlanningSlowMotionTests
+    public class PlanningPhaseTests
     {
         private const string ScenePath = "Assets/Scenes/Arena.unity";
 
@@ -66,7 +69,7 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator PlanningLastsItsTwoSecondsInRealTime()
+        public IEnumerator PlanningLastsItsFullLengthInRealTime()
         {
             // The phase is timed on unscaled time while the world runs at a third speed, which is
             // exactly the sort of pairing that quietly turns two seconds into six. Measured on the
@@ -86,45 +89,58 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator TimeRunsSlowWhilePlanningAndNormalWhileActing()
+        public IEnumerator TheWorldRunsAtFullSpeedWhilePlanning()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
             Assert.AreEqual(MatchPhase.Planning, State.Phase);
-            Assert.Less(Time.timeScale, 0.9f, "planning should visibly slow the world down");
-            Assert.AreEqual(_controller.PlanningTimeScale, Time.timeScale, 0.001f);
+            Assert.AreEqual(1f, Time.timeScale, 0.001f,
+                "planning used to run at a third speed; everything the player reads arrived late");
 
             yield return RunSeconds(GameConstants.PlanningTime + 0.2f);
 
             Assert.AreEqual(MatchPhase.Action, State.Phase);
-            Assert.AreEqual(1f, Time.timeScale, 0.001f, "the action phase runs at full speed");
+            Assert.AreEqual(1f, Time.timeScale, 0.001f, "and the action phase always did");
         }
 
+        /// <summary>
+        /// A knockout keeps its slow motion. It is the opposite case to planning - there is nothing
+        /// to decide and nothing to read, only something to watch.
+        /// </summary>
         [UnityTest]
-        public IEnumerator TheSlowdownDoesNotStretchThePlanningPhaseItself()
+        public IEnumerator AKnockoutStillPlaysOutSlowly()
         {
-            // The whole reason the simulation ticks on unscaled time. Scaling its tick as well would
-            // make two seconds of planning take six real ones at a third speed.
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
-            yield return RunSeconds(GameConstants.RevealTime + 0.05f);
-            Assert.AreEqual(MatchPhase.Planning, State.Phase);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            float startedAt = Time.realtimeSinceStartup;
-            yield return RunUntil(() => State.Phase != MatchPhase.Planning, 20f);
-            float elapsed = Time.realtimeSinceStartup - startedAt;
+            State.Bot.Active.Hp = 0.01f;
+            State.P1.Active.Pos = new Vector2(-40f, 0f);
+            State.Bot.Active.Pos = new Vector2(40f, 0f);
+            State.P1.Active.Facing = Vector2.right;
+            State.Bot.Active.Facing = Vector2.left;
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
 
-            Assert.Less(elapsed, GameConstants.PlanningTime * 1.6f,
-                $"planning took {elapsed:0.0}s of real time; the slowdown is stretching the phase");
+            yield return RunUntil(() => State.Phase == MatchPhase.RoundEnd, 20f);
+
+            Assert.AreEqual(_controller.DeathTimeScale, Time.timeScale, 0.001f);
         }
 
+        /// <summary>
+        /// GameController hands the world back at full speed when it goes away.
+        ///
+        /// Time.timeScale is global: a knockout's slow motion left behind would follow the scene out
+        /// and slow whatever loaded next, including the rest of a test run. Set by hand here rather
+        /// than by reaching a phase that slows it, so this stays a test of the handing back.
+        /// </summary>
         [UnityTest]
         public IEnumerator TimeScaleIsRestoredWhenTheSceneGoesAway()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
-            Assert.Less(Time.timeScale, 0.9f);
 
+            Time.timeScale = 0.25f;
             _controller.gameObject.SetActive(false);
             yield return null;
 
