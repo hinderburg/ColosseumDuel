@@ -494,6 +494,57 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(1f, Player.PlannedPower, 0.001f, "out of range means flat out");
         }
 
+
+        /// <summary>
+        /// The tap follows the finger while it is held, which is just the same order refiled every
+        /// frame - so the thing that has to be true is that refiling replaces rather than adds.
+        ///
+        /// The latch that turns held frames into these calls lives in Update and reads
+        /// Input.mousePosition, which is not something a test can move; what is testable is the
+        /// mechanism underneath it, and that is what would break the feature if it stopped holding.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator DraggingATapReplacesTheOrderRatherThanAddingToIt()
+        {
+            _input.Scheme = ControlScheme.Tap;
+            Player.Pos = Vector2.zero;
+
+            var envelope = MoveEnvelope.For(Player);
+            Vector3 Screen(Vector2 virtualPoint)
+                => _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(virtualPoint));
+
+            // Along the finger's path: near and dead ahead, then out and round to one side.
+            var near = MoveEnvelope.Rotate(Player.Facing, 0f) * (envelope.OuterRadius * 0.35f);
+            float turn = -envelope.HalfAngleDegrees * 0.8f;
+            var far = MoveEnvelope.Rotate(Player.Facing, turn) * (envelope.ReachAtTurn(turn) * 0.95f);
+
+            Assert.IsTrue(_input.TapTo(Screen(near)));
+            float firstPower = Player.PlannedPower;
+            var firstAim = Player.PlannedAimDirection;
+            yield return null;
+
+            Assert.IsTrue(_input.TapTo(Screen(far)));
+
+            Assert.Greater(Player.PlannedPower, firstPower + 0.2f,
+                "the finger moved further out and the order should have followed it");
+            Assert.Greater(Vector2.Angle(Player.PlannedAimDirection, firstAim), 20f,
+                "and round to the side, rather than keeping the heading the press started on");
+
+            // One order, not two. A plan is a single field, so this is really a check that nothing
+            // was queued up behind it on the way.
+            Assert.AreEqual(ActionType.Move, Player.PlannedAction);
+            Assert.AreEqual(0f, Vector2.Angle(Player.PlannedAimDirection, far.normalized), 1f,
+                "the order that stands is the last one filed");
+
+            // And the run drawn under it is the one that stands, not the one the press started with.
+            var lane = FindLine("TrajectoryPreview");
+            Assert.IsTrue(lane.enabled, "the lane should still be up under the finger");
+
+            var drawnEnd = _controller.Arena.ToVirtual(lane.GetPosition(lane.positionCount - 1));
+            Assert.AreEqual(0f, Vector2.Distance(drawnEnd, Player.Pos + far), envelope.OuterRadius * 0.08f,
+                "the lane ends where the finger is, not where it started");
+        }
+
         [UnityTest]
         public IEnumerator ATapLeavesAMarkerAndADottedRunBehindIt()
         {

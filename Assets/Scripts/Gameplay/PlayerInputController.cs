@@ -257,6 +257,7 @@ namespace ColosseumDuel.Gameplay
             if (Controller.Manager.State.Phase != MatchPhase.Planning)
             {
                 if (IsDragging) CancelDrag();
+                _tapping = false;
 
                 // Both arm flags are decisions about one planning phase, and by now that phase has
                 // submitted whatever it was going to. Left standing they would come up already
@@ -283,9 +284,29 @@ namespace ColosseumDuel.Gameplay
                 // A press that landed on a HUD button must not also start a pull underneath it.
                 if (IsPointerOverHud()) return;
 
-                if (Scheme == ControlScheme.Tap) TapTo(Input.mousePosition);
+                if (Scheme == ControlScheme.Tap)
+                {
+                    // Latched, so the rest of the gesture belongs to the sand even if the finger
+                    // wanders over a button on its way. Checking the HUD every frame would hand the
+                    // order to whatever the thumb happened to be over halfway through placing it.
+                    _tapping = true;
+                    TapTo(Input.mousePosition);
+                }
                 else if (Scheme == ControlScheme.Swipe) TryBeginSwipeFromScreen(Input.mousePosition);
                 else TryBeginDragFromScreen(Input.mousePosition);
+            }
+            else if (Input.GetMouseButton(0) && _tapping)
+            {
+                // The tap is a drag while it is held: the order follows the finger, so the run can
+                // be aimed by looking at it rather than by pressing and hoping. Every frame refiles
+                // the plan, which costs nothing - a plan is one field, and the last one filed before
+                // the phase ends is the one that runs.
+                TapTo(Input.mousePosition);
+            }
+            else if (Input.GetMouseButtonUp(0) && _tapping)
+            {
+                TapTo(Input.mousePosition);
+                _tapping = false;
             }
             else if (Input.GetMouseButton(0) && IsDragging)
             {
@@ -297,6 +318,12 @@ namespace ColosseumDuel.Gameplay
                 else CancelDrag();
             }
         }
+
+        /// <summary>
+        /// Whether a tap is being held and dragged right now. Latched on a press that landed on the
+        /// sand, so the gesture is not stolen by a button the finger crosses on its way.
+        /// </summary>
+        private bool _tapping;
 
         /// <summary>
         /// Temporary keyboard bridge so the game is playable before the HUD exists (phase 4):
