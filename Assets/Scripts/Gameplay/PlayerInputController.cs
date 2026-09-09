@@ -590,6 +590,28 @@ namespace ColosseumDuel.Gameplay
             }
         }
 
+        /// <summary>
+        /// Turns the gladiator round where he stands, so the arc of ground he can be sent onto
+        /// swings from in front of him to behind.
+        ///
+        /// Not a toggle, unlike the other two buttons: it happens the moment it is pressed and there
+        /// is nothing to take back - and nothing needs to be shown either, because what it did is
+        /// the green arc visibly swinging round on the sand.
+        ///
+        /// It clears whatever run was drawn, because the simulation has cleared the order behind it:
+        /// an order aimed into the arc he had a second ago is not an order into the arc he has now,
+        /// and quietly swinging it round by half a turn is not what anybody asked for.
+        /// </summary>
+        public void TurnAround()
+        {
+            if (PlayerGladiator() == null) return;
+            if (Controller == null || !Controller.SubmitPlayerAboutFace()) return;
+
+            DefendArmed = false;
+            CancelDrag();
+            ClearOrderDrawing();
+        }
+
         // ------------------------------------------------------------------
 
         /// <summary>

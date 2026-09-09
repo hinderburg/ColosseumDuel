@@ -272,6 +272,113 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(idle, background.color);
         }
 
+        /// <summary>
+        /// The three buttons sit in a column down the right edge, clear of the arena.
+        ///
+        /// They used to ride on the gladiator, which put them on top of the thing being aimed: a
+        /// press meant for the sand landed on a button often enough that they had to keep being
+        /// pushed further from him. Pinned to the edge, the whole arena is pressable again - and
+        /// this is the assertion that would catch them drifting back over it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheActionButtonsSitInAColumnDownTheRightEdge()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var ability = (RectTransform)FindButton("Ability").transform;
+            var defend = (RectTransform)FindButton("Defend").transform;
+            var turn = (RectTransform)FindButton("AboutFace").transform;
+
+            foreach (var rect in new[] { ability, defend, turn })
+            {
+                Assert.AreEqual(new Vector2(1f, 0.5f), rect.anchorMin, $"{rect.name} is not on the edge");
+                Assert.AreEqual(new Vector2(1f, 0.5f), rect.anchorMax);
+                Assert.Less(rect.anchoredPosition.x, 0f, $"{rect.name} hangs off the screen");
+            }
+
+            // Stacked, in the order they are reached for, and not overlapping each other.
+            Assert.Greater(ability.anchoredPosition.y, defend.anchoredPosition.y);
+            Assert.Greater(defend.anchoredPosition.y, turn.anchoredPosition.y);
+            Assert.Greater(defend.anchoredPosition.y - turn.anchoredPosition.y, defend.sizeDelta.y,
+                "two buttons closer together than one is tall would overlap");
+
+            // And well away from the gladiator, who is somewhere in the middle of the arena.
+            var camera = _controller.Arena.ArenaCamera;
+            Vector2 him = camera.WorldToScreenPoint(_controller.Arena.ToWorld(State.P1.Active.Pos));
+            var canvasRect = (RectTransform)FindButton("Defend").GetComponentInParent<Canvas>().transform;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, him, null, out var himLocal);
+
+            Assert.Greater(Vector2.Distance(himLocal, defend.anchoredPosition), defend.sizeDelta.x,
+                "a button sitting on the gladiator is a press that never reaches the sand");
+        }
+
+        /// <summary>
+        /// The countdown is drawn around the gladiator himself, faintly.
+        ///
+        /// It was above his head as a small bright ring. On him it is read without the eye leaving
+        /// the fight at all, which is what the phase is for - and it has to be faint, or the thing
+        /// it is drawn over stops being visible through it.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCountdownIsDrawnFaintlyAroundTheGladiator()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var ring = Find("DecisionTimer").GetComponent<Image>();
+            var rect = ring.rectTransform;
+
+            Assert.Less(ring.color.a, 0.8f, "a solid ring would hide the man it is drawn on");
+            Assert.Greater(ring.color.a, 0.2f, "and one this faint could not be read at all");
+
+            var camera = _controller.Arena.ArenaCamera;
+            Vector2 him = camera.WorldToScreenPoint(_controller.Arena.ToWorld(State.P1.Active.Pos));
+            var canvasRect = (RectTransform)ring.GetComponentInParent<Canvas>().transform;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, him, null, out var himLocal);
+
+            Assert.AreEqual(0f, Vector2.Distance(himLocal, rect.anchoredPosition), 2f,
+                "the ring should be centred on him, not floating above his head");
+
+            // And it still counts. Drawn in a new place but doing the same job.
+            float before = ring.fillAmount;
+            yield return RunSeconds(0.6f);
+            Assert.Less(ring.fillAmount, before, "the ring is not emptying");
+        }
+
+        /// <summary>
+        /// The turn button spends the about-face and comes back over the cycles that follow, and
+        /// the ring on it says how far along that is.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTurnButtonSpendsTheAboutFaceAndShowsItComingBack()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var turn = FindButton("AboutFace");
+            var gauge = Find("TurnGauge").GetComponent<Image>();
+            var player = State.P1.Active;
+            var wasFacing = player.Facing;
+
+            Assert.IsTrue(turn.interactable, "it starts the round charged");
+            Assert.AreEqual(1f, gauge.fillAmount, 0.001f);
+
+            turn.onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(0f, Vector2.Angle(player.Facing, -wasFacing), 0.01f, "he did not turn");
+            Assert.IsFalse(turn.interactable, "and it is spent");
+            Assert.Less(gauge.fillAmount, 0.5f, "the ring should have emptied with it");
+
+            // Round the cycle and it is visibly further along, though not yet back.
+            yield return RunSeconds(GameConstants.PlanningTime + GameConstants.ActionTime + 0.5f);
+            yield return RunSeconds(GameConstants.PlanningTime * 0.5f);
+
+            Assert.Greater(gauge.fillAmount, 0f, "a cycle later it should be charging visibly");
+            Assert.Less(gauge.fillAmount, 1f, "but it is not back yet");
+        }
+
         [UnityTest]
         public IEnumerator PullingBackReleasesTheGuard()
         {
@@ -293,28 +400,21 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator TheDecisionTimerCountsDownAboveTheGladiator()
+        public IEnumerator TheDecisionTimerIsSeenRatherThanRead()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
             var timer = Find("DecisionTimer").GetComponent<Image>();
-            var defend = FindButton("Defend").GetComponent<RectTransform>();
-            var ability = FindButton("Ability").GetComponent<RectTransform>();
 
-            // A ring that empties, with no number in it: how much is left is its shape.
+            // A ring that empties, with no number in it: how much is left is its shape. Where it is
+            // drawn is TheCountdownIsDrawnFaintlyAroundTheGladiator's business, not this one's.
             Assert.AreEqual(Image.Type.Filled, timer.type, "the countdown is not a fill at all");
             Assert.IsEmpty(Find("DecisionTimer").GetComponentsInChildren<Text>(true),
                 "the countdown went back to being read rather than seen");
 
             float first = timer.fillAmount;
             Assert.Greater(first, 0.5f, "the ring should start nearly full");
-
-            // Above both buttons, on the gladiator's own column - the reason it moved off the status
-            // line at the top of the screen, where timing a decision meant looking away from it.
-            var rect = timer.rectTransform;
-            Assert.Greater(rect.anchoredPosition.y, defend.anchoredPosition.y, "the timer is not above the guard");
-            Assert.Greater(rect.anchoredPosition.y, ability.anchoredPosition.y, "the timer is not above the ability");
 
             yield return RunSeconds(0.6f);
 

@@ -6,61 +6,71 @@ using UnityEngine.UI;
 namespace ColosseumDuel.Gameplay.Hud
 {
     /// <summary>
-    /// The two action buttons, pinned to the player's gladiator: defend up and to the left, ability
-    /// up and to the right.
+    /// The three action buttons, in a column down the right-hand edge: the rage ability at the top,
+    /// the guard below it, the about-face below that.
     ///
-    /// They only exist during Planning, which is the only phase in which either choice means
-    /// anything - during Action the decision is already made and the buttons were dead weight in
-    /// the corner. Putting them on the gladiator also keeps the hand near the thing being aimed.
+    /// They used to ride on the gladiator, two of them either side of his head, which put them where
+    /// the hand was already working and put them on top of the thing being aimed - a press meant for
+    /// the sand landed on a button often enough to matter, and the buttons had to be pushed further
+    /// and further clear of him to stop it. A fixed column solves that outright: the whole arena is
+    /// pressable again, and the buttons stop moving around under the thumb between cycles.
     ///
-    /// Screen-space buttons following a world position, rather than a world-space canvas: they stay
-    /// a constant size and stay crisp, and they layer above the arena without depth-sorting against
-    /// it. The ready flame is the one piece that does live in the world, at the same anchor, because
-    /// a particle system has nothing sensible to do inside an overlay canvas.
+    /// They only exist during Planning, which is the only phase in which any of the three means
+    /// anything - during Action the decision is already made.
+    ///
+    /// Screen-space buttons rather than a world-space canvas: they stay a constant size and stay
+    /// crisp, and they layer above the arena without depth-sorting against it. The ready flame is
+    /// the one piece that does live in the world, beside the gladiator, because that is what it is
+    /// about - the man is charged, not the corner of the screen.
     /// </summary>
     public sealed class ActionButtonsView : MonoBehaviour
     {
-        /// <summary>
-        /// Screen-space offsets from the gladiator, in reference-resolution pixels.
-        ///
-        /// Raised well clear of the figure. At the old height the buttons' lower edges sat on his
-        /// body, and a press there went to the button rather than to him - so the pull the phase
-        /// exists for could not be started from half the places it looked like it should.
-        /// </summary>
-        private static readonly Vector2 DefendOffset = new Vector2(-62f, 100f);
-        private static readonly Vector2 AbilityOffset = new Vector2(62f, 100f);
+        private const float ButtonSize = 74f;
+
+        /// <summary>Gap from the right edge of the screen to the edge of a button, in reference pixels.</summary>
+        private const float EdgeMargin = 16f;
+
+        /// <summary>Gap between one button and the next down the column.</summary>
+        private const float ButtonGap = 18f;
 
         /// <summary>
-        /// The countdown sits above the pair, on the gladiator's own column.
+        /// Across the countdown ring, in reference pixels: about a body wide.
         ///
-        /// Not in the status line at the top of the screen, where it used to be: during planning the
-        /// player is looking at their gladiator and the two buttons beside him, and a clock in the
-        /// far corner is read by looking away from the decision it is timing.
+        /// It is drawn around the gladiator himself now rather than floating above his head. The
+        /// clock is the shape of the decision being made, and the decision is made by looking at
+        /// him - so putting the two in the same place means the phase can be timed without the eye
+        /// leaving the fight at all. Faint, for the same reason: it has to be readable at a glance
+        /// and invisible when it is not being glanced at.
         /// </summary>
-        private static readonly Vector2 TimerOffset = new Vector2(0f, 154f);
+        private const float TimerSize = 138f;
 
-        /// <summary>Across the countdown ring. Smaller than a button - it is read, not pressed.</summary>
-        private const float TimerSize = 52f;
+        /// <summary>How solid the countdown is over the sand. Enough to read, not enough to obscure.</summary>
+        private const float TimerAlpha = 0.55f;
 
         /// <summary>The part of the ring that has already run out. Dark, and it stays put.</summary>
-        private static readonly Color TimerTrackColor = new Color(0f, 0f, 0f, 0.42f);
-
-        private const float ButtonSize = 74f;
+        private static readonly Color TimerTrackColor = new Color(0f, 0f, 0f, 0.22f);
 
         /// <summary>Background of a button nobody has pressed.</summary>
         private static readonly Color Idle = new Color(0.10f, 0.10f, 0.13f, 0.92f);
 
-        /// <summary>How visible the ability button is while the rage meter is still filling.</summary>
+        /// <summary>How visible a button is while what it does is still charging.</summary>
         private const float NotReadyAlpha = 0.42f;
+
+        /// <summary>The about-face's own colour - neither the guard's blue nor rage's orange.</summary>
+        private static readonly Color TurnColor = new Color(0.55f, 0.82f, 0.72f);
 
         public Button Defend { get; private set; }
         public Button Ability { get; private set; }
+        public Button AboutFace { get; private set; }
 
         private RectTransform _defendRect;
         private RectTransform _abilityRect;
+        private RectTransform _turnRect;
         private CanvasGroup _defendGroup;
         private CanvasGroup _abilityGroup;
+        private CanvasGroup _turnGroup;
         private Image _rageGauge;
+        private Image _turnGauge;
         private Image _abilityGlow;
         private GameObject _readyFire;
         private ArenaView _arena;
@@ -81,9 +91,19 @@ namespace ColosseumDuel.Gameplay.Hud
             view._arena = arena;
             view._canvas = canvas.GetComponentInParent<Canvas>();
 
-            view.Defend = view.BuildRound(root, "Defend", palette, "Block", HudFactory.PlayerColor,
+            // Top to bottom in the order they are reached for: the one that wins a fight, the one
+            // that survives one, the one that gets you out of a corner.
+            view.Ability = view.BuildRound(root, "Ability", palette, "", HudFactory.RageColor, 1,
+                out view._abilityRect, out view._abilityGroup);
+            view._abilityLabel = view._abilityRect.GetComponentInChildren<Text>();
+            view._abilityBackground = (Image)view.Ability.targetGraphic;
+
+            view.Defend = view.BuildRound(root, "Defend", palette, "Block", HudFactory.PlayerColor, 0,
                 out view._defendRect, out view._defendGroup);
             view._defendBackground = (Image)view.Defend.targetGraphic;
+
+            view.AboutFace = view.BuildRound(root, "AboutFace", palette, "Turn", TurnColor, -1,
+                out view._turnRect, out view._turnGroup);
 
             // The guard gets the same halo the ability has. Pressing it used to file the plan and
             // leave nothing behind, so there was no way to tell a guard from a phase where nothing
@@ -94,21 +114,13 @@ namespace ColosseumDuel.Gameplay.Hud
             view._defendGlow.transform.SetAsFirstSibling();
             HudFactory.Stretch(view._defendGlow.rectTransform, -14f);
 
-            view.Ability = view.BuildRound(root, "Ability", palette, "", HudFactory.RageColor,
-                out view._abilityRect, out view._abilityGroup);
-            view._abilityLabel = view._abilityRect.GetComponentInChildren<Text>();
-            view._abilityBackground = (Image)view.Ability.targetGraphic;
-
             // The rage gauge rides on the ability button as a ring, so charge is read in the same
             // glance as the button itself rather than from a bar elsewhere on screen.
-            view._rageGauge = HudFactory.CreatePanel("RageGauge", view._abilityRect, HudFactory.RageColor);
-            HudFactory.UseSprite(view._rageGauge, palette != null ? palette.Ring : null);
-            view._rageGauge.type = Image.Type.Filled;
-            view._rageGauge.fillMethod = Image.FillMethod.Radial360;
-            view._rageGauge.fillOrigin = (int)Image.Origin360.Top;
-            view._rageGauge.fillClockwise = true;
-            view._rageGauge.raycastTarget = false;
-            HudFactory.Stretch(view._rageGauge.rectTransform, -6f);
+            view._rageGauge = view.BuildGauge("RageGauge", view._abilityRect, palette, HudFactory.RageColor);
+
+            // And the about-face carries the same ring for the same reason, filling over the two
+            // cycles it takes to come back. It is the only way to know whether it is there.
+            view._turnGauge = view.BuildGauge("TurnGauge", view._turnRect, palette, TurnColor);
 
             // A soft halo under the button, pulsed only when the ability is actually available.
             view._abilityGlow = HudFactory.CreatePanel("ReadyGlow", view._abilityRect, HudFactory.RageColor);
@@ -163,16 +175,38 @@ namespace ColosseumDuel.Gameplay.Hud
             return view;
         }
 
-        private Button BuildRound(Transform parent, string name, ViewPalette palette, string caption,
-            Color accent, out RectTransform rect, out CanvasGroup group)
+        /// <summary>The charge ring that sits on a button and fills as what it does comes back.</summary>
+        private Image BuildGauge(string name, RectTransform parent, ViewPalette palette, Color color)
         {
-            var image = HudFactory.CreatePanel(name, parent, new Color(0.10f, 0.10f, 0.13f, 0.92f));
+            var gauge = HudFactory.CreatePanel(name, parent, color);
+            HudFactory.UseSprite(gauge, palette != null ? palette.Ring : null);
+            gauge.type = Image.Type.Filled;
+            gauge.fillMethod = Image.FillMethod.Radial360;
+            gauge.fillOrigin = (int)Image.Origin360.Top;
+            gauge.fillClockwise = true;
+            gauge.raycastTarget = false;
+            HudFactory.Stretch(gauge.rectTransform, -6f);
+            return gauge;
+        }
+
+        /// <summary>
+        /// One button in the column. <paramref name="slot"/> counts upwards from the middle of the
+        /// screen, so 1 is the top of the three and -1 the bottom.
+        /// </summary>
+        private Button BuildRound(Transform parent, string name, ViewPalette palette, string caption,
+            Color accent, int slot, out RectTransform rect, out CanvasGroup group)
+        {
+            var image = HudFactory.CreatePanel(name, parent, Idle);
             HudFactory.UseSprite(image, palette != null ? palette.Disc : null);
 
             rect = image.rectTransform;
-            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
-            rect.pivot = new Vector2(0.5f, 0.5f);
+
+            // Pinned to the right edge and the vertical middle, so the column stays under the thumb
+            // whatever the screen's shape and never overlaps the roster strips at top and bottom.
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
             rect.sizeDelta = new Vector2(ButtonSize, ButtonSize);
+            rect.anchoredPosition = new Vector2(-EdgeMargin, slot * (ButtonSize + ButtonGap));
 
             var button = image.gameObject.AddComponent<Button>();
             button.targetGraphic = image;
@@ -199,8 +233,8 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>
-        /// Places and updates both buttons. <paramref name="gladiator"/> is null whenever the player
-        /// has nobody on the arena, which hides the pair.
+        /// Places the countdown and updates all three buttons. <paramref name="gladiator"/> is null
+        /// whenever the player has nobody on the arena, which hides the lot.
         /// </summary>
         public void Sync(GladiatorInstance gladiator, MatchPhase phase, Camera camera,
                          bool abilityArmed, bool defendArmed, float secondsLeft)
@@ -212,39 +246,23 @@ namespace ColosseumDuel.Gameplay.Hud
             if (_readyFire != null && !visible && _readyFire.activeSelf) _readyFire.SetActive(false);
             if (!visible) return;
 
-            // Anchor above the gladiator's head rather than at his feet, so the buttons do not sit
-            // on top of the model.
-            float headHeight = _arena.ScaleLength(GameConstants.GladiatorRadius) * 2.4f;
-            Vector3 anchorWorld = _arena.ToWorld(gladiator.Pos, headHeight);
-            Vector2 anchorScreen = camera.WorldToScreenPoint(anchorWorld);
-
-            // Screen point to a position inside the canvas, rather than assigning screen coordinates
-            // to RectTransform.position. That shortcut only holds for a Screen Space - Overlay
-            // canvas; under Screen Space - Camera the same property is world space, and the buttons
-            // silently fly off somewhere behind the arena.
-            var canvasRect = (RectTransform)_canvas.transform;
-            var canvasCamera = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
-            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    canvasRect, anchorScreen, canvasCamera, out var anchorLocal))
-                return;
-
-            _defendRect.anchoredPosition = anchorLocal + DefendOffset;
-            _abilityRect.anchoredPosition = anchorLocal + AbilityOffset;
-            _timerRect.anchoredPosition = anchorLocal + TimerOffset;
-            _timerTrack.anchoredPosition = anchorLocal + TimerOffset;
+            // The buttons are pinned to the screen and need no placing. The countdown is not: it is
+            // drawn around the gladiator, so it has to be followed to wherever he is standing.
+            PlaceTimerOn(gladiator, camera);
 
             _timer.fillAmount = Mathf.Clamp01(secondsLeft / GameConstants.PlanningTime);
 
-            // Red once there is under a second left. The ring is beside the decision, so it can
-            // afford to say something as well as count.
-            _timer.color = secondsLeft <= 1f ? new Color(1f, 0.45f, 0.35f) : Color.white;
+            // Red once there is under a second left. It sits on the man, so it can afford to say
+            // something as well as count.
+            var timerColor = secondsLeft <= 1f ? new Color(1f, 0.45f, 0.35f) : Color.white;
+            timerColor.a = TimerAlpha;
+            _timer.color = timerColor;
 
             // The ability differs per gladiator, so name it rather than saying "special" - the
             // names are short enough to fit and tell the player what the button will actually do.
             _abilityLabel.text = gladiator.Def.AbilityName;
 
-            float rage = Mathf.Clamp01(gladiator.Rage / GameConstants.RageMax);
-            _rageGauge.fillAmount = rage;
+            _rageGauge.fillAmount = Mathf.Clamp01(gladiator.Rage / GameConstants.RageMax);
 
             bool ready = gladiator.CanActivateAbility;
             Ability.interactable = ready;
@@ -271,18 +289,47 @@ namespace ColosseumDuel.Gameplay.Hud
             _defendGlow.color = defendGlow;
             _defendGlow.enabled = defendArmed;
 
+            // The about-face has no armed state: it happens the moment it is pressed, and what it
+            // did is visible on the sand as the arc swinging round. So there is nothing to light
+            // up - only the ring saying whether there is anything to press.
+            bool canTurn = gladiator.CanAboutFace;
+            AboutFace.interactable = canTurn;
+            _turnGroup.alpha = canTurn ? 1f : NotReadyAlpha;
+            _turnGauge.fillAmount = gladiator.AboutFaceReadiness;
+
             if (_readyFire != null)
             {
                 if (_readyFire.activeSelf != ready) _readyFire.SetActive(ready);
                 if (ready)
                 {
-                    // The flame lives in the world at the same anchor the button is derived from,
-                    // so the two line up on screen without the particle needing a canvas.
+                    // The flame lives in the world beside the gladiator: what it says is that this
+                    // man is charged, which is a fact about him and not about the button.
+                    float headHeight = _arena.ScaleLength(GameConstants.GladiatorRadius) * 2.4f;
                     _readyFire.transform.position = _arena.ToWorld(gladiator.Pos, headHeight * 1.15f)
                                                     + new Vector3(_arena.ScaleLength(GameConstants.GladiatorRadius) * 1.6f, 0f, 0f);
                 }
             }
         }
 
+        /// <summary>
+        /// Puts the countdown rings around the gladiator's feet.
+        /// </summary>
+        private void PlaceTimerOn(GladiatorInstance gladiator, Camera camera)
+        {
+            Vector2 anchorScreen = camera.WorldToScreenPoint(_arena.ToWorld(gladiator.Pos));
+
+            // Screen point to a position inside the canvas, rather than assigning screen coordinates
+            // to RectTransform.position. That shortcut only holds for a Screen Space - Overlay
+            // canvas; under Screen Space - Camera the same property is world space, and the ring
+            // silently flies off somewhere behind the arena.
+            var canvasRect = (RectTransform)_canvas.transform;
+            var canvasCamera = _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    canvasRect, anchorScreen, canvasCamera, out var anchorLocal))
+                return;
+
+            _timerRect.anchoredPosition = anchorLocal;
+            _timerTrack.anchoredPosition = anchorLocal;
+        }
     }
 }

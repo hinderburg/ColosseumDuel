@@ -483,13 +483,18 @@ namespace ColosseumDuel.Tests
             var input = Object.FindFirstObjectByType<PlayerInputController>();
             input.Scheme = ControlScheme.Tap;
 
-            controller.SubmitPlayerPick(GladiatorId.Hilius);
-            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
-
             var canvas = Object.FindFirstObjectByType<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = Camera.main;
             canvas.planeDistance = 1f;
+
+            // Past the menu, or the frame meant to show the control shows the title screen over it -
+            // which is what it did, for as long as this frame has existed.
+            Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.MenuView>().StartMatch();
+            yield return null;
+
+            controller.SubmitPlayerPick(GladiatorId.Hilius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
             // Half a dash up the arena, so the dashes reach the ring rather than stopping short.
             var player = controller.Manager.State.P1.Active;
