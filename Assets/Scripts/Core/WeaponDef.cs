@@ -67,10 +67,11 @@ namespace ColosseumDuel.Core
         /// zone a wedge that has to be pointed at somebody, which is what the green arc on the
         /// control is for: choosing a heading is choosing who can be hit.
         ///
-        /// The three widen in the same order they lengthen. Twin swords are two short blades worked
-        /// close in; a hammer swung on a full turn covers most of the ground in front of the man
-        /// swinging it. Anything pressed against his body is inside every one of them - see
-        /// GladiatorInstance.CanStrikeFrom.
+        /// The three widen in the same order they lengthen, but not by much: the mace is the widest
+        /// at 120 and the twin swords the narrowest at 90, with the shield between them. Reach is
+        /// what really separates the three - a mace covers four times the ground a sword does - and
+        /// piling the angle on top of that made the wedge do the same job twice. Anything pressed
+        /// against his body is inside every one of them - see GladiatorInstance.CanStrikeFrom.
         /// </summary>
         public readonly float SwingArcDegrees;
 
@@ -108,13 +109,13 @@ namespace ColosseumDuel.Core
         public static readonly WeaponDef SwordAndShield = new WeaponDef(
             WeaponKind.SwordAndShield, "Sword and shield", damageMultiplier: 1f, attacks: 1,
             incomingDamageMultiplier: GameConstants.ShieldDamageMult, bleeds: false, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 25f, swingArcDegrees: 105f,   // 57 - the same sword, so the same reach
+            reach: GameConstants.GladiatorRadius * 2f + 25f, swingArcDegrees: 115f,   // 57 - the same sword, so the same reach
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
             WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.5f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: GameConstants.MaceKnockback,
-            reach: GameConstants.GladiatorRadius * 2f + 78f, swingArcDegrees: 150f,   // 110
+            reach: GameConstants.GladiatorRadius * 2f + 78f, swingArcDegrees: 120f,   // 110
             description: "One heavy blow that throws them back");
 
         /// <summary>The three a gladiator can be trained in, in the order the UI lists them.</summary>

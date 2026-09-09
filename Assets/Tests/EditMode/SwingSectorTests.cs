@@ -97,7 +97,12 @@ namespace ColosseumDuel.Tests
         [Test]
         public void TheMaceCoversAnAngleTheSwordCannot()
         {
-            float off = WeaponDef.SwordAndShield.SwingArcDegrees * 0.5f + 8f;
+            // Halfway between where the sword stops sweeping and where the mace does, so this keeps
+            // measuring the gap between them however wide either one is set.
+            float off = (WeaponDef.SwordAndShield.SwingArcDegrees + WeaponDef.TwoHandedMace.SwingArcDegrees)
+                        * 0.25f;
+            Assert.Greater(off, WeaponDef.SwordAndShield.SwingArcDegrees * 0.5f,
+                "the two arcs have converged - there is no angle left that separates them");
             var target = At(off, 50f);
 
             Assert.IsTrue(Armed(WeaponKind.TwoHandedMace, Vector2.up).CanStrikeFrom(Vector2.zero, target));
