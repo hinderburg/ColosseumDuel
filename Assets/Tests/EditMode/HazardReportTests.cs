@@ -45,7 +45,7 @@ namespace ColosseumDuel.Tests
             => new Vector2(0f, GameConstants.ArenaRadius * GameConstants.ArenaElongation * 0.92f);
 
         [Test]
-        public void APhaseInTheSpikesIsAnnouncedOnce_WithThePhasesWholeCost()
+        public void APhaseInTheSpikesIsAnnouncedOnTheBeat_AndAddsUpToThePhasesCost()
         {
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
@@ -66,13 +66,19 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
-            Assert.AreEqual(1, burnt.Count,
-                "the fire is applied six times a frame - it has to be announced once, at the end");
+            // The fire is charged six times a frame, in fractions of a point that cannot be put on
+            // screen. It is announced on a beat instead - four times a second, so that standing in
+            // it reads as burning rather than as one hit from something invisible - and a phase is
+            // one second long.
+            Assert.AreEqual(4, burnt.Count,
+                $"a phase in the fire should be four ticks, not {burnt.Count}");
 
-            // A whole phase standing in it, so it should be the phase's whole price. Not exact: the
-            // phase can be cut short by a collision, and the last tick lands wherever it lands.
-            Assert.That(burnt[0], Is.EqualTo(GameConstants.HazardDamagePerPhase).Within(6f),
-                $"a full phase in the fire reported {burnt[0]:0.#}");
+            // And the beat does not change the price. Not exact: the phase can be cut short by a
+            // collision, and the last tick lands wherever it lands.
+            float total = 0f;
+            foreach (float tick in burnt) total += tick;
+            Assert.That(total, Is.EqualTo(GameConstants.HazardDamagePerPhase).Within(6f),
+                $"a full phase in the fire reported {total:0.#}");
         }
 
         /// <summary>

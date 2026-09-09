@@ -50,9 +50,12 @@ namespace ColosseumDuel.Core
         public event Action<PlayerSide, float> Bled;
 
         /// <summary>
-        /// What the closing arena cost somebody over one action phase, announced once at the end of
-        /// it. The spikes deal their damage continuously, substep by substep, so this is the only
-        /// point at which the cost is a number rather than a fraction of one.
+        /// What the closing arena has cost somebody since the last time it said so.
+        ///
+        /// The spikes deal their damage continuously, substep by substep, against the position the
+        /// gladiator actually occupied - fractions of a point, far too small to put on screen. This
+        /// is the running total, announced four times a second so that standing in the fire reads as
+        /// burning rather than as one hit from something invisible.
         /// </summary>
         public event Action<PlayerSide, float> Scorched;
 
@@ -369,6 +372,8 @@ namespace ColosseumDuel.Core
                     for (int i = 0; i < GameConstants.ActionSubsteps; i++)
                         StepActionSub(subDt);
 
+                    AdvanceScorchTicks();
+
                     if (State.CollisionEndTimer.HasValue)
                     {
                         State.CollisionEndTimer -= dt;
@@ -428,6 +433,10 @@ namespace ColosseumDuel.Core
             // round restarted, a match thrown away - cannot carry its tally into the next one.
             _scorched[0] = 0f;
             _scorched[1] = 0f;
+
+            // And the beat starts with the phase, so the first tick of a burn is a quarter second
+            // into it rather than at whatever point in the beat the last phase happened to end on.
+            _scorchTicksSent = 0;
 
             PredictStrikes();
             SetPhase(MatchPhase.Action);
@@ -827,10 +836,45 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Announces a phase's worth of spike damage and clears the tally.
+        /// How often the fire says what it has taken, in seconds of the action phase.
         ///
-        /// Cleared whether or not anybody was listening, so a phase spent in the fire cannot carry
-        /// into the next one and be reported twice.
+        /// The damage itself is continuous - it is charged per substep, against the position the
+        /// gladiator actually occupied - and this is only how often that running total is announced.
+        /// A quarter of a second gives four ticks for a second spent in the fire, which reads as
+        /// burning; the whole phase in one number read as a single hit from something invisible, and
+        /// per substep would be a hundred numbers a second, each of a fraction of a point.
+        /// </summary>
+        private const float ScorchTickInterval = 0.25f;
+
+        private int _scorchTicksSent;
+
+        /// <summary>
+        /// Announces the running tally on the beat, without waiting for the phase to end.
+        ///
+        /// Counted off the phase's own clock rather than a separate accumulator, and that is not
+        /// tidiness. A phase is exactly as long as four intervals, so an accumulator lands its
+        /// fourth tick on the same frame the phase ends - and whether it lands just before or just
+        /// after is decided by the last bit of a float. Just after, and the phase's closing flush
+        /// finds a frame's worth of damage left and puts a fifth number on screen reading "1".
+        ///
+        /// Counting instead means the closing flush is the last tick rather than a sliver after it,
+        /// however the arithmetic rounds.
+        /// </summary>
+        private void AdvanceScorchTicks()
+        {
+            int due = Mathf.FloorToInt(State.PhaseTimer / ScorchTickInterval);
+            while (_scorchTicksSent < due)
+            {
+                _scorchTicksSent++;
+                FlushScorched();
+            }
+        }
+
+        /// <summary>
+        /// Announces whatever spike damage has been tallied since the last time, and clears it.
+        ///
+        /// Cleared whether or not anybody was listening, so time spent in the fire cannot be carried
+        /// forward and reported twice.
         /// </summary>
         private void FlushScorched()
         {
