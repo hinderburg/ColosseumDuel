@@ -66,14 +66,14 @@ namespace ColosseumDuel.Gameplay
         public Vector2 CurrentAim { get; private set; }
 
         /// <summary>
-        /// How wide the planned run is drawn, in world units: a thin stripe, about a sixth of a
-        /// gladiator across.
+        /// How wide the planned run is drawn, in world units: a plain white line, a few pixels on
+        /// screen.
         ///
-        /// It was a dashed lane his own width, then half that, with an arrow head on the end. Asked
-        /// for simply a thin white line - three or four times thinner than the half-width lane - and
-        /// that is what a hand-drawn run wants: its bends read as bends instead of as a blot.
+        /// It was a dashed lane his own width, then half that, with an arrow head on the end; then a
+        /// plain stripe at 0.12; then, on request, three times thinner again. What a hand-drawn run
+        /// wants is to be seen as the line the finger drew, bends and all.
         /// </summary>
-        private const float TrajectoryWidth = 0.12f;
+        private const float TrajectoryWidth = 0.04f;
 
         /// <summary>How high above the sand the stripe is drawn.</summary>
         private const float TrajectoryHeight = 0.06f;

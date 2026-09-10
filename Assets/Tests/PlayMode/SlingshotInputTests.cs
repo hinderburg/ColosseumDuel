@@ -193,26 +193,30 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The run is drawn as a thin plain white stripe - no dashes, no arrow head.
+        /// The run is drawn as a plain white line - no texture, no dashes, no arrow head.
         ///
         /// It started as a thin yellow hairline that vanished against the sand, became a dashed lane
-        /// as wide as a gladiator with a head on the end, then half that. Asked for simply a white
-        /// line three or four times thinner than the half-width lane: the width is pinned inside
-        /// that range, and still wider than the hairline it started as.
+        /// as wide as a gladiator with a head on the end, then half that, then a plain stripe at
+        /// 0.12, and was asked to go three times thinner again. The width is pinned around that
+        /// third, and the material is checked for a texture under both of its names, because the
+        /// bootstrap reuses the material from disk and the old dash texture once rode along on it.
         /// </summary>
         [Test]
-        public void TheTrajectoryIsAThinPlainWhiteStripe()
+        public void TheTrajectoryIsAPlainWhiteLine()
         {
             var line = FindLine("TrajectoryPreview");
             Assert.IsNotNull(line);
 
-            const float halfWidthLane = 0.425f;
-            Assert.LessOrEqual(line.widthMultiplier, halfWidthLane / 3f, "not three times thinner than the lane it was");
-            Assert.GreaterOrEqual(line.widthMultiplier, halfWidthLane / 4f, "more than four times thinner - a hairline again");
+            const float stripe = 0.12f;
+            Assert.LessOrEqual(line.widthMultiplier, stripe / 2.5f, "not about three times thinner than the stripe it was");
+            Assert.GreaterOrEqual(line.widthMultiplier, stripe / 4f, "thinner than that and it is lost on a phone screen");
 
-            Assert.IsNull(line.sharedMaterial.mainTexture, "a plain stripe carries no dash pattern");
+            var material = line.sharedMaterial;
+            Assert.IsNull(material.mainTexture, "a plain line carries no texture");
+            if (material.HasProperty("_BaseMap"))
+                Assert.IsNull(material.GetTexture("_BaseMap"), "the URP base map still has a texture on it");
 
-            var colour = line.sharedMaterial.color;
+            var colour = material.color;
             Assert.Greater(Mathf.Min(colour.r, colour.g, colour.b), 0.9f, "and it should be white");
             Assert.Greater(colour.a, 0.9f, "and solid");
 
