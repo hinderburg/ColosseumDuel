@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="1,0888161">
+  <test-suite type="TestSuite" id="1149" name="Colosseum Duel" fullname="Colosseum Duel" runstate="Runnable" testcasecount="127" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="1.088816" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1144" name="ColosseumDuel.Tests.PlayMode.dll" fullname="C:/Users/avshu/Documents/Dev/ColosseumDuel/Library/ScriptAssemblies/ColosseumDuel.Tests.PlayMode.dll" runstate="Runnable" testcasecount="127" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="1.075022" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="42828" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1145" name="ColosseumDuel" fullname="ColosseumDuel" runstate="Runnable" testcasecount="127" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="1.072229" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1146" name="Tests" fullname="ColosseumDuel.Tests" runstate="Runnable" testcasecount="127" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="1.069864" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1078" name="HudTests" fullname="ColosseumDuel.Tests.HudTests" classname="ColosseumDuel.Tests.HudTests" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="1.061099" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1080" name="TheHudFontCanActuallyDrawEveryCaptionTheGameUses" fullname="ColosseumDuel.Tests.HudTests.TheHudFontCanActuallyDrawEveryCaptionTheGameUses" methodname="TheHudFontCanActuallyDrawEveryCaptionTheGameUses" classname="ColosseumDuel.Tests.HudTests" runstate="Runnable" seed="123074849" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:36Z" duration="0.673367" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1085" name="ThePickCardsCarryTheIconAndSpellOutTheAbility" fullname="ColosseumDuel.Tests.HudTests.ThePickCardsCarryTheIconAndSpellOutTheAbility" methodname="ThePickCardsCarryTheIconAndSpellOutTheAbility" classname="ColosseumDuel.Tests.HudTests" runstate="Runnable" seed="1799676623" result="Passed" start-time="2026-09-10 19:32:36Z" end-time="2026-09-10 19:32:37Z" duration="0.366787" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/avshu/AppData/LocalLow/ColosseumDuel/Colosseum Duel\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

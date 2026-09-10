@@ -138,50 +138,6 @@ namespace ColosseumDuel.Core
             return amount;
         }
 
-
-        /// <summary>
-        /// Cycles still to run before he can turn on the spot again. Zero means it is ready.
-        ///
-        /// The about-face is not a rage ability - it costs nothing and every gladiator has it, whoever
-        /// he is - so it does not go through Rage or ActiveBuff. What it costs is time: two whole
-        /// cycles of not having it, which is what makes spending it a decision rather than a habit.
-        /// </summary>
-        public int AboutFaceCooldown;
-
-        public bool CanAboutFace => AboutFaceCooldown <= 0 && Alive;
-
-        /// <summary>
-        /// How charged the about-face is, from nothing to ready. For the ring on its button.
-        /// </summary>
-        public float AboutFaceReadiness
-            => AboutFaceCooldown <= 0
-                ? 1f
-                : 1f - AboutFaceCooldown / (float)(GameConstants.AboutFaceRechargeCycles + 1);
-
-        /// <summary>
-        /// Turns him round where he stands, and starts the cooldown.
-        ///
-        /// The whole of what it does is flip Facing. It was made to swing round the arc of ground he
-        /// could be sent onto, and that arc is gone - a tap now sends him anywhere - so what is left
-        /// is the facing itself: which of him a blow lands on while he stands his ground. A man
-        /// guarding with his back to the one coming for him can spend this to meet him chest-first.
-        /// Once he runs, he faces along his run whatever this did.
-        ///
-        /// It is not a move and does not spend the cycle. What it spends is the next two.
-        /// </summary>
-        public bool AboutFace()
-        {
-            if (!CanAboutFace) return false;
-
-            Facing = -Facing;
-
-            // Plus one so it also covers the cycle it was used in, the same way an ability lock
-            // does - otherwise "two cycles" would quietly mean one and a bit, depending on how
-            // early in the phase the button was pressed.
-            AboutFaceCooldown = GameConstants.AboutFaceRechargeCycles + 1;
-            return true;
-        }
-
         public float Rage = 0f;
         public int AbilityLockedCycles = 0;
         public ActiveBuff Buff;
@@ -220,16 +176,6 @@ namespace ColosseumDuel.Core
         }
 
         public bool IsDefending => PlannedAction == ActionType.Defend;
-
-        /// <summary>
-        /// How far a full-power dash carries this gladiator, in virtual units.
-        ///
-        /// Here rather than in the input layer because it is the same product the action phase
-        /// actually integrates - aiming at a point needs it to work out how hard to pull, and a
-        /// second copy of the formula would drift from this one the first time either factor moved.
-        /// Ignores wall bounces, which change where he ends up but not how far he runs.
-        /// </summary>
-        public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
 
         /// <summary>
         /// Which part of him a blow coming from this point lands on.
@@ -293,37 +239,6 @@ namespace ColosseumDuel.Core
             return Vector2.Angle(look, toTarget) <= weapon.SwingArcDegrees * 0.5f;
         }
 
-        public float EffectiveSpeed()
-        {
-            float speed = Def.Speed;
-            if (Buff.IsActive && Buff.Key == AbilityKey.Spirit)
-                speed *= 1.5f;
-            return speed;
-        }
-
-        /// <summary>
-        /// How fast he will be running once this cycle starts, buff included.
-        ///
-        /// The difference from EffectiveSpeed is one phase of timing. An armed ability has not
-        /// fired yet - it fires at the top of the action phase - so during planning EffectiveSpeed
-        /// still reports the unbuffed number. Anything that draws what the player is about to do
-        /// has to look forward instead: with the speed ability armed, the preview promised a run
-        /// half as long again as the one he would actually make.
-        /// </summary>
-        public float PlannedSpeed()
-        {
-            float speed = EffectiveSpeed();
-            bool willBeSpirited = AbilityArmed && Def.Ability == AbilityKey.Spirit
-                                  && !(Buff.IsActive && Buff.Key == AbilityKey.Spirit);
-            return willBeSpirited ? speed * 1.5f : speed;
-        }
-
-        /// <summary>
-        /// How far one phase of running will carry him once this cycle starts, ability included.
-        /// The planning-time twin of DashReach, for the same reason PlannedSpeed exists.
-        /// </summary>
-        public float PlannedReach() => PlannedSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
-
         public void AddRage(float amount)
         {
             if (AbilityLockedCycles > 0) return; // locked out after a recent activation
@@ -335,7 +250,18 @@ namespace ColosseumDuel.Core
         public void ActivateAbility()
         {
             if (!CanActivateAbility) return;
-            Buff = new ActiveBuff { Key = Def.Ability, CyclesLeft = 2 };
+
+            if (Def.Ability == AbilityKey.SecondWind)
+            {
+                // Instant: the health comes back the moment it fires and nothing is left running. A
+                // lingering buff would light his ability marker for two cycles of doing nothing.
+                Hp = Mathf.Min(Def.MaxHp, Hp + Def.MaxHp * GameConstants.SecondWindHealFraction);
+            }
+            else
+            {
+                Buff = new ActiveBuff { Key = Def.Ability, CyclesLeft = 2 };
+            }
+
             // The ability fires at the start of Action, after BeginCycle already set the attack
             // budget for this cycle - so Mongoose has to top it up for the cycle it was used in.
             AttacksRemainingThisCycle = AttacksPerCycle;
@@ -360,7 +286,6 @@ namespace ColosseumDuel.Core
             DealtDamageThisCycle = false;
             TookDamageThisCycle = false;
             if (AbilityLockedCycles > 0) AbilityLockedCycles--;
-            if (AboutFaceCooldown > 0) AboutFaceCooldown--;
             if (Buff.CyclesLeft > 0)
             {
                 Buff.CyclesLeft--;
@@ -393,10 +318,6 @@ namespace ColosseumDuel.Core
             AbilityArmed = false;
             Buff = default;
             AbilityLockedCycles = 0;
-
-            // Charged at the top of every round. A cooldown carried across would punish a round
-            // winner for something he did in the round before, in a fight he is no longer in.
-            AboutFaceCooldown = 0;
 
             // Back to his own weapon each round. A gilded one is the reward for crossing the arena
             // under fire during a round; carrying it into the next one for free would make the

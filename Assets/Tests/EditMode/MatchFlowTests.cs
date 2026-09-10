@@ -296,7 +296,7 @@ namespace ColosseumDuel.Tests
             float miss = WeaponDef.DualSwords.Reach * Mathf.Sin(halfArc) * 0.8f;
             Assert.Greater(miss, GameConstants.CollideDistance,
                 "and still wide enough that running past is a pass and not a crash");
-            p1.Pos = new Vector2(-miss, -p1.DashReach() * 0.5f);
+            p1.Pos = new Vector2(-miss, -GameConstants.AimedRunLength * 0.5f);
             bot.Pos = new Vector2(0f, 0f);
             float botHp = bot.Hp;
 
@@ -529,11 +529,11 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheTutorialRoundPutsASwordWithinOneDashOfWhoeverWasPicked()
+        public void TheTutorialRoundPutsASwordOnTheWayToTheTapPoint()
         {
-            // Whoever was picked is the point. Hilius covers twice the ground Brutius does, so a
-            // sword at any fixed distance would be a stroll for one and out of reach for another -
-            // and the tutorial's one sentence would be wrong for two players out of three.
+            // Whoever was picked. Nobody has a speed any more, so the layout is the same for all
+            // three - but the sword still has to sit between him and the point the tutorial tells
+            // him to tap, or the one sentence the tutorial says is not true.
             foreach (var def in GladiatorDef.All)
             {
                 var m = new GameManager(new System.Random(def.Id.GetHashCode()));
@@ -544,14 +544,14 @@ namespace ColosseumDuel.Tests
                 var sword = m.State.Items.Items.Find(i => i.Kind == def.SkilledWith);
 
                 Assert.IsNotNull(sword);
-                Assert.Less(Vector2.Distance(player.Pos, sword.Pos), player.DashReach(),
+                Assert.Less(Vector2.Distance(player.Pos, sword.Pos), GameConstants.AimedRunLength,
                     $"{def.Name} cannot reach the weapon the tutorial tells him to run through");
 
                 // And the tap point has to be past it, or running to it stops short of the pickup.
                 float toSword = Vector2.Distance(player.Pos, sword.Pos);
                 float toTap = Vector2.Distance(player.Pos, m.State.TutorialTapPoint);
                 Assert.Greater(toTap, toSword, "the tap has to be beyond the sword, not on it");
-                Assert.Less(toTap, player.DashReach(), "and still inside one dash");
+                Assert.Less(toTap, GameConstants.AimedRunLength, "and still inside one dash");
             }
         }
 
@@ -600,41 +600,42 @@ namespace ColosseumDuel.Tests
             return Vector2.Distance(point, a + ab * t);
         }
 
+        /// <summary>
+        /// A run always arrives, however far it goes.
+        ///
+        /// There is no speed stat any more to run out of: the phase is the same length for everyone
+        /// and a run is paced to fill it, so sending a man most of the way up the arena gets him
+        /// there as surely as sending him a step. Checked from a step to most of the arena, so a cap
+        /// sneaking back in cannot hide behind a test that only ever asked for something short.
+        /// </summary>
         [Test]
-        public void DashCarriesTheSameGround()
+        public void ARunOfAnyLengthArrivesWithinThePhase()
         {
-            // The reach of one dash is Speed * SpeedScale * ActionTime, and the two constants have
-            // been moved in opposite directions on purpose: the action phase was halved to 1.0s so
-            // the charge reads as a burst, and the speed doubled so it still crosses the same
-            // ground. Changing either alone silently shortens or lengthens every move in the game,
-            // which is why the expected distance is spelled out here rather than derived from them.
-            const float expected = 150f; // Brutius: speed 10, at full power, over one action phase
+            foreach (float length in new[] { 40f, GameConstants.AimedRunLength, 520f })
+            {
+                var m = StartedRound();
+                AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
-            var m = StartedRound();
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+                var p1 = m.State.P1.Active;
+                var bot = m.State.Bot.Active;
+                m.State.Traps.Traps.Clear();
 
-            var p1 = m.State.P1.Active;
-            var bot = m.State.Bot.Active;
+                // Straight up the middle from the near end - open sand, clear of every obstacle -
+                // with the bot out of the way to one side, well beyond any weapon's reach.
+                p1.Pos = new Vector2(0f, -260f);
+                bot.Pos = new Vector2(240f, 0f);
+                var target = p1.Pos + new Vector2(0f, length);
 
-            // Out of each other's way, and aimed across the short axis so the run has room and
-            // meets no wall: a bounce would measure the arena rather than the dash.
-            p1.Pos = new Vector2(-expected * 0.5f, 0f);
-            bot.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.9f);
+                m.SubmitPlanningMoveTo(PlayerSide.P1, target);
+                m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+                AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+                AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
-            // And pointed along the dash. A run leaves along the nose and bends onto its target, so
-            // ordered across his own heading he would arc, and the straight line from start to
-            // finish would be the chord of that arc rather than the ground he covered.
-            p1.Facing = Vector2.right;
-            var start = p1.Pos;
-
-            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
-            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
-
-            float travelled = Vector2.Distance(start, p1.Pos);
-            Assert.AreEqual(expected, travelled, expected * 0.05f,
-                $"a full-power dash covered {travelled:0} units where it should cover {expected:0}");
+                // Within a twentieth of the run: the phase is ticked in frames, and a frame of a run
+                // paced to fill one second is a sixtieth of it.
+                Assert.Less(Vector2.Distance(p1.Pos, target), length * 0.05f + 1f,
+                    $"a run of {length:0} finished at {p1.Pos}, short of {target}");
+            }
         }
 
         [Test]

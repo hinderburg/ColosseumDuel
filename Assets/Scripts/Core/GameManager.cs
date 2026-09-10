@@ -213,11 +213,9 @@ namespace ColosseumDuel.Core
             var player = State.P1.Active;
             if (player == null || State.Items == null) return;
 
-            // Measured against this gladiator's own dash, not a fixed distance: Hilius covers twice
-            // the ground Brutius does, so any single number would be a comfortable stroll for one of
-            // them and out of reach for another. At 0.55 of his reach the sword is inside one move
-            // for all three, with room to tap past it.
-            float reach = player.DashReach();
+            // A fixed distance, the same for everyone now that nobody has a speed: the sword a short
+            // run up the arena and the tap point a little past it.
+            float reach = GameConstants.AimedRunLength;
             var forward = player.Facing.sqrMagnitude > 0.0001f ? player.Facing.normalized : Vector2.up;
 
             // The gilded copy of his own weapon, so the first thing the player is ever told to do
@@ -299,9 +297,8 @@ namespace ColosseumDuel.Core
 
             // A direction and a strength, from the callers that still think in those - the bot, the
             // drag controls, the tests - turned into the one thing the action phase actually runs
-            // to: a point. That far along that heading is exactly where the old straight run would
-            // have ended, so on open sand nothing about these orders has changed.
-            g.PlannedTarget = g.Pos + aim * (share * g.PlannedReach());
+            // to: a point, that share of one full aimed run along that heading.
+            g.PlannedTarget = g.Pos + aim * (share * GameConstants.AimedRunLength);
             g.PlannedAimDirection = aim;
             g.PlannedPower = share;
             return true;
@@ -313,7 +310,7 @@ namespace ColosseumDuel.Core
         /// Filed as the point the path actually ends at rather than the one asked for, which differ
         /// when the tap lands on a crate or outside the wall. The aim and the power are filled in
         /// from the path too, for everything that still reads them - which way he sets off, and
-        /// how much of one dash the run spends.
+        /// how long the run is against one full aimed run.
         /// </summary>
         public bool SubmitPlanningMoveTo(PlayerSide side, Vector2 target)
         {
@@ -322,12 +319,11 @@ namespace ColosseumDuel.Core
             if (g == null || !g.Alive) return false;
 
             var path = PlanRun(g, target);
-            float reach = g.PlannedReach();
 
             g.PlannedAction = ActionType.Move;
             g.PlannedTarget = path[path.Count - 1];
             g.PlannedAimDirection = path.Count > 1 ? (path[1] - path[0]).normalized : Vector2.zero;
-            g.PlannedPower = reach > 0.0001f ? Mathf.Clamp01(ObstacleField.Length(path) / reach) : 0f;
+            g.PlannedPower = Mathf.Clamp01(ObstacleField.Length(path) / GameConstants.AimedRunLength);
             return true;
         }
 
@@ -368,37 +364,14 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Turns a gladiator round on the spot, if his about-face is charged. Returns whether it was.
+        /// The run a gladiator would make to a point: the whole path round the obstacles.
         ///
-        /// Planning only, and it drops whatever order he had filed, leaving him undecided - the state
-        /// the phase started in and the one the buttons already know how to show. The turn is a
-        /// choice to stand and face something; a run filed before it would turn him straight back
-        /// round along the run the moment the phase began, and undo it.
-        /// </summary>
-        public bool SubmitAboutFace(PlayerSide side)
-        {
-            if (State.Phase != MatchPhase.Planning) return false;
-
-            var g = State.Get(side).Active;
-            if (g == null || !g.AboutFace()) return false;
-
-            g.PlannedAction = ActionType.None;
-            g.PlannedAimDirection = Vector2.zero;
-            g.PlannedPower = 0f;
-            g.PlannedTarget = Vector2.zero;
-            return true;
-        }
-
-        /// <summary>
-        /// The run a gladiator would make to a point this phase: the path round the obstacles, cut
-        /// off where one phase of running runs out.
-        ///
-        /// Built by the same pathfinder the action phase uses, so the lane drawn under the finger
-        /// is the run and not a picture of one. PlannedReach rather than DashReach: an armed ability
-        /// has not fired yet, and this is a drawing of what is about to happen.
+        /// Built by the same pathfinder the action phase uses, so the lane drawn under the finger is
+        /// the run and not a picture of one. Not cut short anywhere: a run always arrives, however
+        /// far it goes, so the lane always reaches the point it was drawn to.
         /// </summary>
         public List<Vector2> ComputeTrajectoryPreview(GladiatorInstance g, Vector2 target)
-            => ObstacleField.Truncate(PlanRun(g, target), g.PlannedReach());
+            => PlanRun(g, target);
 
         /// <summary>Advance the simulation. Call every frame with Time.deltaTime; the manager
         /// internally handles phase timers and (during Action) substepped physics.</summary>
@@ -528,15 +501,12 @@ namespace ColosseumDuel.Core
 
             var path = PlanRun(g, g.PlannedTarget);
             float length = ObstacleField.Length(path);
-            float fullSpeed = g.EffectiveSpeed() * GameConstants.SpeedScale;
-            float reach = fullSpeed * GameConstants.ActionTime;
-            if (length < 0.0001f || reach < 0.0001f) return;
+            if (length < 0.0001f) return;
 
-            // Timed to arrive as the phase ends when the target is within one dash, and flat out
-            // when it is not. The same pacing the straight run always had, so a short order is a
-            // walk and a long one a charge - rather than every run being a sprint that stops early
-            // and stands about for the rest of the phase.
-            float speed = fullSpeed * Mathf.Min(1f, length / reach);
+            // Paced to arrive as the phase ends, whatever the distance. There is no speed stat to cap
+            // it: a short order is a walk and a long one a sprint, and either way he gets there -
+            // which is the whole of what a tap now promises.
+            float speed = length / GameConstants.ActionTime;
 
             g.Path.AddRange(path);
             g.PathIndex = 1;   // he is standing on the first corner already

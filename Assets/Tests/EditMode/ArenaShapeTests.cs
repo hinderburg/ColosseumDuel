@@ -85,7 +85,7 @@ namespace ColosseumDuel.Tests
         {
             // The real loop: many substeps at speed, in a direction that keeps hitting the wall.
             var pos = Vector2.zero;
-            var vel = new Vector2(1f, 0.6f).normalized * (GameConstants.SpeedScale * 20f);
+            var vel = new Vector2(1f, 0.6f).normalized * 300f;
 
             for (int i = 0; i < 4000; i++)
             {

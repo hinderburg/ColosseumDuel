@@ -78,19 +78,38 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(0.15f, g.Rage, Tol);
         }
 
+        /// <summary>
+        /// Second Wind gives Brutius back a fifth of his full health, the moment it fires. It took
+        /// the place of Spirit, the speed ability, when gladiators stopped having a speed.
+        /// </summary>
         [Test]
-        public void SpiritBuff_Gives50PercentMoreSpeed_ForTwoCycles()
+        public void SecondWind_HealsAFifthOfHisHealth_AtOnce()
         {
-            var g = Fresh(GladiatorDef.Brutius); // speed 10, ability Spirit
+            var g = Fresh(GladiatorDef.Brutius);
+            Assert.AreEqual(AbilityKey.SecondWind, g.Def.Ability, "this test is about Brutius's ability");
+
+            g.Hp = 100f;
             g.BeginCycle();
             g.Rage = 1f;
             g.ActivateAbility();
 
-            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "activation cycle");
+            Assert.AreEqual(100f + g.Def.MaxHp * GameConstants.SecondWindHealFraction, g.Hp, Tol,
+                "a fifth of his full health, not of what he had left");
+            Assert.IsFalse(g.Buff.IsActive,
+                "an instant heal leaves nothing running - a buff here would light his ability marker " +
+                "for two cycles of doing nothing");
+        }
+
+        [Test]
+        public void SecondWind_NeverHealsPastFullHealth()
+        {
+            var g = Fresh(GladiatorDef.Brutius);
+            g.Hp = g.Def.MaxHp - 5f;
             g.BeginCycle();
-            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "second buffed cycle");
-            g.BeginCycle();
-            Assert.AreEqual(10f, g.EffectiveSpeed(), Tol, "buff has expired");
+            g.Rage = 1f;
+            g.ActivateAbility();
+
+            Assert.AreEqual(g.Def.MaxHp, g.Hp, Tol);
         }
 
         [Test]

@@ -191,7 +191,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(MatchPhase.Planning, _controller.Manager.State.Phase);
 
             var g = _controller.Manager.State.P1.Active;
-            var target = g.Pos + new Vector2(0f, g.DashReach() * 0.5f);
+            var target = g.Pos + new Vector2(0f, GameConstants.AimedRunLength * 0.5f);
             var screen = input.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
 
             Assert.IsTrue(input.TapTo(screen), "a tap on open sand should file a move");

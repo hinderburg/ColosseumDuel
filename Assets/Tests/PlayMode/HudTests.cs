@@ -273,44 +273,34 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The three buttons sit in a column down the right edge, clear of the arena.
-        ///
-        /// They used to ride on the gladiator, which put them on top of the thing being aimed: a
-        /// press meant for the sand landed on a button often enough that they had to keep being
-        /// pushed further from him. Pinned to the edge, the whole arena is pressable again - and
-        /// this is the assertion that would catch them drifting back over it.
+        /// The two buttons ride on the gladiator - the guard up and to his left, the ability up and
+        /// to his right, level with each other and above him - and there are only two of them: the
+        /// about-face and its button are gone.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheActionButtonsSitInAColumnDownTheRightEdge()
+        public IEnumerator TheActionButtonsSitEitherSideAboveTheGladiator()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
             var ability = (RectTransform)FindButton("Ability").transform;
             var defend = (RectTransform)FindButton("Defend").transform;
-            var turn = (RectTransform)FindButton("AboutFace").transform;
 
-            foreach (var rect in new[] { ability, defend, turn })
-            {
-                Assert.AreEqual(new Vector2(1f, 0.5f), rect.anchorMin, $"{rect.name} is not on the edge");
-                Assert.AreEqual(new Vector2(1f, 0.5f), rect.anchorMax);
-                Assert.Less(rect.anchoredPosition.x, 0f, $"{rect.name} hangs off the screen");
-            }
-
-            // Stacked, in the order they are reached for, and not overlapping each other.
-            Assert.Greater(ability.anchoredPosition.y, defend.anchoredPosition.y);
-            Assert.Greater(defend.anchoredPosition.y, turn.anchoredPosition.y);
-            Assert.Greater(defend.anchoredPosition.y - turn.anchoredPosition.y, defend.sizeDelta.y,
-                "two buttons closer together than one is tall would overlap");
-
-            // And well away from the gladiator, who is somewhere in the middle of the arena.
             var camera = _controller.Arena.ArenaCamera;
             Vector2 him = camera.WorldToScreenPoint(_controller.Arena.ToWorld(State.P1.Active.Pos));
-            var canvasRect = (RectTransform)FindButton("Defend").GetComponentInParent<Canvas>().transform;
+            var canvasRect = (RectTransform)defend.GetComponentInParent<Canvas>().transform;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, him, null, out var himLocal);
 
-            Assert.Greater(Vector2.Distance(himLocal, defend.anchoredPosition), defend.sizeDelta.x,
-                "a button sitting on the gladiator is a press that never reaches the sand");
+            Assert.Less(defend.anchoredPosition.x, himLocal.x, "the guard goes to his left");
+            Assert.Greater(ability.anchoredPosition.x, himLocal.x, "the ability to his right");
+            Assert.AreEqual(defend.anchoredPosition.y, ability.anchoredPosition.y, 0.01f,
+                "both sit at the same height");
+            Assert.Greater(defend.anchoredPosition.y, himLocal.y + defend.sizeDelta.y,
+                "and above him, clear of his feet where a press is meant for the sand");
+
+            bool turnButtonLeft = Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Any(b => b.name == "AboutFace");
+            Assert.IsFalse(turnButtonLeft, "the about-face was removed, and its button with it");
         }
 
         /// <summary>
@@ -344,39 +334,6 @@ namespace ColosseumDuel.Tests
             float before = ring.fillAmount;
             yield return RunSeconds(0.6f);
             Assert.Less(ring.fillAmount, before, "the ring is not emptying");
-        }
-
-        /// <summary>
-        /// The turn button spends the about-face and comes back over the cycles that follow, and
-        /// the ring on it says how far along that is.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator TheTurnButtonSpendsTheAboutFaceAndShowsItComingBack()
-        {
-            _controller.SubmitPlayerPick(GladiatorId.Brutius);
-            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
-
-            var turn = FindButton("AboutFace");
-            var gauge = Find("TurnGauge").GetComponent<Image>();
-            var player = State.P1.Active;
-            var wasFacing = player.Facing;
-
-            Assert.IsTrue(turn.interactable, "it starts the round charged");
-            Assert.AreEqual(1f, gauge.fillAmount, 0.001f);
-
-            turn.onClick.Invoke();
-            yield return null;
-
-            Assert.AreEqual(0f, Vector2.Angle(player.Facing, -wasFacing), 0.01f, "he did not turn");
-            Assert.IsFalse(turn.interactable, "and it is spent");
-            Assert.Less(gauge.fillAmount, 0.5f, "the ring should have emptied with it");
-
-            // Round the cycle and it is visibly further along, though not yet back.
-            yield return RunSeconds(GameConstants.PlanningTime + GameConstants.ActionTime + 0.5f);
-            yield return RunSeconds(GameConstants.PlanningTime * 0.5f);
-
-            Assert.Greater(gauge.fillAmount, 0f, "a cycle later it should be charging visibly");
-            Assert.Less(gauge.fillAmount, 1f, "but it is not back yet");
         }
 
         [UnityTest]

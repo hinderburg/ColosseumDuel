@@ -106,7 +106,7 @@ namespace ColosseumDuel.Tests
             // on the end of it. Given through the control the game ships on, so the frame is a frame
             // of what a player sees rather than of a scheme they would have to go and choose.
             input.Scheme = ControlScheme.Tap;
-            var runTo = player.Pos + new Vector2(-0.707f, 0.707f) * player.DashReach();
+            var runTo = player.Pos + new Vector2(-0.707f, 0.707f) * GameConstants.AimedRunLength;
             input.TapTo(input.ArenaCamera.WorldToScreenPoint(controller.Arena.ToWorld(runTo)));
             yield return null;
 
@@ -207,7 +207,7 @@ namespace ColosseumDuel.Tests
 
             // Through the control the game ships on, so the frame shows what a player sees.
             input.Scheme = ControlScheme.Tap;
-            var target = player.Pos + new Vector2(0f, player.DashReach());
+            var target = player.Pos + new Vector2(0f, GameConstants.AimedRunLength);
             input.TapTo(camera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
             yield return null;
 
@@ -499,7 +499,7 @@ namespace ColosseumDuel.Tests
 
             // Half a dash up the arena, so the dashes reach the ring rather than stopping short.
             var player = controller.Manager.State.P1.Active;
-            var target = player.Pos + new Vector2(0f, player.DashReach() * 0.5f);
+            var target = player.Pos + new Vector2(0f, GameConstants.AimedRunLength * 0.5f);
             input.TapTo(controller.Arena.ArenaCamera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
             yield return null;
 

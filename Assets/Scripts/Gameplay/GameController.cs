@@ -38,7 +38,7 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Raised whenever the match changes phase. The HUD hooks in here.</summary>
         public event Action<MatchState> PhaseChanged;
 
-        /// <summary>The green arc and red wedge drawn round the player while he is given his orders.</summary>
+        /// <summary>The red strike wedge drawn in front of the player while he is given his orders.</summary>
         public ControlZoneView ControlZone { get; private set; }
 
         private GladiatorView _playerView;
@@ -452,10 +452,6 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Arms or disarms the ability. Returns false if it could not fire anyway.</summary>
         public bool SubmitPlayerAbility(bool armed)
             => Manager != null && Manager.SubmitAbility(PlayerSide.P1, armed);
-
-        /// <summary>Turns the player's gladiator round on the spot. False if it is still charging.</summary>
-        public bool SubmitPlayerAboutFace()
-            => Manager != null && Manager.SubmitAboutFace(PlayerSide.P1);
 
         /// <summary>
         /// Takes back whatever the player had chosen this phase, leaving them undecided again.

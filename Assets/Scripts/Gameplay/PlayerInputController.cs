@@ -407,11 +407,11 @@ namespace ColosseumDuel.Gameplay
             if (!TryScreenToVirtual(screenPos, out var tapped)) return false;
 
             var path = Controller.Manager.PlanRun(g, tapped);
-            float reach = g.PlannedReach();
 
             // A tap on his own feet is not an order to go anywhere. Measured along the run rather
-            // than in a straight line, so a tap just the far side of a column still counts.
-            if (reach <= 0.0001f || ObstacleField.Length(path) / reach <= MinPowerToSubmit) return false;
+            // than in a straight line, so a tap just the far side of a column still counts; a body's
+            // width is the shortest run that reads as a run.
+            if (ObstacleField.Length(path) < GameConstants.GladiatorRadius) return false;
 
             DefendArmed = false;
             CancelDrag();
@@ -420,9 +420,9 @@ namespace ColosseumDuel.Gameplay
 
             // Drawn after submitting, so what is shown is the order that actually went in. It stays
             // up for the rest of the phase - the whole point is being able to look at the decision
-            // already made. The lane stops where one phase of running runs out; the ring sits on the
-            // point he was sent to, so a run too long for one phase says so by falling short of it.
-            ShowTapOrder(path[path.Count - 1], ObstacleField.Truncate(path, reach));
+            // already made. The lane runs all the way to the ring: a run always arrives, however
+            // far it goes, so there is no point short of the tap for the lane to stop at.
+            ShowTapOrder(path[path.Count - 1], path);
             return true;
         }
 
@@ -585,28 +585,6 @@ namespace ColosseumDuel.Gameplay
             }
         }
 
-        /// <summary>
-        /// Turns the gladiator round where he stands, so the arc of ground he can be sent onto
-        /// swings from in front of him to behind.
-        ///
-        /// Not a toggle, unlike the other two buttons: it happens the moment it is pressed and there
-        /// is nothing to take back - and nothing needs to be shown either, because what it did is
-        /// the green arc visibly swinging round on the sand.
-        ///
-        /// It clears whatever run was drawn, because the simulation has cleared the order behind it:
-        /// an order aimed into the arc he had a second ago is not an order into the arc he has now,
-        /// and quietly swinging it round by half a turn is not what anybody asked for.
-        /// </summary>
-        public void TurnAround()
-        {
-            if (PlayerGladiator() == null) return;
-            if (Controller == null || !Controller.SubmitPlayerAboutFace()) return;
-
-            DefendArmed = false;
-            CancelDrag();
-            ClearOrderDrawing();
-        }
-
         // ------------------------------------------------------------------
 
         /// <summary>
@@ -664,8 +642,8 @@ namespace ColosseumDuel.Gameplay
         ///
         /// Tapping used to have no feedback at all: the order went in and nothing on screen
         /// acknowledged it until the gladiators started moving. The ring sits on the point he was
-        /// sent to and the lane shows the actual run round the obstacles, cut off where one phase of
-        /// running runs out - so a run too long for one phase says so by falling short of the ring.
+        /// sent to and the lane shows the actual run round the obstacles, all the way to the ring -
+        /// a run always arrives now, so the lane never has anywhere short of it to stop.
         /// </summary>
         private void ShowTapOrder(Vector2 target, List<Vector2> run)
         {
@@ -736,7 +714,7 @@ namespace ColosseumDuel.Gameplay
                 return;
             }
 
-            var target = g.Pos + aim.normalized * (Mathf.Clamp01(power) * g.PlannedReach());
+            var target = g.Pos + aim.normalized * (Mathf.Clamp01(power) * GameConstants.AimedRunLength);
             DrawLane(Controller.Manager.ComputeTrajectoryPreview(g, target));
         }
 

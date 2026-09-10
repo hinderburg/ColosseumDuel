@@ -63,16 +63,12 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The column is pinned to the screen, not to the man.
-        ///
-        /// The two used to ride either side of his head and move with him, which put them on top of
-        /// the arena he is aimed across - a press meant for the sand landed on a button often enough
-        /// that they kept having to be pushed further away from him. The order down the column and
-        /// its distance from the gladiator are checked in HudTests; what this pins is that they no
-        /// longer chase him around.
+        /// The buttons ride on the man. They spent one iteration in a column down the screen's edge
+        /// and came back by request: beside him they are read in the same glance as the decision
+        /// they belong to.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheButtonsStayPutWhenTheGladiatorMoves()
+        public IEnumerator TheButtonsFollowTheGladiatorAcrossTheArena()
         {
             yield return null;
             var before = RectOf(_buttons.Ability).anchoredPosition;
@@ -80,8 +76,8 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Pos = new Vector2(GameConstants.ArenaRadius * 0.5f, 0f);
             yield return null;
 
-            Assert.AreEqual(before, RectOf(_buttons.Ability).anchoredPosition,
-                "the buttons followed him across the arena instead of staying under the thumb");
+            Assert.Greater(Vector2.Distance(RectOf(_buttons.Ability).anchoredPosition, before), 20f,
+                "moving the gladiator should move his buttons with him");
         }
 
         [UnityTest]

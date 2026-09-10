@@ -91,14 +91,17 @@ namespace ColosseumDuel.Core
         // need one. The fastest still meets inside a single phase. Lower this if the wait shows.
         public const float SpawnDistanceFraction = 0.55f;
 
-        // Virtual units per second per point of a gladiator's Speed stat.
-        //
-        // Paired with ActionTime, and the pair is what matters: how far a dash carries is
-        // Speed * SpeedScale * ActionTime, so halving the phase halves the reach unless this
-        // doubles to match. It did, when the action phase went from 2.0s to 1.0s - the dash covers
-        // the same ground as before and covers it twice as fast, which is the point of the shorter
-        // phase. Change one of the two and the reach moves; DashCarriesTheSameGround pins it.
-        public const float SpeedScale = 15f;
+        /// <summary>
+        /// How far an order given as an aim and a strength sends a man, at full strength.
+        ///
+        /// Gladiators have no speed any more: a run always takes the whole action phase and always
+        /// arrives, however far it goes, so a tap is simply a point. The callers that still think in
+        /// aims - the bot, the old drag controls, most of the tests - need a distance for "all the
+        /// way", and this is it: the dash the middle archetype used to have, so the bot's pace
+        /// across the arena is about what it always was.
+        /// </summary>
+        public const float AimedRunLength = 225f;
+
         public const float MaxDragVirtual = 90f; // max pull-back distance for the slingshot move
 
         /// <summary>
@@ -110,8 +113,8 @@ namespace ColosseumDuel.Core
         /// meant to be playing. Setting them moving instead lets the rest of the phase carry them,
         /// and the whole thing reads as one beat.
         ///
-        /// Modest against a charge: the slowest gladiator runs at 150 and the fastest at 300, so
-        /// this is a recoil rather than a second dash in the other direction.
+        /// Modest against a charge - a run covers hundreds of units in a phase - so this is a recoil
+        /// rather than a second dash in the other direction.
         /// </summary>
         public const float BounceSpeed = 90f;
         /// <summary>
@@ -133,14 +136,15 @@ namespace ColosseumDuel.Core
         public const int AbilityLockCycles = 1; // cycles rage cannot charge after activating an ability
 
         /// <summary>
-        /// How many cycles a gladiator goes without his about-face after spending it.
+        /// What Brutius's Second Wind gives back, as a share of his full health: a fifth, forty
+        /// points of his two hundred.
         ///
-        /// Every gladiator has it and it costs no rage, so time is the whole of its price. Two
-        /// cycles is long enough that turning round is a decision - the fight moves a long way in
-        /// two cycles - and short enough that a man who has run himself at a wall is not stuck
-        /// facing it for the rest of the round.
+        /// Enough to be worth the rage it costs - several cycles of fighting to fill - and not so
+        /// much that the man with twice everybody else's health can outlast every fight by topping
+        /// himself back up. Taken off his full health rather than what he has left, so it is worth
+        /// the same whenever it is spent.
         /// </summary>
-        public const int AboutFaceRechargeCycles = 2;
+        public const float SecondWindHealFraction = 0.2f;
 
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending

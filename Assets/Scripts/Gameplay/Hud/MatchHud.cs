@@ -30,7 +30,6 @@ namespace ColosseumDuel.Gameplay.Hud
         private Text _hint;
         private Button _defendButton;
         private Button _abilityButton;
-        private Button _turnButton;
         private ActionButtonsView _actionButtons;
 
         private GameObject _overlay;
@@ -166,10 +165,8 @@ namespace ColosseumDuel.Gameplay.Hud
 
             _abilityButton = _actionButtons.Ability;
             _defendButton = _actionButtons.Defend;
-            _turnButton = _actionButtons.AboutFace;
             _abilityButton.onClick.AddListener(() => Input?.ToggleAbility());
             _defendButton.onClick.AddListener(() => Input?.ToggleDefend());
-            _turnButton.onClick.AddListener(() => Input?.TurnAround());
 
             _hint = HudFactory.CreateLabel("Hint", root,
                 "Tap the arena and your gladiator runs there",
@@ -396,10 +393,6 @@ namespace ColosseumDuel.Gameplay.Hud
 
             _defendButton.interactable = canAct;
 
-            // The turn is gated twice over: by the phase, like everything else here, and by its own
-            // cooldown, which Sync has just read off the gladiator. Both have to hold.
-            _turnButton.interactable &= canAct;
-
             // The generic hint stands down while the tutorial is talking: during the first round the
             // tutorial line is the hint, and two lines saying near enough the same thing a few pixels
             // apart read as clutter rather than as help.
@@ -493,11 +486,10 @@ namespace ColosseumDuel.Gameplay.Hud
                     _pickIcons[i].color = palette != null ? palette.ArchetypeColor(def.Id) : Color.white;
                     _pickIcons[i].enabled = _pickIcons[i].sprite != null;
 
-                    // Damage and speed alongside HP: with the ability spelled out on its own line
-                    // below, the stat line is the only place the actual trade between the three is
-                    // visible, and "200 HP" alone does not say that Brutius is also the slowest.
+                    // Damage alongside HP: with the ability spelled out on its own line below, the
+                    // stat line is the only place the actual trade between the three is visible.
                     _pickButtonLabels[i].text = alive
-                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} dmg · {Mathf.RoundToInt(def.Speed)} spd"
+                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} dmg"
                         : $"{def.Name}\nout";
                     _pickAbilityLabels[i].text = alive
                         ? $"{def.AbilityName}: {def.AbilityDescription}"
