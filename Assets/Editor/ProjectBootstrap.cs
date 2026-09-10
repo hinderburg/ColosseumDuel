@@ -446,18 +446,15 @@ namespace ColosseumDuel.EditorTools
             palette.BarHp = Unlit("BarHp", new Color(0.30f, 0.85f, 0.35f));
             palette.BarRage = Unlit("BarRage", new Color(0.95f, 0.65f, 0.15f));
 
-            // White, not the old yellow: over bright sand and a red danger ring the yellow line was
-            // hard to pick out, which is what made the preview easy to miss.
+            // White, not the old yellow: over bright sand the yellow line was hard to pick out.
             //
-            // A lane rather than a line. A one-pixel dash said where he would go and nothing about
-            // him going there; a band as wide as he is says a body is about to travel down it.
+            // A plain stripe. It was a dashed lane a body wide, then half that, with an arrow head;
+            // asked for simply a thin white line. The material is reused from disk if it exists, so
+            // the dash texture it used to carry is cleared here rather than left to show through.
             palette.Trajectory = TransparentUnlit("Trajectory", Color.white);
-            ApplyTexture(palette.Trajectory,
-                ProceduralTextures.EnsureTrajectoryBand(TexturesDir + "/TrajectoryBand.png"), Vector2.one);
-
-            palette.TrajectoryHead = TransparentUnlit("TrajectoryHead", Color.white);
-            ApplyTexture(palette.TrajectoryHead,
-                ProceduralTextures.EnsureArrowHead(TexturesDir + "/ArrowHead.png"), Vector2.one);
+            palette.Trajectory.mainTexture = null;
+            palette.Trajectory.mainTextureScale = Vector2.one;
+            EditorUtility.SetDirty(palette.Trajectory);
 
             palette.PullLine = TransparentUnlit("PullLine", new Color(1f, 1f, 1f, 0.75f));
 

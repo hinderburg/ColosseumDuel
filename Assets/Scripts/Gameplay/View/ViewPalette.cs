@@ -35,7 +35,7 @@ namespace ColosseumDuel.Gameplay.View
         public Material BarRage;
 
         [Header("Input")]
-        /// <summary>Dashed white line: where the gladiator will run if released now.</summary>
+        /// <summary>Thin plain white stripe: the run the gladiator has been given.</summary>
         public Material Trajectory;
 
         /// <summary>Solid white line: the pull itself, from the gladiator back to the pointer.</summary>
@@ -93,9 +93,6 @@ namespace ColosseumDuel.Gameplay.View
         /// material's tint - there are two of them, cloth and gold, and a tint has one.
         /// </summary>
         public Material Banner;
-
-        /// <summary>The head on the end of the planned run. Its own quad; see PlayerInputController.</summary>
-        public Material TrajectoryHead;
 
         /// <summary>
         /// Rounded rectangle, nine-sliced: the shape every panel, button and bar in the HUD is cut

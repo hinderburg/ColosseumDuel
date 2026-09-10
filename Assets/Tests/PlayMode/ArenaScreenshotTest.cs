@@ -497,7 +497,7 @@ namespace ColosseumDuel.Tests
             controller.SubmitPlayerPick(GladiatorId.Hilius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
-            // Half a dash up the arena, so the dashes reach the ring rather than stopping short.
+            // Half a dash up the arena, so the stripe reaches the ring rather than stopping short.
             var player = controller.Manager.State.P1.Active;
             var target = player.Pos + new Vector2(0f, GameConstants.TutorialRunLength * 0.5f);
             input.TapTo(controller.Arena.ArenaCamera.WorldToScreenPoint(controller.Arena.ToWorld(target)));

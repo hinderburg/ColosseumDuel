@@ -66,21 +66,16 @@ namespace ColosseumDuel.Gameplay
         public Vector2 CurrentAim { get; private set; }
 
         /// <summary>
-        /// How wide the planned run is drawn, in world units - about half a gladiator across.
+        /// How wide the planned run is drawn, in world units: a thin stripe, about a sixth of a
+        /// gladiator across.
         ///
-        /// It was a lane his own width, which read as the ground he would cover. Halved on request:
-        /// a run the player draws by hand winds about, and a band as wide as he is turned every
-        /// bend of it into a blot.
+        /// It was a dashed lane his own width, then half that, with an arrow head on the end. Asked
+        /// for simply a thin white line - three or four times thinner than the half-width lane - and
+        /// that is what a hand-drawn run wants: its bends read as bends instead of as a blot.
         /// </summary>
-        private const float TrajectoryWidth = 0.425f;
+        private const float TrajectoryWidth = 0.12f;
 
-        /// <summary>World length of one tile of the band - one chevron and one dash of each rail.</summary>
-        private const float DashPeriod = 1.15f;
-
-        /// <summary>How much wider than the lane the head on the end of it is.</summary>
-        private const float ArrowHeadSpread = 1.35f;
-
-        /// <summary>How high above the sand the lane is drawn. The head goes just above it.</summary>
+        /// <summary>How high above the sand the stripe is drawn.</summary>
         private const float TrajectoryHeight = 0.06f;
 
         private LineRenderer _trajectory;
@@ -110,94 +105,12 @@ namespace ColosseumDuel.Gameplay
             _trajectory = CreateLine("TrajectoryPreview", palette != null ? palette.Trajectory : null,
                 TrajectoryWidth);
 
-            // Dashes come from a tiled texture keyed to distance along the line, so they stay evenly
-            // spaced through a bounce even though the preview's points are not evenly spaced.
-            _trajectory.textureMode = LineTextureMode.Tile;
-            _trajectory.textureScale = new Vector2(1f / DashPeriod, 1f);
-
-            // The pull is drawn slightly narrower and solid, so at a glance the two lines read as
+            // The pull is drawn a little narrower and fainter, so at a glance the two lines read as
             // different things: what you are doing now, and what will happen when you let go.
             _pullLine = CreateLine("PullLine", palette != null ? palette.PullLine : null,
                 TrajectoryWidth * 0.65f);
 
             BuildTapMarker(palette);
-            BuildArrowHead(palette);
-        }
-
-        /// <summary>
-        /// The head on the end of the lane.
-        ///
-        /// Its own quad rather than more line: a LineRenderer has one width along its whole length,
-        /// and the point of an arrow is that it has two.
-        ///
-        /// Parented to the arena for the same reason the tap marker is - this component lives on the
-        /// camera, and anything hung off the camera inherits its sixty-six degree pitch, which for
-        /// something meant to lie on the floor means being seen edge-on.
-        /// </summary>
-        private void BuildArrowHead(ViewPalette palette)
-        {
-            if (palette == null || palette.TrajectoryHead == null || palette.Quad == null) return;
-
-            _arrowHead = new GameObject("TrajectoryHead");
-            _arrowHead.transform.SetParent(Controller.Arena.transform, false);
-            _arrowHead.AddComponent<MeshFilter>().sharedMesh = palette.Quad;
-
-            var renderer = _arrowHead.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = palette.TrajectoryHead;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-
-            _arrowHead.SetActive(false);
-        }
-
-        private GameObject _arrowHead;
-
-        /// <summary>
-        /// Puts the head at the end of the run, pointing the way it is going.
-        ///
-        /// The direction comes from the last two points of the preview rather than from the aim: the
-        /// run can bounce off the wall, and after a bounce the aim points at where he started from.
-        /// </summary>
-        private void ShowArrowHead(System.Collections.Generic.List<Vector3> worldPoints)
-        {
-            if (_arrowHead == null || worldPoints.Count < 2) return;
-
-            var tip = worldPoints[worldPoints.Count - 1];
-            var before = worldPoints[worldPoints.Count - 2];
-            var travel = tip - before;
-            if (travel.sqrMagnitude < 0.000001f) { HideArrowHead(); return; }
-            travel.Normalize();
-
-            float span = TrajectoryWidth * ArrowHeadSpread;
-
-            // Set back by half its own length so the arrow's point lands on the end of the run
-            // rather than half an arrow past it - and then forward again by the lane's own end cap.
-            //
-            // That cap is the reason this looked wrong. A LineRenderer with rounded caps draws a
-            // half-disc of its own width past the last point, so the band kept going for another
-            // half-width after the arrow's tip and the head read as sitting short of the end.
-            float pastTheCap = TrajectoryWidth * 0.5f;
-
-            // Above the lane, not under it. Both are transparent and sorted by distance to the
-            // camera, and the lane was the higher of the two - so the half of the head that overlaps
-            // the band's cap was being painted over by the band, which left a visibly shorter arrow
-            // sitting a little way back from where it had been put.
-            _arrowHead.transform.position =
-                tip + travel * (pastTheCap - span * 0.5f) + Vector3.up * (TrajectoryHeight + 0.01f);
-
-            // Laid flat, then turned about the world's up axis. Composed rather than written as one
-            // Euler triple: flat on the ground is ninety degrees of pitch, where Euler angles are
-            // gimbal-locked and the turn comes back out of a component nobody put it in.
-            float yaw = Mathf.Atan2(travel.x, travel.z) * Mathf.Rad2Deg;
-            _arrowHead.transform.rotation = Quaternion.Euler(0f, yaw, 0f) * Quaternion.Euler(90f, 0f, 0f);
-            _arrowHead.transform.localScale = new Vector3(span, span, 1f);
-
-            _arrowHead.SetActive(true);
-        }
-
-        private void HideArrowHead()
-        {
-            if (_arrowHead != null && _arrowHead.activeSelf) _arrowHead.SetActive(false);
         }
 
         /// <summary>
@@ -794,7 +707,6 @@ namespace ColosseumDuel.Gameplay
             CurrentAim = Vector2.zero;
             Hide(_trajectory);
             Hide(_pullLine);
-            HideArrowHead();
         }
 
         private static void Hide(LineRenderer line)
@@ -860,7 +772,6 @@ namespace ColosseumDuel.Gameplay
             if (run == null || run.Count < 2)
             {
                 Hide(_trajectory);
-                HideArrowHead();
                 return;
             }
 
@@ -872,7 +783,6 @@ namespace ColosseumDuel.Gameplay
             for (int i = 0; i < _worldPoints.Count; i++)
                 _trajectory.SetPosition(i, _worldPoints[i]);
             _trajectory.enabled = true;
-            ShowArrowHead(_worldPoints);
         }
 
         /// <summary>
@@ -888,7 +798,6 @@ namespace ColosseumDuel.Gameplay
             DrawExhausted = false;
             if (_tapMarker != null && _tapMarker.activeSelf) _tapMarker.SetActive(false);
             Hide(_trajectory);
-            HideArrowHead();
         }
 
         private void DrawTrajectory(GladiatorInstance g) => DrawRun(g, CurrentAim, CurrentPower);
@@ -906,7 +815,6 @@ namespace ColosseumDuel.Gameplay
             if (power <= MinPowerToSubmit || aim == Vector2.zero)
             {
                 Hide(_trajectory);
-                HideArrowHead();
                 return;
             }
 

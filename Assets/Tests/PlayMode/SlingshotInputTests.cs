@@ -192,24 +192,33 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(pullLine.enabled, "cancelling clears it");
         }
 
+        /// <summary>
+        /// The run is drawn as a thin plain white stripe - no dashes, no arrow head.
+        ///
+        /// It started as a thin yellow hairline that vanished against the sand, became a dashed lane
+        /// as wide as a gladiator with a head on the end, then half that. Asked for simply a white
+        /// line three or four times thinner than the half-width lane: the width is pinned inside
+        /// that range, and still wider than the hairline it started as.
+        /// </summary>
         [Test]
-        public void TheTrajectoryIsWideWhiteAndDashed()
+        public void TheTrajectoryIsAThinPlainWhiteStripe()
         {
-            // Regression for "the movement line is hard to see": it used to be a thin yellow
-            // hairline, which disappeared against bright sand and the red danger rings.
             var line = FindLine("TrajectoryPreview");
             Assert.IsNotNull(line);
 
-            Assert.GreaterOrEqual(line.widthMultiplier, 0.18f,
-                "the trajectory should be several times wider than a hairline");
-            Assert.AreEqual(0.425f, line.widthMultiplier, 0.001f,
-                "half the gladiator-wide lane it was, so a hand-drawn run with bends in it stays legible");
-            Assert.AreEqual(LineTextureMode.Tile, line.textureMode,
-                "dashes come from a tiled texture, so they stay even through a bounce");
-            Assert.IsNotNull(line.sharedMaterial.mainTexture, "the dash pattern is a texture");
+            const float halfWidthLane = 0.425f;
+            Assert.LessOrEqual(line.widthMultiplier, halfWidthLane / 3f, "not three times thinner than the lane it was");
+            Assert.GreaterOrEqual(line.widthMultiplier, halfWidthLane / 4f, "more than four times thinner - a hairline again");
+
+            Assert.IsNull(line.sharedMaterial.mainTexture, "a plain stripe carries no dash pattern");
 
             var colour = line.sharedMaterial.color;
             Assert.Greater(Mathf.Min(colour.r, colour.g, colour.b), 0.9f, "and it should be white");
+            Assert.Greater(colour.a, 0.9f, "and solid");
+
+            var head = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(t => t.name == "TrajectoryHead");
+            Assert.IsNull(head, "the arrow head was taken off with the dashes");
         }
 
         [UnityTest]
@@ -329,64 +338,6 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(_input.ReleaseDrag(drawnTo));
             Assert.AreEqual(ActionType.Move, g.PlannedAction);
             Assert.Greater(Vector2.Dot(g.PlannedAimDirection, Vector2.up), 0.95f);
-        }
-
-        /// <summary>
-        /// The head sits at the far end of the lane, past the band's own rounded cap.
-        ///
-        /// It looked short of the end for a while and the maths was right: a LineRenderer with
-        /// rounded caps draws a half-disc of its own width past its last point, so the band kept
-        /// going after the arrow's tip.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator TheArrowHeadSitsAtTheFarEndOfTheLane()
-        {
-            var line = FindLine("TrajectoryPreview");
-            var head = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .FirstOrDefault(t => t.name == "TrajectoryHead");
-            if (head == null) Assert.Ignore("No arrow head - the palette predates it.");
-
-            var player = Player;
-            _input.Scheme = ControlScheme.Swipe;
-            var anchor = player.Pos + new Vector2(-120f, -120f);
-            _input.TryBeginSwipe(anchor);
-            _input.UpdateDrag(anchor + new Vector2(0f, -GameConstants.MaxDragVirtual));
-            yield return null;
-
-            Assert.IsTrue(head.gameObject.activeSelf, "the lane has no head on it");
-
-            // Pointing the way the run goes. The quad's own up is where the texture's point is, so
-            // this is the arrow's direction and not merely the object's orientation.
-            var lastLeg = (line.GetPosition(line.positionCount - 1)
-                           - line.GetPosition(line.positionCount - 2)).normalized;
-            Assert.Greater(Vector3.Dot(head.up, lastLeg), 0.98f,
-                $"the head points {head.up} while the run goes {lastLeg}");
-
-            // Lying on the floor, not standing up out of it: the camera looks down, and an arrow on
-            // its edge is a line. Measured against the quad's own back, because a Unity quad's
-            // visible face is along its -Z - so an arrow facing the sky has its forward in the sand.
-            Assert.Greater(Vector3.Dot(-head.forward, Vector3.up), 0.98f,
-                "the head is not lying flat on the sand");
-
-            var arena = _controller.Arena;
-            var start = line.GetPosition(0);
-            var end = line.GetPosition(line.positionCount - 1);
-
-            // Measured along the run rather than as a distance, so "past the end" and "short of the
-            // end" are different answers rather than the same one.
-            var along = (end - start).normalized;
-            float headAlong = Vector3.Dot(head.position - start, along);
-            float lineAlong = Vector3.Dot(end - start, along);
-
-            // The threshold sits between the two measured cases rather than at a round number: with
-            // the cap accounted for the head's centre lands a seventh of a body radius short of the
-            // last point, and without it a whole radius and a third short. This is between them, so
-            // the test still fails if the cap is forgotten again.
-            float radius = arena.ScaleLength(GameConstants.GladiatorRadius);
-            Assert.Greater(headAlong, lineAlong - radius * 0.7f,
-                "the head is sitting back down the lane, short of where the band actually ends");
-            Assert.Less(headAlong, lineAlong + radius * 3f,
-                "the head has floated off past the end of the run");
         }
 
         /// <summary>
