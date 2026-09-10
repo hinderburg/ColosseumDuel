@@ -202,6 +202,8 @@ namespace ColosseumDuel.Tests
 
             Assert.GreaterOrEqual(line.widthMultiplier, 0.18f,
                 "the trajectory should be several times wider than a hairline");
+            Assert.AreEqual(0.425f, line.widthMultiplier, 0.001f,
+                "half the gladiator-wide lane it was, so a hand-drawn run with bends in it stays legible");
             Assert.AreEqual(LineTextureMode.Tile, line.textureMode,
                 "dashes come from a tiled texture, so they stay even through a bounce");
             Assert.IsNotNull(line.sharedMaterial.mainTexture, "the dash pattern is a texture");

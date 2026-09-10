@@ -66,13 +66,13 @@ namespace ColosseumDuel.Gameplay
         public Vector2 CurrentAim { get; private set; }
 
         /// <summary>
-        /// How wide the planned run is drawn, in world units - about a gladiator across.
+        /// How wide the planned run is drawn, in world units - about half a gladiator across.
         ///
-        /// A lane, not a line. At a fifth of this it told the player where he would end up and
-        /// nothing about a body going there; at his own width it is the ground he is about to cover,
-        /// and whether it passes through the other man is a thing you can see rather than judge.
+        /// It was a lane his own width, which read as the ground he would cover. Halved on request:
+        /// a run the player draws by hand winds about, and a band as wide as he is turned every
+        /// bend of it into a blot.
         /// </summary>
-        private const float TrajectoryWidth = 0.85f;
+        private const float TrajectoryWidth = 0.425f;
 
         /// <summary>World length of one tile of the band - one chevron and one dash of each rail.</summary>
         private const float DashPeriod = 1.15f;
