@@ -435,18 +435,11 @@ namespace ColosseumDuel.EditorTools
             palette.Shield = Lit("ItemShield", new Color(0.55f, 0.60f, 0.70f));
             palette.RandomItem = Lit("ItemRandom", new Color(0.60f, 0.35f, 0.80f));
 
-            // Washes over the sand rather than paint on top of it. Opaque and fully saturated, the
-            // danger zone read as the arena having been repainted red - it took over the frame from
-            // the fight happening on it. Transparent and dulled, it is ground you can see is
-            // dangerous and still see the floor of.
-            palette.HazardActive = TransparentUnlit("HazardActive", new Color(0.55f, 0.22f, 0.17f, 0.62f));
-            palette.HazardTelegraph = TransparentUnlit("HazardTelegraph", new Color(0.50f, 0.40f, 0.24f, 0.50f));
-
             palette.BarBackground = Unlit("BarBackground", new Color(0.06f, 0.06f, 0.08f));
             palette.BarHp = Unlit("BarHp", new Color(0.30f, 0.85f, 0.35f));
             palette.BarRage = Unlit("BarRage", new Color(0.95f, 0.65f, 0.15f));
 
-            // White, not the old yellow: over bright sand and a red danger ring the yellow line was
+            // White, not the old yellow: over bright sand the yellow line was
             // hard to pick out, which is what made the preview easy to miss.
             //
             // A lane rather than a line. A one-pixel dash said where he would go and nothing about
@@ -514,10 +507,8 @@ namespace ColosseumDuel.EditorTools
             if (palette.Torch == null)
                 Debug.LogWarning($"[Colosseum] Torch prefab not found at {TorchPrefabPath} - the wall will be unlit.");
 
-            // Iron, for the spikes that fill a danger zone and for the jaws of the traps. Dark and
-            // barely lit: they come up out of the sand and should read as a threat rather than as
-            // decoration, and against bright sand a dark silhouette does that better than a colour.
-            palette.Spike = Lit("Spike", new Color(0.30f, 0.31f, 0.35f));
+            // Iron, for the jaws of the traps. Dark and barely lit: against bright sand a dark
+            // silhouette reads as a threat better than a colour does.
             palette.TrapIron = Lit("TrapIron", new Color(0.22f, 0.22f, 0.25f));
 
             palette.BloodHit = AssetDatabase.LoadAssetAtPath<GameObject>(BloodPrefabPath);
@@ -659,8 +650,7 @@ namespace ColosseumDuel.EditorTools
             // Pale bone, matching the reference frame: light and nearly colourless, but warm rather
             // than grey. It went from orange sand to grey stone dust and has landed between the two,
             // which is where the reference has it - bright enough that the figures read as dark
-            // shapes on it, drained enough that the red of the danger zone and the blood are the
-            // only saturated things on the floor.
+            // shapes on it, drained enough that the blood is the only saturated thing on the floor.
             var sandMat = Lit("Sand", new Color(0.60f, 0.56f, 0.48f));
             ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
 
@@ -673,7 +663,7 @@ namespace ColosseumDuel.EditorTools
             // palette. Nothing logged, and the scene file looked right.
             palette = AssetDatabase.LoadAssetAtPath<ViewPalette>(PalettePath);
 
-            // --- arena root: owns the virtual->world conversion and the hazard ring visuals ---
+            // --- arena root: owns the virtual->world conversion and the props laid out on the sand ---
             var arenaGo = new GameObject("Arena");
             var arena = arenaGo.AddComponent<ArenaView>();
             arena.WorldArenaRadius = r;

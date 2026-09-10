@@ -6,7 +6,7 @@ namespace ColosseumDuel.Tests
 {
     /// <summary>
     /// The arena is an ellipse, and four separate systems depend on agreeing where its wall is:
-    /// the action phase's bounce, the trajectory preview, the danger rings and item spawning.
+    /// the action phase's bounce, the trajectory preview, the obstacle layout and item spawning.
     /// </summary>
     public class ArenaShapeTests
     {

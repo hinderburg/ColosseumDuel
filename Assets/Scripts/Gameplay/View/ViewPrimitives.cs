@@ -37,17 +37,16 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         /// <summary>
-        /// A flat ring on the XZ plane. Used for the arena's shrinking danger zones - a ring is the
-        /// shape the design actually calls for, and drawing it as real geometry keeps it readable
-        /// under an orthographic top-down camera.
+        /// A flat ring on the XZ plane. Used for the trap plates and the rings round the gladiators -
+        /// drawing it as real geometry keeps it readable under an orthographic top-down camera.
         /// </summary>
         /// <summary>
-        /// A cone standing on the XZ plane with its point up, for the spikes in the danger zone.
+        /// A cone standing on the XZ plane with its point up, for the teeth of the traps.
         ///
         /// Built here rather than taken from a primitive because Unity has no cone among them, and
         /// a squashed cylinder is not the same silhouette - what has to read from above is the point.
         /// Flat-shaded on purpose: each side face gets its own vertices, so the facets catch the
-        /// light separately and a spike is legible as a spike at forty pixels.
+        /// light separately and a tooth is legible as a tooth at forty pixels.
         /// </summary>
         public static Mesh CreateCone(float radius, float height, int segments = 10)
         {
@@ -66,7 +65,7 @@ namespace ColosseumDuel.Gameplay.View
                 vertices.Add(apex); vertices.Add(p1); vertices.Add(p0);
                 triangles.Add(at); triangles.Add(at + 1); triangles.Add(at + 2);
 
-                // The base too - a spike rising out of the floor shows its underside on the way up.
+                // The base too - a tooth seen from low down shows its underside.
                 int ab = vertices.Count;
                 vertices.Add(Vector3.zero); vertices.Add(p0); vertices.Add(p1);
                 triangles.Add(ab); triangles.Add(ab + 1); triangles.Add(ab + 2);

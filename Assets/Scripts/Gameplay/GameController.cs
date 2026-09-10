@@ -72,7 +72,6 @@ namespace ColosseumDuel.Gameplay
             Manager.Damaged += OnDamaged;
             Manager.Bitten += OnBitten;
             Manager.Bled += OnBled;
-            Manager.Scorched += OnScorched;
             Manager.AbilityFired += OnAbilityFired;
 
             if (AutoStartOnPlay) RestartMatch();
@@ -138,8 +137,6 @@ namespace ColosseumDuel.Gameplay
 
         private void BuildViews()
         {
-            Arena.BuildHazardRings();
-            Arena.BuildSpikes();
             Arena.BuildTraps();
 
             // From the simulation's own list, so the stone drawn on the sand is the stone the paths
@@ -394,10 +391,6 @@ namespace ColosseumDuel.Gameplay
             if (victim != null) Arena.PlayBlood(victim.Pos);
             ShowDamage(side, amount, DamageNumbersView.Source.Bleed);
         }
-
-        /// <summary>A phase spent in the closing arena, totalled up.</summary>
-        private void OnScorched(PlayerSide side, float amount)
-            => ShowDamage(side, amount, DamageNumbersView.Source.Spikes);
 
         /// <summary>
         /// Sends the number up off whoever paid it.

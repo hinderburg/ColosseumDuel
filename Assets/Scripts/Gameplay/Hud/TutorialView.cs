@@ -16,11 +16,11 @@ namespace ColosseumDuel.Gameplay.Hud
     ///
     /// Screen-space labels following world positions, the same way the action buttons work: they
     /// stay a constant size and stay crisp whatever the camera is doing, and they layer over the
-    /// arena without depth-sorting against a spike.
+    /// arena without depth-sorting against the props on it.
     ///
     /// Each label sits on its own plate. Light text with a dark outline is what a HUD does when it
     /// has to survive any background; these labels have a background of exactly one kind - bright
-    /// sand, sometimes with a red hazard ring or a black spike crossing it - and against that the
+    /// sand, sometimes with a trap or a patch of blood crossing it - and against that the
     /// outline was doing the reading work that a plate does better. Dark text on a solid plate also
     /// separates instruction from the game's own light-on-dark chrome.
     /// </summary>

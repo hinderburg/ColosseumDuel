@@ -49,18 +49,6 @@ namespace ColosseumDuel.Core
         /// </summary>
         public event Action<PlayerSide, float> Bled;
 
-        /// <summary>
-        /// What the closing arena has cost somebody since the last time it said so.
-        ///
-        /// The spikes deal their damage continuously, substep by substep, against the position the
-        /// gladiator actually occupied - fractions of a point, far too small to put on screen. This
-        /// is the running total, announced four times a second so that standing in the fire reads as
-        /// burning rather than as one hit from something invisible.
-        /// </summary>
-        public event Action<PlayerSide, float> Scorched;
-
-        private readonly float[] _scorched = new float[2];
-
         private readonly System.Random _rng;
 
         public GameManager(System.Random rng = null)
@@ -400,8 +388,6 @@ namespace ColosseumDuel.Core
                     for (int i = 0; i < GameConstants.ActionSubsteps; i++)
                         StepActionSub(subDt);
 
-                    AdvanceScorchTicks();
-
                     if (State.CollisionEndTimer.HasValue)
                     {
                         State.CollisionEndTimer -= dt;
@@ -456,15 +442,6 @@ namespace ColosseumDuel.Core
             ApplyPlannedAction(PlayerSide.P1, State.P1.Active, State.Bot.Active);
             ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
             FaceTravel();
-
-            // Zeroed here rather than only when it is announced, so a phase abandoned partway - a
-            // round restarted, a match thrown away - cannot carry its tally into the next one.
-            _scorched[0] = 0f;
-            _scorched[1] = 0f;
-
-            // And the beat starts with the phase, so the first tick of a burn is a quarter second
-            // into it rather than at whatever point in the beat the last phase happened to end on.
-            _scorchTicksSent = 0;
 
             PredictStrikes();
             SetPhase(MatchPhase.Action);
@@ -557,7 +534,7 @@ namespace ColosseumDuel.Core
         /// end up - speed, aim, power, the wall - is known now, and nothing during the phase depends
         /// on anything outside it. So the answer can be had by running the movement forward.
         ///
-        /// Movement only. Damage, rage, traps and the hazard are left out on purpose: they change
+        /// Movement only. Damage, rage and traps are left out on purpose: they change
         /// what the phase costs, not where anybody is, and a prediction that also dealt damage would
         /// be a second simulation quietly disagreeing with the first. Collisions are the exception,
         /// because running into somebody is an exchange and there is nothing after it worth
@@ -782,20 +759,6 @@ namespace ColosseumDuel.Core
 
             RunOrDrift(g, ref g.Pos, ref g.Vel, ref g.PathIndex, dt);
 
-            // hazard damage - continuous DOT while standing in an active danger ring
-            if (HazardSystem.IsInActiveHazard(g.Pos, State.Cycle))
-            {
-                float dps = GameConstants.HazardDamagePerPhase / GameConstants.ActionTime;
-                float bite = dps * dt;
-                g.TakeDamage(bite);
-
-                // Totalled rather than announced. This runs once per substep of every frame, so a
-                // listener told each time would be told a hundred times a phase about a fraction of
-                // a point - which is not something anybody can be shown. The total goes out once,
-                // when the phase ends.
-                _scorched[(int)SideOf(g)] += bite;
-            }
-
             // item pickup
             var item = State.Items.TryPickup(g);
             if (item != null) State.Items.ApplyPickup(g, item);
@@ -982,8 +945,6 @@ namespace ColosseumDuel.Core
             // come within reach of each other, so a cycle that ends with them standing together has
             // already been paid for - on the substep they arrived.
 
-            FlushScorched();
-
             // Everybody stops. The phase is over, and nothing between here and the next action
             // phase moves anyone - but the velocity that carried them here was being left standing,
             // so for the whole four seconds of planning the view was told they were still travelling
@@ -1005,57 +966,6 @@ namespace ColosseumDuel.Core
             }
 
             StartCycle();
-        }
-
-        /// <summary>
-        /// How often the fire says what it has taken, in seconds of the action phase.
-        ///
-        /// The damage itself is continuous - it is charged per substep, against the position the
-        /// gladiator actually occupied - and this is only how often that running total is announced.
-        /// A quarter of a second gives four ticks for a second spent in the fire, which reads as
-        /// burning; the whole phase in one number read as a single hit from something invisible, and
-        /// per substep would be a hundred numbers a second, each of a fraction of a point.
-        /// </summary>
-        private const float ScorchTickInterval = 0.25f;
-
-        private int _scorchTicksSent;
-
-        /// <summary>
-        /// Announces the running tally on the beat, without waiting for the phase to end.
-        ///
-        /// Counted off the phase's own clock rather than a separate accumulator, and that is not
-        /// tidiness. A phase is exactly as long as four intervals, so an accumulator lands its
-        /// fourth tick on the same frame the phase ends - and whether it lands just before or just
-        /// after is decided by the last bit of a float. Just after, and the phase's closing flush
-        /// finds a frame's worth of damage left and puts a fifth number on screen reading "1".
-        ///
-        /// Counting instead means the closing flush is the last tick rather than a sliver after it,
-        /// however the arithmetic rounds.
-        /// </summary>
-        private void AdvanceScorchTicks()
-        {
-            int due = Mathf.FloorToInt(State.PhaseTimer / ScorchTickInterval);
-            while (_scorchTicksSent < due)
-            {
-                _scorchTicksSent++;
-                FlushScorched();
-            }
-        }
-
-        /// <summary>
-        /// Announces whatever spike damage has been tallied since the last time, and clears it.
-        ///
-        /// Cleared whether or not anybody was listening, so time spent in the fire cannot be carried
-        /// forward and reported twice.
-        /// </summary>
-        private void FlushScorched()
-        {
-            for (int side = 0; side < _scorched.Length; side++)
-            {
-                float total = _scorched[side];
-                _scorched[side] = 0f;
-                if (total > 0f) Scorched?.Invoke((PlayerSide)side, total);
-            }
         }
 
         private void AfterRoundEndDelay()

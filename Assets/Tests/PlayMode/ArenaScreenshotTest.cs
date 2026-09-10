@@ -63,14 +63,6 @@ namespace ColosseumDuel.Tests
             controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
-            // Jump the cycle counter so the frame also shows the closing danger rings, which would
-            // otherwise take seven real cycles (~35 seconds) to appear.
-            controller.Manager.State.Cycle = 8;
-
-            // The spikes come up out of the sand rather than snapping into place, so the frame has
-            // to be taken a moment after the rings light up or it catches them still underground.
-            yield return RunSeconds(0.8f);
-
             var player = controller.Manager.State.P1.Active;
 
             // Armed, so the frame also shows the carried gear in his hands - the sword and the
@@ -81,7 +73,7 @@ namespace ColosseumDuel.Tests
             controller.Manager.State.Bot.Active.Weapon = WeaponKind.TwoHandedMace;
 
             // A few rounds' worth of blood on the sand. The stains are the one thing on the arena
-            // that is meant to build up over a whole match, so a frame taken at cycle eight of round
+            // that is meant to build up over a whole match, so a frame taken early in round
             // one shows none of what they are for.
             foreach (var spot in new[]
                      {
@@ -117,7 +109,7 @@ namespace ColosseumDuel.Tests
             {
                 numbers.Show(player.Pos, 34f, ColosseumDuel.Gameplay.Hud.DamageNumbersView.Source.Blow);
                 numbers.Show(controller.Manager.State.Bot.Active.Pos, 65f,
-                    ColosseumDuel.Gameplay.Hud.DamageNumbersView.Source.Spikes);
+                    ColosseumDuel.Gameplay.Hud.DamageNumbersView.Source.Trap);
                 yield return null;
             }
 
@@ -361,7 +353,7 @@ namespace ColosseumDuel.Tests
 
             float band = arena.ScaleLength(2.6f);
             AddRing(root, arena.ScaleLength(GameConstants.GladiatorRadius), band, arena.Palette.BarBackground);
-            AddRing(root, arena.ScaleLength(reachVirtual), band, arena.Palette.HazardActive);
+            AddRing(root, arena.ScaleLength(reachVirtual), band, arena.Palette.BotHelmet);
             if (tipVirtual > 0f)
                 AddRing(root, arena.ScaleLength(tipVirtual), band, arena.Palette.PlayerHelmet);
             return root;

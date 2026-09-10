@@ -33,7 +33,7 @@ namespace ColosseumDuel.Core
         ///
         /// Three archetypes that fought differently and looked identical was the standing complaint:
         /// on an arena this size the only thing separating them was the colour of a body, and colour
-        /// is also what the danger rings and the hazard use. Silhouette reads first and reads from
+        /// is also what the two side helmets use. Silhouette reads first and reads from
         /// further away - a broad one is the one who takes a beating, a small thin one the one who
         /// fights by landing blows rather than by standing them.
         /// </summary>

@@ -19,8 +19,6 @@ MonoBehaviour:
   Weapon: {fileID: 2100000, guid: ee6fe21f7b83ac649be759c22471908c, type: 2}
   Shield: {fileID: 2100000, guid: 3f17c2f6488ac964ebbea7e33b0dc45c, type: 2}
   RandomItem: {fileID: 2100000, guid: c6135911b12f30e41823cbf25c89e575, type: 2}
-  HazardActive: {fileID: 2100000, guid: 0f0fe0bd4cc7d914fa9af4eaad6a8e4e, type: 2}
-  HazardTelegraph: {fileID: 2100000, guid: e11ddcdf0607980408c9251e42383b22, type: 2}
   BarBackground: {fileID: 2100000, guid: f0e2555ddd7aead4c81526eb2c95d8b1, type: 2}
   BarHp: {fileID: 2100000, guid: 0ff837530b7206e418094f87c279e5d7, type: 2}
   BarRage: {fileID: 2100000, guid: 969767cabbb9fd840b7ec7d01f5af92f, type: 2}
@@ -49,7 +47,6 @@ MonoBehaviour:
   - {fileID: 798309987, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
-  Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
   TrapIron: {fileID: 2100000, guid: 60fcb597a7ecef943ba9c0c921503b0b, type: 2}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}
   WallBlock: {fileID: 2189462429148424501, guid: 41ec6068ce141e64bb4966fb380c77b1, type: 3}

@@ -25,10 +25,6 @@ namespace ColosseumDuel.Gameplay.View
         public Material Shield;
         public Material RandomItem;
 
-        [Header("Arena hazard")]
-        public Material HazardActive;
-        public Material HazardTelegraph;
-
         [Header("Bars")]
         public Material BarBackground;
         public Material BarHp;
@@ -146,8 +142,7 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Flame set along the arena wall. Same caveat: absent in a clean clone.</summary>
         public GameObject Torch;
 
-        /// <summary>Iron for the spikes that fill the danger zone and the jaws of the traps.</summary>
-        public Material Spike;
+        /// <summary>Iron for the jaws of the traps.</summary>
         public Material TrapIron;
 
         /// <summary>Burst played on a gladiator taking a hit. Same caveat.</summary>

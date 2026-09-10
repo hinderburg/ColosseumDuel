@@ -20,7 +20,7 @@ namespace ColosseumDuel.Gameplay.View
     /// </summary>
     public class ControlZoneView : MonoBehaviour
     {
-        /// <summary>How high off the sand the wedge sits. Under the trajectory, over the hazard.</summary>
+        /// <summary>How high off the sand the wedge sits. Under the trajectory, over the sand.</summary>
         private const float StrikeZoneHeight = 0.043f;
 
         private ArenaView _arena;

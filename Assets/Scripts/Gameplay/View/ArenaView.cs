@@ -6,7 +6,7 @@ namespace ColosseumDuel.Gameplay.View
 {
     /// <summary>
     /// The single place where the simulation's virtual 2D space is converted to world space, plus
-    /// the visuals that belong to the arena itself (the shrinking danger rings).
+    /// the visuals that belong to the arena itself (the obstacles, the traps and the blood).
     ///
     /// The simulation is a top-down plane, so virtual (x, y) maps to world (x, 0, y) - the same
     /// convention the original web build used. Nothing else in the project should do this
@@ -22,8 +22,8 @@ namespace ColosseumDuel.Gameplay.View
         [Tooltip("The fixed arena camera. World-space labels billboard towards it.")]
         public Camera ArenaCamera;
 
-        [Tooltip("Height above the floor at which the danger rings are drawn, to avoid z-fighting.")]
-        public float HazardRingHeight = 0.03f;
+        [Tooltip("Height above the floor at which the trap plates are drawn, to avoid z-fighting.")]
+        public float FloorDecalHeight = 0.03f;
 
         // --- how the props are laid out ---
         // The props themselves live in the scene and are edited there. These are the figures the
@@ -60,140 +60,6 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>Converts a virtual length (a radius, a distance) to world units.</summary>
         public float ScaleLength(float virtualLength) => virtualLength * VirtualToWorld;
-
-        private readonly List<Renderer> _hazardRings = new List<Renderer>();
-        private MaterialPropertyBlock _ringProperties;
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-
-        public void BuildHazardRings()
-        {
-            foreach (var ring in _hazardRings)
-                if (ring != null) Destroy(ring.gameObject);
-            _hazardRings.Clear();
-            _ringProperties = new MaterialPropertyBlock();
-
-            var root = new GameObject("HazardRings");
-            root.transform.SetParent(transform, false);
-            root.transform.localPosition = new Vector3(0f, HazardRingHeight, 0f);
-
-            foreach (var stage in HazardSystem.Schedule)
-            {
-                var go = new GameObject($"Ring_{stage.InnerFraction:0.00}-{stage.OuterFraction:0.00}");
-                go.transform.SetParent(root.transform, false);
-
-                // Built as a unit ring and stretched onto the arena's ellipse, so a stage at 0.75 is
-                // the same fraction of the way to the wall in every direction - matching how
-                // HazardSystem actually measures it.
-                float inner = Mathf.Max(stage.InnerFraction, 0.001f);
-                float outer = stage.OuterFraction;
-
-                go.AddComponent<MeshFilter>().sharedMesh = ViewPrimitives.CreateAnnulus(inner, outer);
-                go.transform.localScale = new Vector3(WorldRadiusX, 1f, WorldRadiusZ);
-                var renderer = go.AddComponent<MeshRenderer>();
-                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                renderer.enabled = false;
-                _hazardRings.Add(renderer);
-            }
-        }
-
-
-        // ------------------------------------------------------------------
-        // spikes: what the danger zone is made of
-        // ------------------------------------------------------------------
-
-        [Tooltip("How many spikes are scattered across the arena floor.")]
-        public int SpikeCount = 150;
-
-        /// <summary>How fast a spike travels between hidden and standing, in world units a second.</summary>
-        private const float SpikeRiseSpeed = 4f;
-
-        private readonly List<Transform> _spikes = new List<Transform>();
-        private readonly List<float> _spikeDistance = new List<float>();
-        private float _spikeHeight;
-
-        /// <summary>
-        /// Scatters the spikes over the whole floor, sunk out of sight.
-        ///
-        /// Every one of them remembers how far out it sits in the arena's own normalized units -
-        /// the same units the hazard schedule is written in - so deciding whether it should be up
-        /// is a comparison against that schedule rather than a second copy of the ring geometry.
-        ///
-        /// A fixed scatter built once, not spawned as the rings light up: a hundred and fifty
-        /// meshes appearing mid-cycle is a hitch at exactly the moment the player is trying to run
-        /// somewhere, and they cost nothing sitting under the floor.
-        /// </summary>
-        public void BuildSpikes()
-        {
-            if (Palette == null || Palette.Spike == null) return;
-
-            var root = new GameObject("Spikes");
-            root.transform.SetParent(transform, false);
-
-            float radius = ScaleLength(GameConstants.GladiatorRadius) * 0.30f;
-            _spikeHeight = ScaleLength(GameConstants.GladiatorRadius) * 1.15f;
-            var mesh = ViewPrimitives.CreateCone(radius, _spikeHeight);
-
-            // Deterministic, so the field is the same shape every run and a screenshot of it means
-            // something. The arena's own randomness belongs to the simulation, not to scenery.
-            var rng = new System.Random(20260907);
-
-            for (int i = 0; i < SpikeCount; i++)
-            {
-                // Square root of a uniform draw, or they all bunch towards the middle - the same
-                // correction the item spawns use.
-                float d = Mathf.Sqrt((float)rng.NextDouble());
-                float a = (float)(rng.NextDouble() * System.Math.PI * 2.0);
-                var onUnitCircle = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * d;
-
-                var spike = ViewPrimitives.Create(mesh, $"Spike_{i:000}", root.transform, Palette.Spike);
-                spike.transform.localPosition = new Vector3(
-                    onUnitCircle.x * WorldRadiusX, -_spikeHeight, onUnitCircle.y * WorldRadiusZ);
-
-                // A field of identical cones in identical poses reads as a texture rather than as
-                // iron; a little variation in size and spin is enough to break that up.
-                float scale = Mathf.Lerp(0.75f, 1.25f, (float)rng.NextDouble());
-                spike.transform.localScale = new Vector3(scale, scale, scale);
-                spike.transform.localRotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-
-                _spikes.Add(spike.transform);
-                _spikeDistance.Add(d);
-            }
-        }
-
-        /// <summary>
-        /// Raises the spikes standing in ground that is currently dangerous, and lowers the rest.
-        ///
-        /// Moved towards a target rather than switched: they are meant to come up out of the sand,
-        /// and the moment a ring lights up is the moment the player most needs to notice it.
-        /// </summary>
-        private void SyncSpikes(MatchState state)
-        {
-            if (_spikes.Count == 0) return;
-
-            for (int i = 0; i < _spikes.Count; i++)
-            {
-                // The same test the simulation uses to decide whether it is burning someone, asked
-                // at the spike's own place on the floor - so what is up is exactly what hurts.
-                bool dangerous = HazardSystem.IsInActiveHazard(
-                    ArenaShape.FromUnitCircle(DirectionOf(i) * _spikeDistance[i]), state.Cycle);
-
-                var position = _spikes[i].localPosition;
-                float target = dangerous ? 0f : -_spikeHeight;
-                if (Mathf.Approximately(position.y, target)) continue;
-
-                position.y = Mathf.MoveTowards(position.y, target, SpikeRiseSpeed * Time.deltaTime);
-                _spikes[i].localPosition = position;
-            }
-        }
-
-        /// <summary>The unit-circle direction a spike sits on, recovered from where it was placed.</summary>
-        private Vector2 DirectionOf(int index)
-        {
-            var p = _spikes[index].localPosition;
-            var onCircle = new Vector2(p.x / WorldRadiusX, p.z / WorldRadiusZ);
-            return onCircle.sqrMagnitude > 1e-6f ? onCircle.normalized : Vector2.right;
-        }
 
         // ------------------------------------------------------------------
         // obstacles
@@ -378,7 +244,7 @@ namespace ColosseumDuel.Gameplay.View
 
                 var plate = ViewPrimitives.Create(ViewPrimitives.CreateAnnulus(radius * 0.45f, radius, 24),
                     "Plate", trap.transform, Palette.TrapIron);
-                plate.transform.localPosition = new Vector3(0f, HazardRingHeight, 0f);
+                plate.transform.localPosition = new Vector3(0f, FloorDecalHeight, 0f);
 
                 const int teeth = 8;
                 for (int t = 0; t < teeth; t++)
@@ -450,7 +316,7 @@ namespace ColosseumDuel.Gameplay.View
         [Tooltip("How many blood stains the sand holds before the oldest is painted over.")]
         public int BloodStainCount = 48;
 
-        /// <summary>How high above the floor a stain sits - under the danger rings, over the sand.</summary>
+        /// <summary>How high above the floor a stain sits - just over the sand.</summary>
         private const float BloodStainHeight = 0.012f;
 
         private readonly List<Transform> _bloodStains = new List<Transform>();
@@ -553,48 +419,10 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
-        /// <summary>
-        /// Shows the rings that are dealing damage right now, and - during Planning only - the one
-        /// that will light up next cycle. The design calls for that stage to be telegraphed a cycle
-        /// ahead so the player can plan a move out of it.
-        /// </summary>
+        /// <summary>Keeps the traps' jaws in step with the simulation.</summary>
         public void Sync(MatchState state)
         {
-            SyncSpikes(state);
             SyncTraps(state);
-
-            if (_hazardRings.Count == 0 || Palette == null) return;
-
-            var upcoming = HazardSystem.UpcomingStage(state.Cycle);
-            bool telegraphing = state.Phase == MatchPhase.Planning && upcoming.HasValue;
-
-            for (int i = 0; i < _hazardRings.Count && i < HazardSystem.Schedule.Count; i++)
-            {
-                var stage = HazardSystem.Schedule[i];
-                var renderer = _hazardRings[i];
-
-                bool active = state.Cycle >= stage.ActivateCycle;
-                bool warned = telegraphing && stage.ActivateCycle == upcoming.Value.ActivateCycle;
-
-                renderer.enabled = active || warned;
-                if (!renderer.enabled) continue;
-
-                var material = active ? Palette.HazardActive : Palette.HazardTelegraph;
-                renderer.sharedMaterial = material;
-
-                // Flat paint reads as decoration; a slow flicker reads as fire, which is what the
-                // design asks for and what makes the ring feel dangerous rather than decorative.
-                // Each ring gets its own phase so they do not breathe in lockstep, and the warning
-                // ring pulses faster and harder to say "this one is not burning yet, but will be".
-                float speed = active ? 2.4f : 5.5f;
-                float depth = active ? 0.14f : 0.30f;
-                float pulse = 1f + Mathf.Sin(Time.time * speed + i * 1.7f) * depth;
-
-                var color = material.color * pulse;
-                color.a = material.color.a;
-                _ringProperties.SetColor(BaseColorId, color);
-                renderer.SetPropertyBlock(_ringProperties);
-            }
         }
     }
 }

@@ -150,7 +150,7 @@ namespace ColosseumDuel.Gameplay.View
                 figure.name = $"Figure_{def.Id}";
 
                 // Build, so the three read apart by shape and not only by colour. Colour is also
-                // what the danger rings, the hazard and the two side helmets are using; a broad
+                // what the two side helmets are using; a broad
                 // figure and a small thin one are legible past all of that, and from further away.
                 // Width goes on both ground axes, since the camera can see him from any angle he
                 // happens to be facing.

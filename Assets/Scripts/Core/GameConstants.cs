@@ -164,7 +164,7 @@ namespace ColosseumDuel.Core
         /// <summary>
         /// How much better the gilded copies on the sand are than the weapon a gladiator arrives
         /// with. It is the entire reason to break off and cross a mined arena for one, so it has to
-        /// be worth a trap and a stretch of danger zone - but it is a better version of the same
+        /// be worth the risk of a trap - but it is a better version of the same
         /// weapon, not a different tier of weapon.
         /// </summary>
         public const float GildedWeaponMult = 1.35f;
@@ -196,38 +196,6 @@ namespace ColosseumDuel.Core
         // that a dash is not a dice roll.
         public const int TrapCount = 6;
         public const float TrapRadius = 14f;
-
-        // --- arena hazard (shrinking rings) ---
-
-        /// <summary>
-        /// What the spikes cost a gladiator who spends a whole action phase in them.
-        ///
-        /// A flat number rather than a share of his own health, which is what it used to be. As a
-        /// share it punished the three archetypes equally in proportion and unequally in effect -
-        /// the closing arena is a wall, and a wall does not hit harder because the man walking into
-        /// it is tougher. At 65 against health of 100 to 200 it is two or three phases from full,
-        /// which is what a shrinking arena is for: somewhere you cannot stand, not somewhere
-        /// expensive to stand.
-        /// </summary>
-        public const float HazardDamagePerPhase = 65f;
-
-        /// <summary>
-        /// How many full cycles the arena stays safe before the first ring bites.
-        ///
-        /// Raised from six. Six put the first ring down while two fighters were often still closing
-        /// - the approach takes cycles now that a run bends - so the arena was deciding fights that
-        /// had not started yet.
-        /// </summary>
-        public const int HazardSafeCycles = 8;
-
-        /// <summary>
-        /// Cycles between one ring closing and the next.
-        ///
-        /// It used to be one, which gave the whole shrink four cycles from first ring to dead
-        /// centre: less time than two gladiators need to cross the arena, so the ending was the
-        /// arena rather than either of them. At three there is a fight between each closing.
-        /// </summary>
-        public const int HazardRingInterval = 3;
 
         // --- squads ---
         public const int SquadSize = 3;
