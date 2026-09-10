@@ -24,11 +24,13 @@ namespace ColosseumDuel.Core
     public sealed class ItemSystem
     {
         private readonly System.Random _rng;
+        private readonly ObstacleField _obstacles;
         public readonly List<ArenaItem> Items = new List<ArenaItem>();
 
-        public ItemSystem(System.Random rng)
+        public ItemSystem(System.Random rng, ObstacleField obstacles = null)
         {
             _rng = rng;
+            _obstacles = obstacles ?? ObstacleField.Empty;
         }
 
         public void SpawnInitial()
@@ -47,6 +49,17 @@ namespace ColosseumDuel.Core
         }
 
         private Vector2 RandomItemPos()
+        {
+            // Not under a column or in a crate, where it could be seen and never reached. Drawn
+            // again rather than pushed off, so the spread stays uniform instead of piling weapons up
+            // along the obstacles' edges; the last draw stands if every try somehow fails.
+            Vector2 pos = AnyItemPos();
+            for (int attempt = 0; attempt < 16 && !_obstacles.IsFree(pos, GameConstants.ItemRadius * 2f); attempt++)
+                pos = AnyItemPos();
+            return pos;
+        }
+
+        private Vector2 AnyItemPos()
         {
             // Uniform-ish point inside the arena, kept clear of the wall. Drawn on a unit circle and
             // then stretched onto the ellipse, so the same code works whatever shape the arena is.

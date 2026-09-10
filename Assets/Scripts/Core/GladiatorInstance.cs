@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ColosseumDuel.Core
@@ -23,14 +24,45 @@ namespace ColosseumDuel.Core
         public Vector2 Vel;
 
         /// <summary>
-        /// How sharply his run bends this cycle: signed curvature, one over the radius of the turn,
-        /// positive anticlockwise. Zero is a straight charge.
+        /// Where he has been told to run to this cycle. Only meaningful while PlannedAction is Move.
         ///
-        /// Set once when the phase starts and held for it, because the shape of a run is a decision
-        /// made during planning rather than something steered while it happens. See
-        /// MoveEnvelope.CurvatureFor for where the number comes from.
+        /// A point rather than a direction and a strength, which is what the order used to be: the
+        /// arena has things standing in it now, and "that way, that hard" says nothing about how
+        /// to get round a column. The way there is worked out from here when the phase starts -
+        /// see ObstacleField.FindPath.
         /// </summary>
-        public float Curvature;
+        public Vector2 PlannedTarget;
+
+        /// <summary>
+        /// The corners of the run he is on, starting where he set off. Empty when he is not running.
+        ///
+        /// Followed rather than steered: it is fixed when the phase starts, and anything that knocks
+        /// him off it - a collision, a trap, a mace - ends it rather than bending it.
+        /// </summary>
+        public readonly List<Vector2> Path = new List<Vector2>();
+
+        /// <summary>The corner of <see cref="Path"/> he is heading for next.</summary>
+        public int PathIndex;
+
+        /// <summary>How fast he covers the path, in virtual units a second.</summary>
+        public float PathSpeed;
+
+        public bool IsRunning => PathSpeed > 0f && PathIndex < Path.Count;
+
+        /// <summary>
+        /// Takes him off whatever path he was on and stops him dead.
+        ///
+        /// Everything that interrupts a run goes through here - a trap, a collision, a shove, the
+        /// phase ending - so none of them can leave him with a stale path that the next step would
+        /// resume, walking him from wherever he was thrown back towards a corner he has left.
+        /// </summary>
+        public void StopRunning()
+        {
+            Path.Clear();
+            PathIndex = 0;
+            PathSpeed = 0f;
+            Vel = Vector2.zero;
+        }
 
         /// <summary>Unit vector the model should face. Set by the simulation: towards the opponent
         /// while defending (per the design doc), along the run direction while moving.</summary>
@@ -129,9 +161,11 @@ namespace ColosseumDuel.Core
         /// <summary>
         /// Turns him round where he stands, and starts the cooldown.
         ///
-        /// The whole of what it does is flip Facing, because facing is what the arc of ground he can
-        /// be ordered onto is struck about - so a man who has run himself into a corner can spend
-        /// this and have the whole arena in front of him again instead of the wall.
+        /// The whole of what it does is flip Facing. It was made to swing round the arc of ground he
+        /// could be sent onto, and that arc is gone - a tap now sends him anywhere - so what is left
+        /// is the facing itself: which of him a blow lands on while he stands his ground. A man
+        /// guarding with his back to the one coming for him can spend this to meet him chest-first.
+        /// Once he runs, he faces along his run whatever this did.
         ///
         /// It is not a move and does not spend the cycle. What it spends is the next two.
         /// </summary>
@@ -284,6 +318,12 @@ namespace ColosseumDuel.Core
             return willBeSpirited ? speed * 1.5f : speed;
         }
 
+        /// <summary>
+        /// How far one phase of running will carry him once this cycle starts, ability included.
+        /// The planning-time twin of DashReach, for the same reason PlannedSpeed exists.
+        /// </summary>
+        public float PlannedReach() => PlannedSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
+
         public void AddRage(float amount)
         {
             if (AbilityLockedCycles > 0) return; // locked out after a recent activation
@@ -313,7 +353,8 @@ namespace ColosseumDuel.Core
             PlannedAction = ActionType.None;
             PlannedAimDirection = Vector2.zero;
             PlannedPower = 0f;
-            Curvature = 0f;
+            PlannedTarget = Vector2.zero;
+            StopRunning();
 
             AbilityArmed = false;
             DealtDamageThisCycle = false;
@@ -347,8 +388,7 @@ namespace ColosseumDuel.Core
         public void ResetForNewRound()
         {
             // Winner persists with current HP (not healed) - only a freshly-picked gladiator gets this.
-            Vel = Vector2.zero;
-            Curvature = 0f;
+            StopRunning();
             PlannedAction = ActionType.None;
             AbilityArmed = false;
             Buff = default;

@@ -141,6 +141,11 @@ namespace ColosseumDuel.Gameplay
             Arena.BuildHazardRings();
             Arena.BuildSpikes();
             Arena.BuildTraps();
+
+            // From the simulation's own list, so the stone drawn on the sand is the stone the paths
+            // go round. The layout belongs to the arena rather than the match, which is why the
+            // state carries it from the moment it exists.
+            Arena.BuildObstacles(Manager != null ? Manager.State.Obstacles : ObstacleField.Standard());
             Arena.BuildBloodPool();
             Arena.BuildBloodStains();
 
@@ -431,6 +436,12 @@ namespace ColosseumDuel.Gameplay
         public void SubmitPlayerMove(Vector2 aimDirection, float power)
         {
             Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, aimDirection, power);
+        }
+
+        /// <summary>Sends the player's gladiator to a point, round whatever is in the way.</summary>
+        public void SubmitPlayerMoveTo(Vector2 target)
+        {
+            Manager?.SubmitPlanningMoveTo(PlayerSide.P1, target);
         }
 
         public void SubmitPlayerDefend()

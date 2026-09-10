@@ -41,17 +41,22 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Solid white line: the pull itself, from the gladiator back to the pointer.</summary>
         public Material PullLine;
 
-        /// <summary>
-        /// The green arc on the sand: the ground the player's gladiator can be ordered onto this
-        /// cycle. See ControlZoneView, and MoveEnvelope for the rule it draws.
-        /// </summary>
-        public Material MoveZone;
-
-        /// <summary>The brighter rim along the far edge of that arc - where one dash runs out.</summary>
-        public Material MoveZoneEdge;
-
-        /// <summary>The red wedge over it: the ground his weapon covers, and so who he can hit.</summary>
+        /// <summary>The red wedge on the sand: the ground his weapon covers, and so who he can hit.</summary>
         public Material StrikeZone;
+
+        /// <summary>
+        /// The pillar the columns on the sand are built from. Low Poly Trim Sheet, so absent in a
+        /// clean clone - ArenaView falls back to a stone cylinder, which is the same obstacle to the
+        /// simulation and only less handsome.
+        /// </summary>
+        [Header("Obstacles")]
+        public GameObject ColumnModel;
+
+        /// <summary>Stone for the fallback column, when there is no pillar model to build it from.</summary>
+        public Material ColumnStone;
+
+        /// <summary>Planked wood for the crates. Drawn in code, so it is always there.</summary>
+        public Material CrateWood;
 
         /// <summary>
         /// Transparent unlit material for the expanding impact/ability rings. Shared, with per-ring

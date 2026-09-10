@@ -19,10 +19,14 @@ namespace ColosseumDuel.Gameplay.View
     /// </summary>
     public static class GearSizes
     {
-        public const float SwordLength = 1.5f;
-        public const float MaceLength = 2.3f;
-        public const float ShieldHeight = 1.2f;
-        public const float HelmetHeight = 0.62f;
+        // Grown with the man (GameConstants.GladiatorScale). Gear is given an absolute world size -
+        // SetWorldSize divides out whatever the hand bone inherits - so a bigger figure does not make
+        // bigger gear on its own. Left alone, a fifth-larger gladiator would be holding a sword a
+        // fifth too small for him, and the weapon reaches, which scale with him, would outrun it.
+        public const float SwordLength = 1.5f * GameConstants.GladiatorScale;
+        public const float MaceLength = 2.3f * GameConstants.GladiatorScale;
+        public const float ShieldHeight = 1.2f * GameConstants.GladiatorScale;
+        public const float HelmetHeight = 0.62f * GameConstants.GladiatorScale;
 
         /// <summary>What goes in the weapon hand, and how long it is.</summary>
         public static float MainHandLength(WeaponKind kind)

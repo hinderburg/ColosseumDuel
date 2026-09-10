@@ -42,10 +42,40 @@ namespace ColosseumDuel.Core
         /// See ArenaShape for the geometry everything else goes through.
         /// </summary>
         public const float ArenaElongation = 2.0f;
-        public const float GladiatorRadius = 16f;
+
+        /// <summary>
+        /// How big a gladiator is against the size everything was first tuned at.
+        ///
+        /// One knob for the whole man, because the man is several things that have to agree: the
+        /// radius collisions and paths are resolved against, the figure drawn on screen, the gear
+        /// in his hands and the reach that gear strikes at. Scaled separately they drift - a bigger
+        /// figure over the same collision circle has bodies passing through each other, and a
+        /// bigger figure holding the same sword has a blade that no longer reaches as far as it
+        /// looks. GladiatorView and GearSizes both read this, and so do the weapon reaches.
+        ///
+        /// 1.2 since the obstacles went in: at the old size a man was small against a column, and
+        /// running round things reads better when the things and the men are of a kind.
+        /// </summary>
+        public const float GladiatorScale = 1.2f;
+
+        /// <summary>The body radius everything was tuned at, before <see cref="GladiatorScale"/>.</summary>
+        public const float BaseGladiatorRadius = 16f;
+
+        public const float GladiatorRadius = BaseGladiatorRadius * GladiatorScale;   // 19.2
         public const float ItemRadius = 12f;
 
-        public const float CollideDistance = GladiatorRadius * 2f - 4f;   // 28
+        // --- obstacles ---
+
+        /// <summary>
+        /// A column's radius, in virtual units. A little wider than a man, so it is obviously
+        /// something to go round rather than someone to fight.
+        /// </summary>
+        public const float ColumnRadius = 26f;
+
+        /// <summary>Half a crate's side. About a man's width, and so about his cover.</summary>
+        public const float CrateHalfSize = 20f;
+
+        public const float CollideDistance = GladiatorRadius * 2f - 4f;   // 34.4
         // Reach for picking something off the sand: the two radii, a little slack, and 15% on top
         // of the lot after a pass where running over an item and not getting it was too common.
         public const float PickupDistance = (GladiatorRadius + ItemRadius + 6f) * 1.15f;
@@ -115,25 +145,6 @@ namespace ColosseumDuel.Core
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
         public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
-
-        // --- how far and how sharply a gladiator may be ordered to turn ---
-
-        /// <summary>
-        /// The arc of ground a gladiator may be ordered onto, at the slowest speed in the game and
-        /// at the fastest. See MoveEnvelope, which interpolates between them.
-        ///
-        /// Both dimensions run the same way: a quick gladiator reaches further and turns wider, a
-        /// heavy one covers less ground and is stuck harder with the heading he set off on. Speed
-        /// is therefore a straight advantage at moving, and it is paid for elsewhere - the fastest
-        /// archetype hits for seven where the slowest hits for ten and carries twice the health.
-        ///
-        /// A hundred and thirty degrees is the cap, because he does not pivot and set off - he
-        /// leaves along his nose and bends round, and half of the arc is how far round he can bend.
-        /// Past that a run stops reading as a run.
-        /// </summary>
-        public const float MoveArcFastestDegrees = 130f;
-
-        public const float MoveArcSlowestDegrees = 75f;
 
         /// <summary>
         /// What a blow is worth for landing behind a gladiator, and for landing on his flank.

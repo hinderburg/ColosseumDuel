@@ -220,14 +220,12 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The same frame with the tap out at the edge of the zone, so the bend shows.
-        ///
-        /// A gladiator leaves along his nose and turns onto where he was sent, and the whole reason
-        /// the zone has a width is that the turn is limited. Straight ahead the two look identical,
-        /// which is why the frame that ships alongside this one cannot show it.
+        /// A run round a column: the tap is on the far side of it, and the lane has to bend round
+        /// the stone to get there. A run across open sand looks as it always did, which is why this
+        /// frame exists alongside that one.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheCurvedRunRendersAFrame()
+        public IEnumerator TheRoutedRunRendersAFrame()
         {
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
                 Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
@@ -247,17 +245,20 @@ namespace ColosseumDuel.Tests
 
             var player = controller.Manager.State.P1.Active;
             var bot = controller.Manager.State.Bot.Active;
-            player.Pos = new Vector2(-40f, -200f);
-            bot.Pos = new Vector2(120f, -60f);
+
+            // Just below the first column, and the tap just above it: the straight line between
+            // goes through the stone, so the lane has to go round.
+            Obstacle column = null;
+            foreach (var o in controller.Manager.State.Obstacles.Obstacles)
+                if (o.Kind == ObstacleKind.Column) { column = o; break; }
+            Assert.IsNotNull(column, "the arena has no columns to run round");
+
+            player.Pos = column.Centre + new Vector2(8f, -70f);
+            bot.Pos = column.Centre + new Vector2(170f, 90f);
             yield return null;
 
             input.Scheme = ControlScheme.Tap;
-
-            // Right out at the far corner of the arc, which is where the bend is at its sharpest.
-            var envelope = MoveEnvelope.For(player);
-            float turn = -envelope.HalfAngleDegrees * 0.95f;   // round to his right, into the frame
-            var target = player.Pos
-                         + MoveEnvelope.Rotate(player.Facing, turn) * (envelope.ReachAtTurn(turn) * 0.95f);
+            var target = column.Centre + new Vector2(-8f, 70f);
             input.TapTo(camera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
             yield return null;
 
@@ -269,7 +270,7 @@ namespace ColosseumDuel.Tests
             FrameOnPair(camera, controller.Arena, middle, span, 0f);
             yield return null;
 
-            yield return Capture(SuffixPath("-curve"));
+            yield return Capture(SuffixPath("-routed"));
 
             if (cameraDriver != null) cameraDriver.enabled = true;
         }

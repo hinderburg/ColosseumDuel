@@ -59,21 +59,22 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// And the whole point of turning him: the ground he can be sent onto comes with him. A turn
-        /// that moved the model and not the envelope would be an animation, not an action.
+        /// And what turning him is for, now that he can be sent anywhere: which of him a blow lands
+        /// on while he stands his ground. A man guarding with his back to the one coming for him
+        /// turns and takes it on the chest instead.
         /// </summary>
         [Test]
-        public void TheArcOfGroundHeCanBeSentOntoComesRoundWithHim()
+        public void ItTurnsWhichOfHimABlowLandsOn()
         {
             var g = new GladiatorInstance(GladiatorDef.Brutius) { Pos = Vector2.zero, Facing = Vector2.up };
+            var comingFromBehind = new Vector2(0f, -40f);
 
-            var behind = new Vector2(0f, -40f);
-            Assert.IsFalse(MoveEnvelope.For(g).Contains(behind), "he cannot be sent behind himself");
+            Assert.AreEqual(HitSector.Back, g.SectorHitFrom(comingFromBehind), "his back is to him");
 
             g.AboutFace();
 
-            Assert.IsTrue(MoveEnvelope.For(g).Contains(behind),
-                "and after turning round, that is the ground in front of him");
+            Assert.AreEqual(HitSector.Front, g.SectorHitFrom(comingFromBehind),
+                "and after turning round, the same man is in front of him");
         }
 
         [Test]

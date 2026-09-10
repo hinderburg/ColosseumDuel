@@ -111,20 +111,31 @@ namespace ColosseumDuel.Core
         public static readonly WeaponDef DualSwords = new WeaponDef(
             WeaponKind.DualSwords, "Twin swords", damageMultiplier: 0.7f, attacks: 2,
             incomingDamageMultiplier: 1f, bleeds: true, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 25f, swingArcDegrees: 90f,   // 57
+            reach: Scaled(25f), swingArcDegrees: 90f,   // 68.4
             description: "Two light blows, and the wound keeps bleeding");
 
         public static readonly WeaponDef SwordAndShield = new WeaponDef(
             WeaponKind.SwordAndShield, "Sword and shield", damageMultiplier: 1f, attacks: 1,
             incomingDamageMultiplier: GameConstants.ShieldDamageMult, bleeds: false, knockback: 0f,
-            reach: GameConstants.GladiatorRadius * 2f + 52f, swingArcDegrees: 100f,   // 84 - halfway between the blades and the hammer
+            reach: Scaled(52f), swingArcDegrees: 100f,   // 100.8 - halfway between the blades and the hammer
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
             WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.5f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: GameConstants.MaceKnockback,
-            reach: GameConstants.GladiatorRadius * 2f + 78f, swingArcDegrees: 120f,   // 110
+            reach: Scaled(78f), swingArcDegrees: 120f,   // 132
             description: "One heavy blow that throws them back");
+
+        /// <summary>
+        /// A reach set against the models at their original size, grown with the man.
+        ///
+        /// The reaches were measured against the gear in a gladiator's hands, and the gear grows
+        /// with him - GearSizes reads GladiatorScale too. So the whole reach scales, not just the
+        /// body-radius part of it: growing only the radius would leave a blade drawn a fifth longer
+        /// striking barely further than before.
+        /// </summary>
+        private static float Scaled(float beyondTwoBodies)
+            => (GameConstants.BaseGladiatorRadius * 2f + beyondTwoBodies) * GameConstants.GladiatorScale;
 
         /// <summary>The three a gladiator can be trained in, in the order the UI lists them.</summary>
         public static readonly IReadOnlyList<WeaponDef> All = new List<WeaponDef>

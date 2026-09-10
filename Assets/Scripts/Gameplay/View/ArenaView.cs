@@ -196,6 +196,160 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         // ------------------------------------------------------------------
+        // obstacles
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// How tall a gladiator stands, in world units: the height the figures are built to (see
+        /// GladiatorPrefabs and GearSizes) grown by GladiatorScale. The obstacles are sized against
+        /// it so that they and the men read as things of a kind.
+        /// </summary>
+        private const float FigureHeight = 3.75f * GameConstants.GladiatorScale;
+
+        /// <summary>
+        /// A column's height as a share of a man's. Just short of him, on purpose: the camera looks
+        /// down across the arena, and a man standing behind something taller than he is would be
+        /// hidden behind it. At nine tenths his head always clears the stone.
+        /// </summary>
+        private const float ColumnHeightOfMan = 0.9f;
+
+        /// <summary>
+        /// Builds the columns and crates from the simulation's own list.
+        ///
+        /// Each is sized to its footprint in the simulation, so the stone drawn is never smaller than
+        /// the shape the paths go round - a man should not seem to stop short of nothing, nor to
+        /// pass through a corner. Built once: nothing about an obstacle changes during a match.
+        /// </summary>
+        public void BuildObstacles(ObstacleField field)
+        {
+            if (field == null) return;
+
+            var old = transform.Find("Obstacles");
+            if (old != null) Destroy(old.gameObject);
+
+            var root = new GameObject("Obstacles");
+            root.transform.SetParent(transform, false);
+
+            for (int i = 0; i < field.Obstacles.Count; i++)
+            {
+                var obstacle = field.Obstacles[i];
+                var prop = obstacle.Kind == ObstacleKind.Column
+                    ? BuildColumn(root.transform, obstacle)
+                    : BuildCrate(root.transform, obstacle);
+
+                prop.name = $"{obstacle.Kind}_{i}";
+                prop.transform.localPosition = ToWorld(obstacle.Centre);
+            }
+        }
+
+        private GameObject BuildColumn(Transform parent, Obstacle column)
+        {
+            float diameter = ScaleLength(column.Size * 2f);
+            float height = FigureHeight * ColumnHeightOfMan;
+
+            if (Palette != null && Palette.ColumnModel != null)
+            {
+                var holder = new GameObject("Column");
+                holder.transform.SetParent(parent, false);
+
+                var model = Instantiate(Palette.ColumnModel, holder.transform, false);
+                StripColliders(model);
+
+                // The pack ships its pillar on the built-in Standard shader, which URP draws as solid
+                // magenta. ColumnStone is the same textures on URP's Lit shader - see the bootstrap -
+                // so swapping it in keeps the look and fixes the colour.
+                if (Palette.ColumnStone != null)
+                    foreach (var renderer in model.GetComponentsInChildren<Renderer>(true))
+                    {
+                        var materials = renderer.sharedMaterials;
+                        for (int m = 0; m < materials.Length; m++) materials[m] = Palette.ColumnStone;
+                        renderer.sharedMaterials = materials;
+                    }
+
+                FitToBox(model, holder.transform, new Vector3(diameter, height, diameter));
+                return holder;
+            }
+
+            // No pillar model in this project: a stone cylinder is the same obstacle to the
+            // simulation, and says "go round me" just as clearly.
+            var cylinder = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            cylinder.transform.SetParent(parent, false);
+            StripColliders(cylinder);
+            if (Palette != null) cylinder.GetComponent<Renderer>().sharedMaterial = Palette.ColumnStone;
+            return Seated(cylinder, new Vector3(diameter, height * 0.5f, diameter), height);
+        }
+
+        private GameObject BuildCrate(Transform parent, Obstacle crate)
+        {
+            // A cube, square to the arena, because the simulation's crate is a square square to the
+            // arena - turned even a little, its corners would stick out past the shape the paths
+            // go round.
+            float side = ScaleLength(crate.Size * 2f);
+
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            cube.transform.SetParent(parent, false);
+            StripColliders(cube);
+            if (Palette != null) cube.GetComponent<Renderer>().sharedMaterial = Palette.CrateWood;
+            return Seated(cube, new Vector3(side, side, side), side);
+        }
+
+        /// <summary>
+        /// Wraps a unit primitive so its base sits on the sand - they are built centred on their own
+        /// middle, and would otherwise stand half buried.
+        /// </summary>
+        private static GameObject Seated(GameObject primitive, Vector3 scale, float height)
+        {
+            var holder = new GameObject(primitive.name);
+            holder.transform.SetParent(primitive.transform.parent, false);
+            primitive.transform.SetParent(holder.transform, false);
+            primitive.transform.localScale = scale;
+            primitive.transform.localPosition = new Vector3(0f, height * 0.5f, 0f);
+            return holder;
+        }
+
+        /// <summary>
+        /// Scales a model to fill a box and stands it on the sand, measured off what it actually
+        /// renders rather than off numbers about the model - the same approach the gear uses, and
+        /// for the same reason: re-importing an asset should not quietly resize the arena.
+        /// </summary>
+        private static void FitToBox(GameObject model, Transform holder, Vector3 size)
+        {
+            model.transform.localPosition = Vector3.zero;
+            model.transform.localRotation = Quaternion.identity;
+            model.transform.localScale = Vector3.one;
+
+            var renderers = model.GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) return;
+
+            var bounds = renderers[0].bounds;
+            foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+
+            var measured = holder.InverseTransformVector(bounds.size);
+            model.transform.localScale = new Vector3(
+                size.x / Mathf.Max(Mathf.Abs(measured.x), 0.0001f),
+                size.y / Mathf.Max(Mathf.Abs(measured.y), 0.0001f),
+                size.z / Mathf.Max(Mathf.Abs(measured.z), 0.0001f));
+
+            // Re-measured after scaling, then moved so its footprint is centred and its base is on
+            // the sand wherever the artist put the pivot.
+            bounds = renderers[0].bounds;
+            foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+            var centre = holder.InverseTransformPoint(bounds.center);
+            var bottom = holder.InverseTransformPoint(bounds.min).y;
+            model.transform.localPosition -= new Vector3(centre.x, bottom, centre.z);
+        }
+
+        /// <summary>
+        /// Nothing here is ever raycast - input projects onto a mathematical plane and the obstacles
+        /// are a list in the simulation - so a physics collider on a prop is pure weight.
+        /// </summary>
+        private static void StripColliders(GameObject go)
+        {
+            foreach (var collider in go.GetComponentsInChildren<Collider>(true))
+                Destroy(collider);
+        }
+
+        // ------------------------------------------------------------------
         // traps
         // ------------------------------------------------------------------
 

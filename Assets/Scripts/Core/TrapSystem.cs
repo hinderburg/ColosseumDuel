@@ -23,11 +23,13 @@ namespace ColosseumDuel.Core
     public sealed class TrapSystem
     {
         private readonly System.Random _rng;
+        private readonly ObstacleField _obstacles;
         public readonly List<ArenaTrap> Traps = new List<ArenaTrap>();
 
-        public TrapSystem(System.Random rng)
+        public TrapSystem(System.Random rng, ObstacleField obstacles = null)
         {
             _rng = rng;
+            _obstacles = obstacles ?? ObstacleField.Empty;
         }
 
         /// <summary>
@@ -78,7 +80,7 @@ namespace ColosseumDuel.Core
                 if (Vector2.Distance(g.Pos, trap.Pos) > TriggerDistance) continue;
 
                 trap.Armed = false;
-                g.Vel = Vector2.zero;
+                g.StopRunning();
                 g.TakeDamage(Damage);
                 return trap;
             }
@@ -88,6 +90,18 @@ namespace ColosseumDuel.Core
 
         /// <summary>A point in one half of the arena, in the half the sign of <paramref name="side"/> picks.</summary>
         private Vector2 RandomPos(float side)
+        {
+            // Not on a column or a crate. Drawn again rather than pushed off, so the spread stays
+            // what the draw below makes it - pushing would pile traps up along the obstacles' edges.
+            // The obstacles cover a small share of the sand, so a handful of tries is plenty; the
+            // last one stands if they all somehow fail, rather than leaving a slot empty.
+            Vector2 pos = AnyPos(side);
+            for (int attempt = 0; attempt < 16 && !_obstacles.IsFree(pos, GameConstants.TrapRadius * 2f); attempt++)
+                pos = AnyPos(side);
+            return pos;
+        }
+
+        private Vector2 AnyPos(float side)
         {
             // Drawn on a unit circle and stretched onto the ellipse, the same walk item spawns use,
             // so the shape of the arena is stated in one place rather than three. The angle is

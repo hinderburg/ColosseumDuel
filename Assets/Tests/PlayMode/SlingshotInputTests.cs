@@ -147,7 +147,16 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             Assert.IsTrue(line.enabled);
-            Assert.Greater(line.positionCount, 2, "the preview should be a real polyline");
+
+            // A lane from him to where the run ends. Drawn corner to corner now rather than sampled
+            // every twentieth of a second, so a straight run across open sand is exactly two points
+            // - what matters is that it starts on him and actually goes somewhere.
+            Assert.GreaterOrEqual(line.positionCount, 2, "the preview should be a lane, not a dot");
+            var start = _controller.Arena.ToVirtual(line.GetPosition(0));
+            var end = _controller.Arena.ToVirtual(line.GetPosition(line.positionCount - 1));
+            Assert.Less(Vector2.Distance(start, Player.Pos), 1f, "the lane should start on him");
+            Assert.Greater(Vector2.Distance(start, end), Player.PlannedReach() * 0.5f,
+                "a full pull should draw a run most of a dash long");
 
             _input.CancelDrag();
             Assert.IsFalse(line.enabled, "cancelling clears the preview");
@@ -233,7 +242,8 @@ namespace ColosseumDuel.Tests
 
             var aim = new Vector2(1f, 0f);
             const float power = 0.5f;
-            var preview = GameManager.ComputeTrajectoryPreview(player, aim, power);
+            var target = player.Pos + aim * (power * player.PlannedReach());
+            var preview = _controller.Manager.ComputeTrajectoryPreview(player, target);
             Vector2 predicted = preview[preview.Count - 1];
 
             _input.TryBeginDrag(player.Pos);
@@ -509,14 +519,15 @@ namespace ColosseumDuel.Tests
             _input.Scheme = ControlScheme.Tap;
             Player.Pos = Vector2.zero;
 
-            var envelope = MoveEnvelope.For(Player);
+            float reach = Player.PlannedReach();
             Vector3 Screen(Vector2 virtualPoint)
                 => _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(virtualPoint));
 
-            // Along the finger's path: near and dead ahead, then out and round to one side.
-            var near = MoveEnvelope.Rotate(Player.Facing, 0f) * (envelope.OuterRadius * 0.35f);
-            float turn = -envelope.HalfAngleDegrees * 0.8f;
-            var far = MoveEnvelope.Rotate(Player.Facing, turn) * (envelope.ReachAtTurn(turn) * 0.95f);
+            // Along the finger's path: near and dead ahead, then out and well round to one side.
+            // Both on open sand, clear of every obstacle, so each run is a straight line and the
+            // order is easy to read back.
+            var near = new Vector2(0f, reach * 0.3f);
+            var far = new Vector2(reach * 0.8f, reach * 0.4f);
 
             Assert.IsTrue(_input.TapTo(Screen(near)));
             float firstPower = Player.PlannedPower;
@@ -541,7 +552,7 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(lane.enabled, "the lane should still be up under the finger");
 
             var drawnEnd = _controller.Arena.ToVirtual(lane.GetPosition(lane.positionCount - 1));
-            Assert.AreEqual(0f, Vector2.Distance(drawnEnd, Player.Pos + far), envelope.OuterRadius * 0.08f,
+            Assert.AreEqual(0f, Vector2.Distance(drawnEnd, Player.Pos + far), reach * 0.08f,
                 "the lane ends where the finger is, not where it started");
         }
 

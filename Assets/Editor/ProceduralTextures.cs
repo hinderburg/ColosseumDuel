@@ -951,6 +951,49 @@ namespace ColosseumDuel.EditorTools
             return total > 0f ? value / total : 0f;
         }
 
+        /// <summary>
+        /// The face of a crate: boards running across, a darker frame round the edge and a brace
+        /// from corner to corner.
+        ///
+        /// Those three are what make a box read as a crate from above and at a distance - planks
+        /// alone read as a floor, and a plain brown cube reads as a block of something. Grain is
+        /// noise stretched along the boards, so it runs the way wood runs.
+        /// </summary>
+        public static Texture2D EnsureCrate(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int size = 128;
+            const int frame = 12;
+            const int board = 26;
+            const float brace = 7f;
+
+            var wood = new Color(0.62f, 0.43f, 0.24f);
+            var pixels = new Color32[size * size];
+            var rng = new System.Random(4711);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool isFrame = x < frame || y < frame || x >= size - frame || y >= size - frame;
+                    bool isBrace = !isFrame && Mathf.Abs(x - y) < brace;
+                    bool isSeam = !isFrame && !isBrace && (y - frame) % board < 2;
+
+                    float grain = Fbm(x * 0.03f, y * 0.45f, 3);
+                    float shade = isFrame ? 0.58f + grain * 0.12f
+                        : isBrace ? 0.66f + grain * 0.12f
+                        : isSeam ? 0.40f
+                        : 0.82f + grain * 0.22f + (float)(rng.NextDouble() - 0.5) * 0.04f;
+
+                    pixels[y * size + x] = Tint(wood, shade);
+                }
+            }
+
+            return Write(path, pixels, size);
+        }
+
         private static Texture2D Write(string path, Color32[] pixels, int size)
         {
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);

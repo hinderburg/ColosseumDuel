@@ -6,14 +6,18 @@ using UnityEngine;
 namespace ColosseumDuel.Gameplay
 {
     /// <summary>
-    /// Drag-to-launch ("slingshot") input: press on your gladiator, pull back, release to run in
-    /// the opposite direction with power proportional to the pull. While dragging, the full bounced
-    /// trajectory is drawn from GameManager.ComputeTrajectoryPreview - the same maths the action
-    /// phase will run, so the preview is a promise rather than an approximation.
+    /// The player's orders. The game ships on tapping: tap anywhere on the arena and the gladiator
+    /// runs there, round whatever stands in the way; hold and drag and the order follows the finger.
+    /// The lane drawn under it comes from GameManager.ComputeTrajectoryPreview - the same pathfinder
+    /// the action phase runs - so the preview is a promise rather than an approximation.
     ///
-    /// The drag itself lives in TryBeginDrag/UpdateDrag/ReleaseDrag, which take virtual-space points
-    /// and know nothing about a mouse. Update() is only the mapping from device to those calls,
-    /// which keeps the interesting half testable without synthesising input events.
+    /// The older slingshot and swipe schemes are still here and still work - they give an aim and a
+    /// power, which the simulation turns into a point and routes like any other order - but nothing
+    /// offers them any more; they are switched on the inspector.
+    ///
+    /// The gestures live in TapTo and TryBeginDrag/UpdateDrag/ReleaseDrag, which take points and
+    /// know nothing about a mouse. Update() is only the mapping from device to those calls, which
+    /// keeps the interesting half testable without synthesising input events.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class PlayerInputController : MonoBehaviour
@@ -388,46 +392,37 @@ namespace ColosseumDuel.Gameplay
         }
 
         /// <summary>
-        /// Sends the gladiator at a point on the sand: the whole of the alternative control.
+        /// Sends the gladiator to a point on the sand: the whole of the control.
         ///
-        /// Aims at the tap and pulls exactly hard enough to arrive there, or as hard as he can if
-        /// the point is further than one dash carries. Reach comes from the simulation rather than
-        /// from a number here, so "as hard as he can" stays true when the speed or the phase length
-        /// is retuned.
+        /// Anywhere at all. The way there goes round whatever stands in it - the pathfinder works
+        /// that out, not the player - and a tap on a crate or outside the wall is answered with the
+        /// nearest ground he can stand on rather than thrown away. Held and dragged it is called
+        /// every frame and the order follows the finger; tapped again, the new order replaces the
+        /// old one. Nothing limits how often, for as long as the phase lasts.
         /// </summary>
         public bool TapTo(Vector3 screenPos)
         {
             var g = PlayerGladiator();
             if (g == null) return false;
-            if (!TryScreenToVirtual(screenPos, out var target)) return false;
+            if (!TryScreenToVirtual(screenPos, out var tapped)) return false;
 
-            // Folded into the arc he can actually run through before anything is measured off it. A
-            // tap outside the zone is not a mis-click to be thrown away: it is a request to go as
-            // far that way as he can, and it is answered with the closest thing he can do.
-            var envelope = MoveEnvelope.For(g);
-            target = envelope.Clamp(target);
+            var path = Controller.Manager.PlanRun(g, tapped);
+            float reach = g.PlannedReach();
 
-            var toTarget = target - g.Pos;
-            float distance = toTarget.magnitude;
-            if (distance < 0.0001f) return false;
-
-            // Measured along the bend he will actually run rather than across the straight line to
-            // the tap, and against the zone's own far edge rather than DashReach - with the speed
-            // ability armed those two differ by half again. Taking either the easy way put full
-            // power well short of the edge the player is looking at.
-            float power = envelope.PowerOnto(target);
-            if (power <= MinPowerToSubmit) return false;
+            // A tap on his own feet is not an order to go anywhere. Measured along the run rather
+            // than in a straight line, so a tap just the far side of a column still counts.
+            if (reach <= 0.0001f || ObstacleField.Length(path) / reach <= MinPowerToSubmit) return false;
 
             DefendArmed = false;
             CancelDrag();
 
-            var aim = toTarget / distance;
-            Controller.SubmitPlayerMove(aim, power);
+            Controller.SubmitPlayerMoveTo(tapped);
 
-            // Drawn after submitting, so what is shown is the order that actually went in rather
-            // than the one about to. It stays up for the rest of the phase - the whole point is
-            // being able to look at the decision you have already made.
-            ShowTapOrder(g, target, aim, power);
+            // Drawn after submitting, so what is shown is the order that actually went in. It stays
+            // up for the rest of the phase - the whole point is being able to look at the decision
+            // already made. The lane stops where one phase of running runs out; the ring sits on the
+            // point he was sent to, so a run too long for one phase says so by falling short of it.
+            ShowTapOrder(path[path.Count - 1], ObstacleField.Truncate(path, reach));
             return true;
         }
 
@@ -665,17 +660,14 @@ namespace ColosseumDuel.Gameplay
         }
 
         /// <summary>
-        /// Marks where the player tapped and draws the run they just ordered.
+        /// Marks where the player sent him and draws the run he will make.
         ///
-        /// Tapping had no feedback at all: the order went in and nothing on screen acknowledged it
-        /// until the gladiators started moving, so there was no way to tell a registered tap from a
-        /// missed one, and no way to check the aim before committing to it.
-        ///
-        /// The ring sits on the tapped point and the dashes show the actual run, which is the same
-        /// preview the pull draws - so when the tap is further than one dash carries, the line stops
-        /// short of the ring and says exactly that.
+        /// Tapping used to have no feedback at all: the order went in and nothing on screen
+        /// acknowledged it until the gladiators started moving. The ring sits on the point he was
+        /// sent to and the lane shows the actual run round the obstacles, cut off where one phase of
+        /// running runs out - so a run too long for one phase says so by falling short of the ring.
         /// </summary>
-        private void ShowTapOrder(GladiatorInstance g, Vector2 target, Vector2 aim, float power)
+        private void ShowTapOrder(Vector2 target, List<Vector2> run)
         {
             if (Controller.Arena == null) return;
 
@@ -685,11 +677,23 @@ namespace ColosseumDuel.Gameplay
                 _tapMarker.SetActive(true);
             }
 
-            if (_trajectory == null) return;
+            DrawLane(run);
+        }
 
-            var points = GameManager.ComputeTrajectoryPreview(g, aim, power);
+        /// <summary>Lays the lane along a run, corner to corner, and puts the head on the end of it.</summary>
+        private void DrawLane(List<Vector2> run)
+        {
+            if (_trajectory == null || Controller.Arena == null) return;
+
+            if (run == null || run.Count < 2)
+            {
+                Hide(_trajectory);
+                HideArrowHead();
+                return;
+            }
+
             _worldPoints.Clear();
-            foreach (var p in points)
+            foreach (var p in run)
                 _worldPoints.Add(Controller.Arena.ToWorld(p, TrajectoryHeight));
 
             _trajectory.positionCount = _worldPoints.Count;
@@ -716,8 +720,10 @@ namespace ColosseumDuel.Gameplay
         private void DrawTrajectory(GladiatorInstance g) => DrawRun(g, CurrentAim, CurrentPower);
 
         /// <summary>
-        /// Draws the lane a run would take, from an aim and a power rather than from the gesture in
-        /// progress - so the same drawing serves the swipe being made and the order it left behind.
+        /// Draws the lane for an aim and a power - the drag controls' way of giving an order - by
+        /// turning them into the point they reach and routing to it like any other order. The same
+        /// conversion GameManager.SubmitPlanningAction makes, so the lane is the run that will be
+        /// filed.
         /// </summary>
         private void DrawRun(GladiatorInstance g, Vector2 aim, float power)
         {
@@ -730,16 +736,8 @@ namespace ColosseumDuel.Gameplay
                 return;
             }
 
-            var points = GameManager.ComputeTrajectoryPreview(g, aim, power);
-            _worldPoints.Clear();
-            foreach (var p in points)
-                _worldPoints.Add(Controller.Arena.ToWorld(p, TrajectoryHeight));
-
-            _trajectory.positionCount = _worldPoints.Count;
-            for (int i = 0; i < _worldPoints.Count; i++)
-                _trajectory.SetPosition(i, _worldPoints[i]);
-            _trajectory.enabled = true;
-            ShowArrowHead(_worldPoints);
+            var target = g.Pos + aim.normalized * (Mathf.Clamp01(power) * g.PlannedReach());
+            DrawLane(Controller.Manager.ComputeTrajectoryPreview(g, target));
         }
 
         private GladiatorInstance PlayerGladiator()

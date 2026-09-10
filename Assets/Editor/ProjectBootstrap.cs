@@ -51,6 +51,11 @@ namespace ColosseumDuel.EditorTools
         private const string GallerySlabPath = ArenaKitDir + "/floor/Ground_C_1x1.prefab";
         private const string GalleryRailPath = ArenaKitDir + "/stair/Rail_A_1m.prefab";
 
+        // The columns standing on the sand. Low Poly Trim Sheet's pillar, sized at runtime to the
+        // footprint the simulation gives a column - see ArenaView.BuildObstacles.
+        private const string ColumnPrefabPath =
+            "Assets/Low Poly Trim Sheet Asset Collection/TrimSheet_Prefabs/Pillar.prefab";
+
         /// <summary>World radius of the arena floor; GameConstants.ArenaRadius maps onto this.</summary>
         private const float WorldArenaRadius = 8f;
 
@@ -456,12 +461,8 @@ namespace ColosseumDuel.EditorTools
 
             palette.PullLine = TransparentUnlit("PullLine", new Color(1f, 1f, 1f, 0.75f));
 
-            // The control itself, drawn on the sand. Green for ground he can be sent onto, red for
-            // ground his weapon covers - and both faint enough to read as light on the floor rather
-            // than as paint, because the fight has to stay legible through them. The rim on the far
-            // edge carries the shape: a flat wash has no boundary, and the boundary is the rule.
-            palette.MoveZone = TransparentUnlit("MoveZone", new Color(0.24f, 0.72f, 0.36f, 0.22f));
-            palette.MoveZoneEdge = TransparentUnlit("MoveZoneEdge", new Color(0.45f, 0.95f, 0.55f, 0.68f));
+            // The ground his weapon covers, drawn on the sand. Faint enough to read as light on the
+            // floor rather than as paint, because the fight has to stay legible through it.
             palette.StrikeZone = TransparentUnlit("StrikeZone", new Color(0.88f, 0.20f, 0.18f, 0.44f));
             palette.Burst = TransparentUnlit("Burst", Color.white);
 
@@ -537,6 +538,45 @@ namespace ColosseumDuel.EditorTools
             ApplyTexture(palette.WallStone,
                          ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
                          new Vector2(2f, 1f));
+
+            // The obstacles on the sand. The pillar is Low Poly Trim Sheet and absent in a clean
+            // clone, where ArenaView stands a cylinder in the same stone as the wall; the crate is
+            // drawn in code and always there.
+            palette.ColumnModel = AssetDatabase.LoadAssetAtPath<GameObject>(ColumnPrefabPath);
+            if (palette.ColumnModel == null)
+                Debug.LogWarning($"[Colosseum] Pillar not found at {ColumnPrefabPath} - " +
+                                 "columns will be plain stone cylinders.");
+
+            // The pillar's own sandstone, lifted onto URP's Lit shader. The pack ships it on the
+            // built-in Standard shader, which URP draws as solid magenta - the textures are fine, so
+            // they move onto a material URP can draw, and the pillar's own UVs still land on the
+            // right part of its trim sheet. Read off the pillar itself rather than a material path,
+            // so it is whatever the pillar actually wears. Plain wall stone when the pack is absent.
+            var pillar = palette.ColumnModel != null ? palette.ColumnModel.GetComponentInChildren<Renderer>(true) : null;
+            var sandstone = pillar != null ? pillar.sharedMaterial : null;
+
+            palette.ColumnStone = Lit("ColumnStone", Color.white);
+            if (sandstone != null && sandstone.mainTexture is Texture2D albedo)
+            {
+                ApplyTexture(palette.ColumnStone, albedo, Vector2.one);
+                var normal = sandstone.HasProperty("_BumpMap") ? sandstone.GetTexture("_BumpMap") : null;
+                if (normal != null)
+                {
+                    palette.ColumnStone.SetTexture("_BumpMap", normal);
+                    palette.ColumnStone.EnableKeyword("_NORMALMAP");
+                }
+            }
+            else
+            {
+                palette.ColumnStone.color = new Color(0.60f, 0.57f, 0.52f);
+                ApplyTexture(palette.ColumnStone,
+                             ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
+                             new Vector2(1f, 2f));
+            }
+
+            palette.CrateWood = Lit("CrateWood", Color.white);
+            ApplyTexture(palette.CrateWood,
+                         ProceduralTextures.EnsureCrate(TexturesDir + "/Crate.png"), Vector2.one);
 
             // Built from the imported weapon pack rather than loaded from it: the pack's own prefabs
             // carry LOD groups and colliders this game has no use for, and its materials are on the

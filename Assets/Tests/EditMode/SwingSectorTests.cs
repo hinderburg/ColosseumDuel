@@ -20,9 +20,15 @@ namespace ColosseumDuel.Tests
             return g;
         }
 
-        /// <summary>A point the given number of degrees off his nose, at the given distance.</summary>
+        /// <summary>
+        /// A point the given number of degrees off his nose - anticlockwise, with his nose pointing
+        /// up - at the given distance.
+        /// </summary>
         private static Vector2 At(float degrees, float distance)
-            => MoveEnvelope.Rotate(Vector2.up, degrees) * distance;
+        {
+            float r = degrees * Mathf.Deg2Rad;
+            return new Vector2(-Mathf.Sin(r), Mathf.Cos(r)) * distance;
+        }
 
         /// <summary>
         /// The three strike zones nest: twin swords inside sword and shield inside the mace, on

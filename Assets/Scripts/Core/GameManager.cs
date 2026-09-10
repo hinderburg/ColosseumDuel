@@ -87,9 +87,12 @@ namespace ColosseumDuel.Core
             // ability lock into a match that was supposed to start clean.
             State.P1.Active = null;
             State.Bot.Active = null;
-            State.Items = new ItemSystem(_rng);
+
+            // The obstacles first, because the items and the traps are laid out round them.
+            State.Obstacles = ObstacleField.Standard();
+            State.Items = new ItemSystem(_rng, State.Obstacles);
             State.Items.SpawnInitial();
-            State.Traps = new TrapSystem(_rng);
+            State.Traps = new TrapSystem(_rng, State.Obstacles);
             State.Traps.SpawnForRound();
             State.Round = 0;
             State.Cycle = 0;
@@ -290,10 +293,51 @@ namespace ColosseumDuel.Core
             if (g == null || !g.Alive) return false;
 
             g.PlannedAction = action;
-            g.PlannedAimDirection = aimDirection.sqrMagnitude > 0.0001f ? aimDirection.normalized : Vector2.zero;
-            g.PlannedPower = Mathf.Clamp01(power);
+
+            var aim = aimDirection.sqrMagnitude > 0.0001f ? aimDirection.normalized : Vector2.zero;
+            float share = Mathf.Clamp01(power);
+
+            // A direction and a strength, from the callers that still think in those - the bot, the
+            // drag controls, the tests - turned into the one thing the action phase actually runs
+            // to: a point. That far along that heading is exactly where the old straight run would
+            // have ended, so on open sand nothing about these orders has changed.
+            g.PlannedTarget = g.Pos + aim * (share * g.PlannedReach());
+            g.PlannedAimDirection = aim;
+            g.PlannedPower = share;
             return true;
         }
+
+        /// <summary>
+        /// Sends a gladiator to a point, round whatever is in the way: the order a tap gives.
+        ///
+        /// Filed as the point the path actually ends at rather than the one asked for, which differ
+        /// when the tap lands on a crate or outside the wall. The aim and the power are filled in
+        /// from the path too, for everything that still reads them - which way he sets off, and
+        /// how much of one dash the run spends.
+        /// </summary>
+        public bool SubmitPlanningMoveTo(PlayerSide side, Vector2 target)
+        {
+            if (State.Phase != MatchPhase.Planning) return false;
+            var g = State.Get(side).Active;
+            if (g == null || !g.Alive) return false;
+
+            var path = PlanRun(g, target);
+            float reach = g.PlannedReach();
+
+            g.PlannedAction = ActionType.Move;
+            g.PlannedTarget = path[path.Count - 1];
+            g.PlannedAimDirection = path.Count > 1 ? (path[1] - path[0]).normalized : Vector2.zero;
+            g.PlannedPower = reach > 0.0001f ? Mathf.Clamp01(ObstacleField.Length(path) / reach) : 0f;
+            return true;
+        }
+
+        /// <summary>
+        /// The way a gladiator would run to a point, round whatever stands in the way, starting where
+        /// he is. The one pathfinder the whole game uses - the action phase, the strike prediction
+        /// and the lane under the player's finger all come through here.
+        /// </summary>
+        public List<Vector2> PlanRun(GladiatorInstance g, Vector2 target)
+            => State.Obstacles.FindPath(g.Pos, target, GameConstants.GladiatorRadius);
 
         /// <summary>Files both at once, for callers that decide them together - the bot, and tests.</summary>
         public bool SubmitPlanningAction(PlayerSide side, ActionType action, Vector2 aimDirection, float power, bool useAbility)
@@ -326,11 +370,10 @@ namespace ColosseumDuel.Core
         /// <summary>
         /// Turns a gladiator round on the spot, if his about-face is charged. Returns whether it was.
         ///
-        /// Planning only, and it does not touch the plan he has filed - except that it cannot leave
-        /// it standing either: an order given before the turn was aimed into the arc he had then,
-        /// and after it that arc is behind him. Rather than quietly swinging his run round by 180
-        /// degrees, the order is dropped and he is left undecided, which is the state the phase
-        /// started in and the one the buttons already know how to show.
+        /// Planning only, and it drops whatever order he had filed, leaving him undecided - the state
+        /// the phase started in and the one the buttons already know how to show. The turn is a
+        /// choice to stand and face something; a run filed before it would turn him straight back
+        /// round along the run the moment the phase began, and undo it.
         /// </summary>
         public bool SubmitAboutFace(PlayerSide side)
         {
@@ -342,44 +385,20 @@ namespace ColosseumDuel.Core
             g.PlannedAction = ActionType.None;
             g.PlannedAimDirection = Vector2.zero;
             g.PlannedPower = 0f;
+            g.PlannedTarget = Vector2.zero;
             return true;
         }
 
-        /// <summary>Simulates the full bounced trajectory for a prospective Move, for UI preview
-        /// while the player is still dragging. Mirrors computeTrajectoryPreview() in the JS build.</summary>
-        public static List<Vector2> ComputeTrajectoryPreview(GladiatorInstance g, Vector2 aimDirection, float power, float stepSeconds = 0.05f)
-        {
-            var points = new List<Vector2>();
-            Vector2 pos = g.Pos;
-
-            // Built through the same envelope the action phase will build the run from, so the lane
-            // cannot promise a turn he is not going to make. Doing it here rather than in the
-            // caller means every drawing of a run gets it, including the one left on screen after
-            // the order was given.
-            //
-            // PlannedSpeed, not EffectiveSpeed: an armed ability has not fired yet, and this is a
-            // drawing of what is about to happen rather than of what is happening.
-            var envelope = MoveEnvelope.For(g);
-            float share = Mathf.Clamp01(power);
-            float speed = g.PlannedSpeed() * GameConstants.SpeedScale * share;
-
-            Vector2 vel = envelope.Facing * speed;
-            float curvature = MoveEnvelope.CurvatureFor(
-                envelope.TurnOnto(g.Pos + aimDirection),
-                speed * GameConstants.ActionTime);
-
-            float t = 0f;
-            points.Add(pos);
-            while (t < GameConstants.ActionTime)
-            {
-                // Same step and same bounce the action phase will run, so the preview stays a promise.
-                StepTravel(ref pos, ref vel, curvature, stepSeconds);
-                ArenaShape.Bounce(ref pos, ref vel, GameConstants.GladiatorRadius);
-                points.Add(pos);
-                t += stepSeconds;
-            }
-            return points;
-        }
+        /// <summary>
+        /// The run a gladiator would make to a point this phase: the path round the obstacles, cut
+        /// off where one phase of running runs out.
+        ///
+        /// Built by the same pathfinder the action phase uses, so the lane drawn under the finger
+        /// is the run and not a picture of one. PlannedReach rather than DashReach: an armed ability
+        /// has not fired yet, and this is a drawing of what is about to happen.
+        /// </summary>
+        public List<Vector2> ComputeTrajectoryPreview(GladiatorInstance g, Vector2 target)
+            => ObstacleField.Truncate(PlanRun(g, target), g.PlannedReach());
 
         /// <summary>Advance the simulation. Call every frame with Time.deltaTime; the manager
         /// internally handles phase timers and (during Action) substepped physics.</summary>
@@ -497,34 +516,43 @@ namespace ColosseumDuel.Core
                 AbilityFired?.Invoke(side);
             }
 
-            // Facing is not set here - see FaceTravel, which runs once both sides have been given
-            // their velocity. It still holds last cycle's heading at this point, which is exactly
-            // what the envelope has to be measured from: the arc drawn during planning was struck
-            // about the way he was already looking.
+            // Facing is not set here - see FaceTravel, which runs once both sides have their
+            // velocity and turns each of them to face along the first leg of his run.
             //
-            // The turn is clamped here rather than only where the order is given, so it is a rule of
-            // the world and not a manner of the interface. The bot files aims through the same
-            // field, and an order that reached this line by any other route - a test, a replay -
-            // would otherwise be allowed a turn no player could ask for.
-            if (g.PlannedAction == ActionType.Move)
-            {
-                var envelope = MoveEnvelope.For(g);
-                float power = Mathf.Clamp01(g.PlannedPower);
+            // The path is worked out here, from the target, rather than carried over from wherever
+            // the order was given. That makes it a rule of the world and not a manner of the
+            // interface: the bot's orders, the drag controls' and the tests' all arrive as a point
+            // and are routed round the same obstacles by the same pathfinder.
+            g.StopRunning();
+            if (g.PlannedAction != ActionType.Move) return;   // Defend, or no plan at all - stand still
 
-                // He leaves along his nose, not along the aim. The aim is where he is going, and
-                // the way there is a bend - the whole turn is done during the run rather than
-                // instantly on the spot before it, which is what a man running actually does and
-                // what the arc on the sand has been drawing.
-                g.Vel = envelope.Facing * (g.EffectiveSpeed() * GameConstants.SpeedScale * power);
-                g.Curvature = MoveEnvelope.CurvatureFor(
-                    envelope.TurnOnto(g.Pos + g.PlannedAimDirection),
-                    power * g.EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime);
-            }
-            else
+            var path = PlanRun(g, g.PlannedTarget);
+            float length = ObstacleField.Length(path);
+            float fullSpeed = g.EffectiveSpeed() * GameConstants.SpeedScale;
+            float reach = fullSpeed * GameConstants.ActionTime;
+            if (length < 0.0001f || reach < 0.0001f) return;
+
+            // Timed to arrive as the phase ends when the target is within one dash, and flat out
+            // when it is not. The same pacing the straight run always had, so a short order is a
+            // walk and a long one a charge - rather than every run being a sprint that stops early
+            // and stands about for the rest of the phase.
+            float speed = fullSpeed * Mathf.Min(1f, length / reach);
+
+            g.Path.AddRange(path);
+            g.PathIndex = 1;   // he is standing on the first corner already
+            g.PathSpeed = speed;
+            g.Vel = FirstHeading(path) * speed;
+        }
+
+        /// <summary>The direction of the first leg of a path that actually goes anywhere.</summary>
+        private static Vector2 FirstHeading(IReadOnlyList<Vector2> path)
+        {
+            for (int i = 1; i < path.Count; i++)
             {
-                g.Vel = Vector2.zero; // Defend, or no plan at all - stand still
-                g.Curvature = 0f;
+                var leg = path[i] - path[i - 1];
+                if (leg.sqrMagnitude > 0.000001f) return leg.normalized;
             }
+            return Vector2.zero;
         }
 
         /// <summary>
@@ -578,7 +606,10 @@ namespace ColosseumDuel.Core
             var b = State.Bot.Active;
             if (a == null || b == null || !a.Alive || !b.Alive) return;
 
+            // Copies of where each man is and which corner of his path he is making for. The paths
+            // themselves are only read, so both runs can be walked forward without touching either.
             Vector2 posA = a.Pos, velA = a.Vel, posB = b.Pos, velB = b.Vel;
+            int nextA = a.PathIndex, nextB = b.PathIndex;
             Vector2 lookA = a.Facing, lookB = b.Facing;
             WeaponDef armedA = a.WeaponDef, armedB = b.WeaponDef;
 
@@ -590,10 +621,8 @@ namespace ColosseumDuel.Core
                 var wasA = posA;
                 var wasB = posB;
 
-                StepTravel(ref posA, ref velA, a.Curvature, PredictionStep);
-                ArenaShape.Bounce(ref posA, ref velA, GameConstants.GladiatorRadius);
-                StepTravel(ref posB, ref velB, b.Curvature, PredictionStep);
-                ArenaShape.Bounce(ref posB, ref velB, GameConstants.GladiatorRadius);
+                RunOrDrift(a, ref posA, ref velA, ref nextA, PredictionStep);
+                RunOrDrift(b, ref posB, ref velB, ref nextB, PredictionStep);
 
                 t += PredictionStep;
 
@@ -699,22 +728,6 @@ namespace ColosseumDuel.Core
         /// Both move at a constant velocity across a substep, so the distance between them is a
         /// quadratic in time and its minimum is one division.
         /// </summary>
-        /// <summary>
-        /// One step of a run along its bend: turn first, then travel.
-        ///
-        /// The one place the shape of a run is integrated, because there are three callers - the
-        /// phase itself, the strike prediction that runs ahead of it, and the lane drawn under the
-        /// player's finger - and the whole point of the last two is that they agree with the first.
-        /// Three copies of this would be three chances for the promise to drift from the fact.
-        /// </summary>
-        private static void StepTravel(ref Vector2 pos, ref Vector2 vel, float curvature, float dt)
-        {
-            if (curvature != 0f && vel.sqrMagnitude > 0.00000001f)
-                vel = MoveEnvelope.Rotate(vel, curvature * vel.magnitude * dt * Mathf.Rad2Deg);
-
-            pos += vel * dt;
-        }
-
         private static float ClosestApproach(Vector2 fromA, Vector2 toA, Vector2 fromB, Vector2 toB,
             out float at)
         {
@@ -732,12 +745,72 @@ namespace ColosseumDuel.Core
             return (separation + closing * at).magnitude;
         }
 
+        /// <summary>
+        /// One step of a man's movement: along his path if he is on one, carried by whatever
+        /// velocity he has if he is not - the recoil of a collision, mostly.
+        ///
+        /// The one place movement is integrated, because there are two callers - the phase itself
+        /// and the strike prediction that runs ahead of it - and the whole point of the second is
+        /// that it agrees with the first. Takes the position, velocity and next corner by reference
+        /// so the prediction can walk copies of them while reading the gladiator's own path.
+        ///
+        /// Pushed off the obstacles at the end whichever way he moved. A path already keeps him
+        /// clear, so for a runner this does nothing; it is the recoil and the knockback, which move
+        /// him without asking, that it is for.
+        /// </summary>
+        private void RunOrDrift(GladiatorInstance g, ref Vector2 pos, ref Vector2 vel, ref int next, float dt)
+        {
+            if (g.PathSpeed > 0f && next < g.Path.Count)
+                AdvanceAlongPath(g.Path, ref next, ref pos, g.PathSpeed * dt, g.PathSpeed, out vel);
+            else
+                pos += vel * dt;
+
+            ArenaShape.Bounce(ref pos, ref vel, GameConstants.GladiatorRadius);
+            State.Obstacles.PushOut(ref pos, GameConstants.GladiatorRadius);
+        }
+
+        /// <summary>
+        /// Moves a point a given distance along a path, turning its corners, and reports the
+        /// velocity it is left with: along the leg it is on, or nothing once it has arrived.
+        ///
+        /// Nothing once arrived rather than the last heading, because a man who has reached his
+        /// point has stopped. FaceTravel keeps the way he was last looking when there is no velocity
+        /// to read, so he still ends up facing along the final leg of his run.
+        /// </summary>
+        private static void AdvanceAlongPath(IReadOnlyList<Vector2> path, ref int next, ref Vector2 pos,
+            float distance, float speed, out Vector2 vel)
+        {
+            var heading = Vector2.zero;
+
+            while (distance > 0f && next < path.Count)
+            {
+                var leg = path[next] - pos;
+                float length = leg.magnitude;
+
+                if (length <= distance)
+                {
+                    // Reaches this corner inside the step, and carries the rest round it.
+                    pos = path[next];
+                    distance -= length;
+                    if (length > 0.000001f) heading = leg / length;
+                    next++;
+                }
+                else
+                {
+                    heading = leg / length;
+                    pos += heading * distance;
+                    distance = 0f;
+                }
+            }
+
+            vel = next < path.Count ? heading * speed : Vector2.zero;
+        }
+
         private void StepGladiator(GladiatorInstance g, float dt)
         {
             if (g == null || !g.Alive) return;
 
-            StepTravel(ref g.Pos, ref g.Vel, g.Curvature, dt);
-            ArenaShape.Bounce(ref g.Pos, ref g.Vel, GameConstants.GladiatorRadius);
+            RunOrDrift(g, ref g.Pos, ref g.Vel, ref g.PathIndex, dt);
 
             // hazard damage - continuous DOT while standing in an active danger ring
             if (HazardSystem.IsInActiveHazard(g.Pos, State.Cycle))
@@ -794,6 +867,11 @@ namespace ColosseumDuel.Core
             a.Pos = mid + apart * (GameConstants.CollideDistance * 0.5f);
             b.Pos = mid - apart * (GameConstants.CollideDistance * 0.5f);
 
+            // Off their paths first. A collision ends a run rather than interrupting it: left on
+            // them, the next step would walk each of them straight back towards a corner they were
+            // thrown away from.
+            a.StopRunning();
+            b.StopRunning();
             a.Vel = apart * GameConstants.BounceSpeed;
             b.Vel = -apart * GameConstants.BounceSpeed;
 
@@ -894,7 +972,7 @@ namespace ColosseumDuel.Core
         /// for the same reason a collision is: a shove that lands as the phase ends would otherwise
         /// leave a gladiator standing outside the arena for the length of a planning phase.
         /// </summary>
-        private static void Shove(GladiatorInstance attacker, GladiatorInstance target)
+        private void Shove(GladiatorInstance attacker, GladiatorInstance target)
         {
             float distance = attacker.WeaponDef.Knockback;
             if (distance <= 0f || !target.Alive) return;
@@ -905,6 +983,27 @@ namespace ColosseumDuel.Core
             target.Pos += away.normalized * distance;
             var still = Vector2.zero;
             ArenaShape.Bounce(ref target.Pos, ref still, GameConstants.GladiatorRadius);
+
+            // And not into the stone. A mace can throw a man at a column as easily as away from one.
+            State.Obstacles.PushOut(ref target.Pos, GameConstants.GladiatorRadius);
+
+            // Thrown, not stopped: a shove has always moved a man and left his charge going, and it
+            // still does. What it cannot do any more is leave him walking straight on to the next
+            // corner of a path he has been knocked off - from a body-length to one side that line
+            // can run through a crate. So the rest of the run is routed again from where he landed,
+            // to the same place, at the same pace.
+            //
+            // Stopping him outright was tried first and was wrong: it turned the mace's knockback
+            // into a halt, and two mace fighters charging each other knocked each other still and
+            // never met.
+            if (target.IsRunning)
+            {
+                var goal = target.Path[target.Path.Count - 1];
+                var rest = PlanRun(target, goal);
+                target.Path.Clear();
+                target.Path.AddRange(rest);
+                target.PathIndex = 1;
+            }
         }
 
         private void EndActionPhase()
@@ -918,9 +1017,10 @@ namespace ColosseumDuel.Core
             // Everybody stops. The phase is over, and nothing between here and the next action
             // phase moves anyone - but the velocity that carried them here was being left standing,
             // so for the whole four seconds of planning the view was told they were still travelling
-            // at a full charge and ran them on the spot.
-            if (State.P1.Active != null) State.P1.Active.Vel = Vector2.zero;
-            if (State.Bot.Active != null) State.Bot.Active.Vel = Vector2.zero;
+            // at a full charge and ran them on the spot. Off their paths too, so a run that did not
+            // finish inside the phase is not picked up again when the next one starts.
+            State.P1.Active?.StopRunning();
+            State.Bot.Active?.StopRunning();
 
             State.P1.Active?.ResolveCycleRage();
             State.Bot.Active?.ResolveCycleRage();

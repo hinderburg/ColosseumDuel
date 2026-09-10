@@ -37,6 +37,13 @@ namespace ColosseumDuel.Core
         public ItemSystem Items;
         public TrapSystem Traps;
 
+        /// <summary>
+        /// What stands on the sand. Set here rather than only when a match starts, so the views can
+        /// build the columns and crates before there is a match to read them from - the layout is
+        /// the arena's, not the match's.
+        /// </summary>
+        public ObstacleField Obstacles = ObstacleField.Standard();
+
         public PlayerSide? WinnerSide;
 
         /// <summary>

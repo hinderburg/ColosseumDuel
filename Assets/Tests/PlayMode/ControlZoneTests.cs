@@ -11,12 +11,12 @@ using UnityEngine.TestTools;
 namespace ColosseumDuel.Tests
 {
     /// <summary>
-    /// The control drawn on the sand: the green arc of ground he can be sent onto, and the red
-    /// wedge his weapon covers.
+    /// The red wedge drawn on the sand in front of the player's gladiator: the ground his weapon
+    /// covers.
     ///
-    /// Both are pictures of rules the simulation enforces, so what these check is that the drawing
-    /// and the rule are the same shape. A zone that flattered the rule would be worse than none:
-    /// the player would aim at ground he cannot reach, or expect a blow that never lands.
+    /// A picture of a rule the simulation enforces, so what these check is that the drawing and the
+    /// rule are the same shape. There used to be a green arc under it as well - the ground he could
+    /// be sent onto - and it went with the limit it drew; NoGreenArcIsLeftBehind makes sure it did.
     /// </summary>
     public class ControlZoneTests
     {
@@ -31,9 +31,6 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             _controller = Object.FindFirstObjectByType<GameController>();
-            // Brutius throughout: he is the one with the speed ability, which the last of these
-            // needs, and the zone he gets is the widest and shortest in the game - the easiest
-            // shape to be wrong about.
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return null;
         }
@@ -73,7 +70,7 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator TheZonesAreUpWhileHeIsBeingGivenOrdersAndDownWhileHeRuns()
+        public IEnumerator TheWedgeIsUpWhileHeIsBeingGivenOrdersAndDownWhileHeRuns()
         {
             yield return ReachPlanning();
 
@@ -88,25 +85,7 @@ namespace ColosseumDuel.Tests
                 "left up while they run it would describe a decision already carried out");
         }
 
-        /// <summary>
-        /// The green arc reaches exactly as far as one dash, and no further. Drawn short it hides
-        /// ground he could have taken; drawn long it promises ground he cannot.
-        /// </summary>
-        [UnityTest]
-        public IEnumerator TheGreenArcEndsWhereOneDashDoes()
-        {
-            yield return ReachPlanning();
-
-            var player = _controller.Manager.State.P1.Active;
-            float expected = _controller.Arena.ScaleLength(MoveEnvelope.For(player).OuterRadius);
-
-            Assert.AreEqual(expected, Extent(Layer("MoveZone")), 0.01f);
-        }
-
-        /// <summary>
-        /// And the red wedge ends where the weapon does - inside the green, which is what makes the
-        /// two readable as one picture: this is where you may go, and this is what you cover.
-        /// </summary>
+        /// <summary>The red wedge ends where the weapon does.</summary>
         [UnityTest]
         public IEnumerator TheRedWedgeEndsWhereTheWeaponDoes()
         {
@@ -115,18 +94,16 @@ namespace ColosseumDuel.Tests
             var player = _controller.Manager.State.P1.Active;
             float expected = _controller.Arena.ScaleLength(player.WeaponDef.Reach);
 
-            float drawn = Extent(Layer("StrikeZone"));
-            Assert.AreEqual(expected, drawn, 0.01f);
-            Assert.Less(drawn, Extent(Layer("MoveZone")), "the strike zone sits inside the run");
+            Assert.AreEqual(expected, Extent(Layer("StrikeZone")), 0.01f);
         }
 
         /// <summary>
-        /// Both arcs are struck about the way he is looking. Pinned by turning him and reading the
-        /// drawing back - a zone bolted to the arena would be a different game entirely, since the
-        /// whole rule is that a heading is something he carries.
+        /// The wedge is struck about the way he is looking. Pinned by turning him and reading the
+        /// drawing back - a wedge bolted to the arena would promise blows in a direction he is not
+        /// facing.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheArcsPointWhereHeIsLooking()
+        public IEnumerator TheWedgePointsWhereHeIsLooking()
         {
             yield return ReachPlanning();
 
@@ -135,10 +112,8 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             var root = Layer("ControlZone");
-            var forward = root.forward;
-
-            Assert.AreEqual(0f, Vector3.Angle(forward, Vector3.right), 0.5f,
-                "he is looking down positive X and the arc should be too");
+            Assert.AreEqual(0f, Vector3.Angle(root.forward, Vector3.right), 0.5f,
+                "he is looking down positive X and the wedge should be too");
 
             player.Facing = new Vector2(0f, -1f);
             yield return null;
@@ -148,26 +123,22 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// Arming the speed ability lengthens the arc and narrows it, while the player is still
-        /// deciding. The ability does not fire until the action phase, so a zone drawn off what he
-        /// is rather than off what he is about to be would be a picture of the wrong cycle.
+        /// The green arc is gone, and gone from the scene rather than merely hidden - a zone left
+        /// in the hierarchy is a zone the next change can switch back on by accident, drawing a
+        /// limit the simulation no longer has.
         /// </summary>
         [UnityTest]
-        public IEnumerator ArmingTheSpeedAbilityChangesTheZoneBeforeItFires()
+        public IEnumerator NoGreenArcIsLeftBehind()
         {
             yield return ReachPlanning();
 
-            var picked = _controller.Manager.State.P1.Active;
-            Assert.AreEqual(AbilityKey.Spirit, picked.Def.Ability, "this test is about the speed one");
+            var names = Object.FindFirstObjectByType<ArenaView>()
+                .GetComponentsInChildren<Transform>(true)
+                .Select(t => t.name)
+                .ToList();
 
-            float before = Extent(Layer("MoveZone"));
-
-            picked.Rage = GameConstants.RageMax;
-            _controller.SubmitPlayerAbility(true);
-            yield return null;
-
-            Assert.Greater(Extent(Layer("MoveZone")), before * 1.4f,
-                "the run he is about to make is half again as long, and the zone should say so");
+            CollectionAssert.DoesNotContain(names, "MoveZone");
+            CollectionAssert.DoesNotContain(names, "MoveZoneEdge");
         }
     }
 }

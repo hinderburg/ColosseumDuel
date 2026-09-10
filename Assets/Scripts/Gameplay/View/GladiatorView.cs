@@ -154,8 +154,11 @@ namespace ColosseumDuel.Gameplay.View
                 // figure and a small thin one are legible past all of that, and from further away.
                 // Width goes on both ground axes, since the camera can see him from any angle he
                 // happens to be facing.
+                //
+                // And grown by GladiatorScale on top, the one knob that also sizes his collision
+                // radius, his gear and his reach - see GameConstants.
                 figure.transform.localScale =
-                    new Vector3(def.BuildWidth, def.BuildHeight, def.BuildWidth);
+                    new Vector3(def.BuildWidth, def.BuildHeight, def.BuildWidth) * GameConstants.GladiatorScale;
 
                 // Seated here rather than when the prefab was built, and after the build scale, so
                 // it is measured against the figure that will actually be drawn. Seated once at

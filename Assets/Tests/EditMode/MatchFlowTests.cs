@@ -101,65 +101,40 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheyLookWhereTheyAreGoing_NotAtEachOther()
+        public void TheyLookAlongTheirRun_NotAtEachOther()
         {
             // They used to look at each other whatever they were doing, which read well and made
             // the direction a man faces mean nothing. It means something now: it decides which of
-            // him a blow lands on, and it is not a thing he can set freely either - he leaves along
-            // the heading he already has and bends round from there.
+            // him a blow lands on. And with nothing limiting where he can be sent, it is entirely the
+            // player's to choose - he faces along his run from the first step to the last.
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
 
-            // On open sand in the middle, well clear of the wall. A bounce reflects the run and
-            // the bend carries on turning from there, so a wall in the way would make the total
-            // turn a fact about the arena rather than about him.
+            // On open sand in the middle, clear of the wall and of every obstacle, so the run is a
+            // straight line and his heading has only one right answer.
             p1.Pos = Vector2.zero;
             bot.Pos = new Vector2(0f, 200f);
 
-            var envelope = MoveEnvelope.For(p1);
-            float sharpest = envelope.HalfAngleDegrees;
-
-            // Straight backwards, away from the opponent, at full power. Nobody can turn that far in
-            // one phase, so what he actually does is the sharpest bend he has.
+            // Straight backwards, away from the opponent, at full power.
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
 
-            // He sets off looking exactly where he was already looking. There is no pivot: the turn
-            // is done during the run, which is the whole difference between an order and a swivel.
-            Assert.AreEqual(0f, Vector2.Angle(p1.Facing, Vector2.up), 1.5f,
-                "he should leave along the heading he came in with");
-
-            float turnedSoFar = 0f;
             for (int i = 0; i < 400 && m.State.Phase == MatchPhase.Action; i++)
             {
+                Assert.AreEqual(0f, Vector2.Angle(p1.Facing, Vector2.down), 1f,
+                    "he was sent backwards and should be looking backwards, from the first step on");
                 m.Tick(Dt);
                 if (!p1.Alive || !bot.Alive) break;
-
-                float turned = Vector2.Angle(Vector2.up, p1.Facing);
-                Assert.GreaterOrEqual(turned, turnedSoFar - 1f, "he only ever turns one way here");
-                Assert.LessOrEqual(turned, sharpest * 2f + 5f,
-                    "and never further round than twice the sharpest turn he is allowed");
-                turnedSoFar = turned;
             }
 
-            // Twice the sharpest turn by the end: half of it done on the way out and half on the
-            // way in, which is what a circle through a point does.
-            // Within a few degrees rather than exactly: the last tick of a phase overshoots its own
-            // end by up to a frame, and a frame of a one-second phase is a sixtieth of the turn.
-            Assert.AreEqual(sharpest * 2f, turnedSoFar, 5f,
-                "the bend was cut short, or it was never a bend at all");
-
-            // And what that turn is worth to the other one. Brutius is the slowest man in the game
-            // and so has the narrowest arc: 75 degrees, of which he uses half on the way out and
-            // half on the way in. That is nowhere near the 135 the back sector begins at, and the
-            // little ground he covers does not make up the difference - he can offer a flank and no
-            // more. What a quick gladiator can do from the same spot is the next test.
-            Assert.AreEqual(HitSector.Side, p1.SectorHitFrom(bot.Pos),
-                "the heaviest man in the game cannot turn his back inside one phase");
+            // And that is a back turned, not just a number. There is no limit on turning any more,
+            // so running away from somebody shows him your spine whoever you are.
+            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
+                "running away from somebody should present your back to them");
 
             // She never moved, and a gladiator who stands still keeps the heading he last ran on.
             Assert.AreEqual(0f, Vector2.Angle(bot.Facing, Vector2.down), 0.01f,
@@ -169,40 +144,61 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// Whether a gladiator can get his back to somebody in one phase is a question about how
-        /// fast he is, and that is the whole point of tying the arc to speed.
+        /// Sent to the far side of a column, he runs round it - never through it - and turns at the
+        /// corner, facing each leg of the run as he takes it. And he still gets there: a run round an
+        /// obstacle is paced to arrive, exactly like one across open sand.
         ///
-        /// Both halves of it matter. A quick man turns 130 degrees and covers 300 units, and between
-        /// the turning and the running he ends the phase spine-on. The heavy one does neither and
-        /// ends it side-on - see the test above, which is the same order given to Brutius.
+        /// Without the pathfinder this fails three ways at once: he would stop against the stone,
+        /// never arrive, and look one way the whole time.
         /// </summary>
         [Test]
-        public void AQuickGladiatorCanGetHisBackTurnedInOnePhase()
+        public void ARunRoundAColumnGoesRoundItAndTurnsAtTheCorner()
         {
-            var m = NewMatch();
-            m.SubmitPick(PlayerSide.P1, GladiatorId.Hilius);   // the fastest, and so the widest arc
+            var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
-            p1.Pos = Vector2.zero;
-            bot.Pos = new Vector2(0f, 200f);
 
-            float sharpest = MoveEnvelope.For(p1).HalfAngleDegrees;
+            Obstacle column = null;
+            foreach (var o in m.State.Obstacles.Obstacles)
+                if (o.Kind == ObstacleKind.Column) { column = o; break; }
+            Assert.IsNotNull(column, "the arena has no columns to run round");
 
-            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 1f, false);
+            // Just below the column and just above it: the straight line between goes through it.
+            // Close enough that the way round fits inside one of Brutius's dashes.
+            p1.Pos = column.Centre + new Vector2(0f, -55f);
+            var target = column.Centre + new Vector2(0f, 55f);
+            Assert.IsFalse(m.State.Obstacles.IsClear(p1.Pos, target, GameConstants.GladiatorRadius),
+                "the test needs the straight line to be blocked");
+
+            bot.Pos = new Vector2(0f, 420f);
+            m.SubmitPlanningMoveTo(PlayerSide.P1, target);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
-            Assert.AreEqual(HitSector.Back, p1.SectorHitFrom(bot.Pos),
-                "running away at speed should end with your spine to the man you left");
+            var firstHeading = p1.Facing;
+            float widestTurn = 0f;
+            float closest = float.MaxValue;
 
-            // And it took both. The turn alone is short of the 135 degrees the back begins at, so
-            // the ground he covered is what carried him the rest of the way round - which is why
-            // this is a fact about running away rather than about turning away.
-            Assert.Less(sharpest * 2f, 135f,
-                "if the turn alone were enough this would prove nothing about the running");
+            for (int i = 0; i < 400 && m.State.Phase == MatchPhase.Action; i++)
+            {
+                m.Tick(Dt);
+                widestTurn = Mathf.Max(widestTurn, Vector2.Angle(firstHeading, p1.Facing));
+                closest = Mathf.Min(closest, Vector2.Distance(p1.Pos, column.Centre));
+            }
+
+            Assert.GreaterOrEqual(closest, column.Size + GameConstants.GladiatorRadius - 0.5f,
+                "he went through the stone, or into it");
+            Assert.Greater(widestTurn, 20f,
+                "he looked one way the whole run - he was not facing along the way round");
+            // Within a twentieth of the run rather than exactly - the same allowance
+            // DashCarriesTheSameGround makes, for the same reason: the phase is ticked in frames, and
+            // at this pace a frame is a couple of units of ground.
+            float runLength = ObstacleField.Length(m.State.Obstacles.FindPath(
+                column.Centre + new Vector2(0f, -55f), target, GameConstants.GladiatorRadius));
+            Assert.Less(Vector2.Distance(p1.Pos, target), runLength * 0.05f,
+                $"he should have got round and arrived, and is at {p1.Pos} instead of {target}");
         }
 
         [Test]
@@ -393,11 +389,8 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-40f, 0f);
             bot.Pos = new Vector2(40f, 0f);
 
-
             // Pointed along the charge they are about to be given. A run leaves along the nose and
-
             // bends onto its target, so two men set down across an axis they did not spawn along
-
             // would each curve away rather than meet.
 
             p1.Facing = Vector2.right;
@@ -744,11 +737,8 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-40f, 0f);
             bot.Pos = new Vector2(40f, 0f);
 
-
             // Pointed along the charge they are about to be given. A run leaves along the nose and
-
             // bends onto its target, so two men set down across an axis they did not spawn along
-
             // would each curve away rather than meet.
 
             p1.Facing = Vector2.right;
@@ -789,11 +779,8 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-40f, 0f);
             bot.Pos = new Vector2(40f, 0f);
 
-
             // Pointed along the charge they are about to be given. A run leaves along the nose and
-
             // bends onto its target, so two men set down across an axis they did not spawn along
-
             // would each curve away rather than meet.
 
             p1.Facing = Vector2.right;

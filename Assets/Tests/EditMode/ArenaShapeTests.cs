@@ -151,21 +151,26 @@ namespace ColosseumDuel.Tests
         private static Vector2 Point(float t, float radiusX, float radiusY)
             => new Vector2(Mathf.Cos(t) * radiusX, Mathf.Sin(t) * radiusY);
 
+        /// <summary>
+        /// A tap anywhere is an order now, including well outside the wall - and it is answered with
+        /// ground inside it, not with a run into the stands. Checked in every direction, through the
+        /// real obstacle field, so a corner of a grown obstacle near the wall cannot route a path
+        /// out through it either.
+        /// </summary>
         [Test]
-        public void TheTrajectoryPreviewStaysInsideTheArenaToo()
+        public void ARunToAPointOutsideTheWallStaysInsideIt()
         {
-            var g = new GladiatorInstance(GladiatorDef.Hilius); // the fastest one
-            g.Pos = Vector2.zero;
+            var field = ObstacleField.Standard();
 
             for (int i = 0; i < 16; i++)
             {
                 float angle = i * 22.5f * Mathf.Deg2Rad;
-                var aim = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-                var points = GameManager.ComputeTrajectoryPreview(g, aim, 1f);
+                var faraway = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 5000f;
+                var path = field.FindPath(Vector2.zero, faraway, GameConstants.GladiatorRadius);
 
-                foreach (var p in points)
-                    Assert.LessOrEqual(ArenaShape.NormalizedDistance(p), 1.0001f,
-                        $"the preview promised a point outside the wall at {p}");
+                foreach (var p in path)
+                    Assert.IsTrue(ArenaShape.Contains(p, GameConstants.GladiatorRadius - 0.01f),
+                        $"the run towards {faraway} went outside the wall at {p}");
             }
         }
     }
