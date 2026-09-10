@@ -58,6 +58,29 @@ namespace ColosseumDuel.Tests
             yield return null;
         }
 
+        /// <summary>
+        /// The menu says which build is open.
+        ///
+        /// The link stays the same while what it serves changes, and a browser keeps serving the old
+        /// build from its cache - so "is this the new one?" needs an answer on the screen. Tucked in
+        /// the bottom corner and quiet: it is for whoever is checking, not something to read in play.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheMenuSaysWhichBuildItIs()
+        {
+            var label = Find("BuildVersion");
+            Assert.IsNotNull(label, "the menu has no build label");
+            Assert.IsTrue(label.activeInHierarchy, "the build label is not on the opening screen");
+
+            var text = label.GetComponent<Text>();
+            StringAssert.Contains(Application.version, text.text,
+                "the label should carry the version the build was stamped with");
+            Assert.AreEqual(new Vector2(1f, 0f), text.rectTransform.anchorMin,
+                "it belongs in the bottom-right corner, out of the way of the squad and the buttons");
+
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator StartMatchHandsTheScreenToThePickOverlay()
         {

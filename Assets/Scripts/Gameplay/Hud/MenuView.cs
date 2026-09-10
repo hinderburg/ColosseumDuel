@@ -157,6 +157,13 @@ namespace ColosseumDuel.Gameplay.Hud
                 "Choose gladiators", 22);
             Centre((RectTransform)choose.transform, new Vector2(300f, 58f), -216f);
             choose.onClick.AddListener(OpenRosterScreen);
+
+            // Which build this is. The link stays the same from one build to the next and a browser
+            // will happily serve the last one from its cache, so the menu says which one is open.
+            // The build stamps the version with its branch, commit and time (ProjectBootstrap).
+            var version = HudFactory.CreateLabel("BuildVersion", panel.transform,
+                $"build {Application.version}", 13, TextAnchor.LowerRight, HudFactory.MutedTextColor);
+            Anchor(version.rectTransform, new Vector2(1f, 0f), new Vector2(420f, 20f), new Vector2(-14f, 10f));
         }
 
         private void BuildRoster(RectTransform root)

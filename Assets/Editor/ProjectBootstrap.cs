@@ -876,20 +876,82 @@ namespace ColosseumDuel.EditorTools
 
             string destination = string.IsNullOrEmpty(outputPath) ? WebGLBuildPath : outputPath;
 
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            // Stamped with where it came from, for the length of the build only. The menu shows it:
+            // the same link serves every build published to it, and a browser will happily keep
+            // serving an old one from its cache, so without this nobody could tell which was open.
+            string version = DescribeBuild();
+            string previousVersion = PlayerSettings.bundleVersion;
+            PlayerSettings.bundleVersion = version;
+
+            BuildReport report;
+            try
             {
-                scenes = scenes,
-                locationPathName = destination,
-                target = BuildTarget.WebGL,
-                options = BuildOptions.None
-            });
+                report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = scenes,
+                    locationPathName = destination,
+                    target = BuildTarget.WebGL,
+                    options = BuildOptions.None
+                });
+            }
+            finally
+            {
+                // Put back, so ProjectSettings does not pick up a new number every time anybody
+                // builds.
+                PlayerSettings.bundleVersion = previousVersion;
+            }
 
             var summary = report.summary;
             if (summary.result != BuildResult.Succeeded)
                 throw new BuildFailedException($"[Colosseum] WebGL build {summary.result}: {summary.totalErrors} error(s).");
 
-            Debug.Log($"[Colosseum] WebGL build succeeded: {destination}, " +
+            Debug.Log($"[Colosseum] WebGL build succeeded: {destination}, build \"{version}\", " +
                       $"{summary.totalSize / (1024 * 1024)} MB, {summary.totalTime.TotalSeconds:0} s.");
+        }
+
+        /// <summary>
+        /// What a build calls itself: the branch, the commit and when it was made - for example
+        /// "iteration4 943609b 2026-09-10 23:40". A "+" after the commit means the working tree had
+        /// changes nobody had committed yet, so the build is not exactly that commit.
+        /// </summary>
+        private static string DescribeBuild()
+        {
+            string branch = Git("rev-parse --abbrev-ref HEAD");
+            string commit = Git("rev-parse --short HEAD");
+            if (string.IsNullOrEmpty(commit)) commit = "unknown";
+            else if (!string.IsNullOrEmpty(Git("status --porcelain --untracked-files=no"))) commit += "+";
+
+            string when = DateTime.Now.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+
+            // A detached checkout - which is what CI builds from - has no branch to name.
+            return string.IsNullOrEmpty(branch) || branch == "HEAD"
+                ? $"{commit} {when}"
+                : $"{branch} {commit} {when}";
+        }
+
+        /// <summary>Runs git in the project folder and returns what it printed, or null if it could not.</summary>
+        private static string Git(string arguments)
+        {
+            try
+            {
+                var start = new System.Diagnostics.ProcessStartInfo("git", arguments)
+                {
+                    WorkingDirectory = Path.GetDirectoryName(Application.dataPath),
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using (var git = System.Diagnostics.Process.Start(start))
+                {
+                    string output = git.StandardOutput.ReadToEnd().Trim();
+                    return git.WaitForExit(5000) && git.ExitCode == 0 ? output : null;
+                }
+            }
+            catch (Exception)
+            {
+                // No git on the machine, or not a checkout: the build still goes out, just unnamed.
+                return null;
+            }
         }
 
         // ------------------------------------------------------------------
