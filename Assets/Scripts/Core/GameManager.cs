@@ -522,6 +522,12 @@ namespace ColosseumDuel.Core
         private static void FaceTravel(GladiatorInstance g)
         {
             if (g == null || !g.Alive) return;
+
+            // Only while he is running his own path. The recoil of a collision also moves him, and
+            // following that turned both men round the moment they struck - each thrown back and
+            // now looking the way he was thrown, which is away from the man he just hit. Knocked
+            // back, he keeps facing the fight and steps away from it.
+            if (!g.IsRunning) return;
             if (g.Vel.sqrMagnitude < 0.0001f) return;
 
             g.Facing = g.Vel.normalized;

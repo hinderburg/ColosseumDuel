@@ -144,6 +144,47 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// Two men who run into each other are thrown apart - and are still looking at each other
+        /// when they land.
+        ///
+        /// The recoil moves them, and facing used to follow any movement at all, so the instant they
+        /// struck both turned round and looked the way they had been thrown: away from the man they
+        /// had just hit, back offered to him for the whole of the next planning phase. Facing follows
+        /// the run he was ordered on, and being knocked back is not one.
+        /// </summary>
+        [Test]
+        public void ThrownBackByACollision_TheyStillFaceEachOther()
+        {
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+            m.State.Traps.Traps.Clear();
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            // The same open stretch as above, and each sent to where the other is standing: head on.
+            p1.Pos = Vector2.zero;
+            bot.Pos = new Vector2(0f, 200f);
+
+            bool collided = false;
+            m.Impact += _ => collided = true;
+
+            m.SubmitPlanningMoveTo(PlayerSide.P1, bot.Pos);
+            m.SubmitPlanningMoveTo(PlayerSide.Bot, p1.Pos);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            Assert.IsTrue(collided, "they never met, so nothing here threw anybody back");
+
+            Assert.AreEqual(0f, Vector2.Angle(p1.Facing, Vector2.up), 1f,
+                "he was thrown back from the collision and turned round to look where he was going");
+            Assert.AreEqual(0f, Vector2.Angle(bot.Facing, Vector2.down), 1f,
+                "so was she");
+            Assert.AreEqual(HitSector.Front, p1.SectorHitFrom(bot.Pos),
+                "after an exchange the two should still be face to face");
+        }
+
+        /// <summary>
         /// There is no closing arena any more. Standing right against the wall deep into a round,
         /// which used to be standing in the fire, costs nothing.
         /// </summary>
