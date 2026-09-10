@@ -196,7 +196,7 @@ namespace ColosseumDuel.Tests
         public void TheTrajectoryIsWideWhiteAndDashed()
         {
             // Regression for "the movement line is hard to see": it used to be a thin yellow
-            // hairline, which disappeared against bright sand.
+            // hairline, which disappeared against bright sand and the red danger rings.
             var line = FindLine("TrajectoryPreview");
             Assert.IsNotNull(line);
 

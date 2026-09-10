@@ -7,8 +7,8 @@ namespace ColosseumDuel.Core
     /// looks down, so the long axis runs up the screen and fills a portrait frame.
     ///
     /// Everything that used to test <c>pos.magnitude</c> against a single radius goes through here
-    /// instead. Concentrating the geometry in one place is the point: wall bounces, the obstacles,
-    /// item spawns and the trajectory preview all have to agree on where the wall is, and
+    /// instead. Concentrating the geometry in one place is the point: wall bounces, the danger
+    /// rings, item spawns and the trajectory preview all have to agree on where the wall is, and
     /// four separate copies of the ellipse equation would not stay in agreement for long.
     /// </summary>
     public static class ArenaShape
@@ -21,8 +21,9 @@ namespace ColosseumDuel.Core
 
         /// <summary>
         /// Distance from the centre measured in wall units: 0 at the centre, 1 exactly on the wall,
-        /// more than 1 outside. A point at 0.75 is the same fraction of the way out in every direction
-        /// rather than a circle inside an oval.
+        /// more than 1 outside. This is what the danger rings are expressed in, so a ring at 0.75
+        /// is the same fraction of the way out in every direction rather than a circle inside an
+        /// oval.
         /// </summary>
         public static float NormalizedDistance(Vector2 p)
             => Mathf.Sqrt(p.x * p.x / (RadiusX * RadiusX) + p.y * p.y / (RadiusY * RadiusY));

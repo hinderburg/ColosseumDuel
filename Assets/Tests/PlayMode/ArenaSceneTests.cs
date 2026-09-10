@@ -85,6 +85,86 @@ namespace ColosseumDuel.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator HazardRingsStayHiddenWhileTheArenaIsSafe()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            Assert.AreEqual(1, _controller.Manager.State.Cycle, "should still be on the first cycle");
+
+            var rings = RingRenderers();
+            Assert.AreEqual(HazardSystem.Schedule.Count, rings.Length, "one ring per hazard stage");
+            Assert.IsTrue(rings.All(r => !r.enabled),
+                "no danger ring should be drawn during the arena's safe cycles");
+        }
+
+        [UnityTest]
+        public IEnumerator HazardRingsLightUpOnceTheArenaStartsClosingIn()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
+
+            // Fast-forward the cycle counter instead of playing out seven real cycles.
+            _controller.Manager.State.Cycle = 9;
+            yield return null;
+
+            var rings = RingRenderers();
+            int expected = HazardSystem.ActiveStagesAt(9).Count;
+            Assert.AreEqual(expected, rings.Count(r => r.enabled),
+                "every stage active on cycle 9 should be drawn");
+            Assert.Greater(expected, 0, "cycle 9 must have active hazard stages for this test to mean anything");
+
+            foreach (var ring in rings.Where(r => r.enabled))
+            {
+                Assert.AreSame(_controller.Arena.Palette.HazardActive, ring.sharedMaterial);
+
+                // A ring wound the wrong way round is invisible from the top-down camera while
+                // still reporting enabled == true, so check the geometry actually faces upwards.
+                var mesh = ring.GetComponent<MeshFilter>().sharedMesh;
+                Assert.Greater(FrontFaceNormal(mesh).y, 0.5f,
+                    $"{ring.name} is wound face-down and would be culled away");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator SpikesRiseOutOfTheGroundWhereItTurnsDangerous()
+        {
+            var spikeRoot = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "Spikes");
+            Assert.IsNotNull(spikeRoot, "the arena has no spikes");
+
+            var spikes = spikeRoot.Cast<Transform>().ToList();
+            Assert.AreEqual(_controller.Arena.SpikeCount, spikes.Count);
+
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            Assert.IsTrue(spikes.All(s => s.localPosition.y < 0f),
+                "nothing should be up while the whole arena is still safe");
+
+            // Far enough in that the two outer stages are live, so everything past half way out is
+            // dangerous and everything inside it is not. Derived, because the pacing has moved
+            // twice and a written-down cycle number stopped being the answer both times.
+            _controller.Manager.State.Cycle = GameConstants.HazardSafeCycles + 1
+                                             + GameConstants.HazardRingInterval;
+            yield return RunSeconds(1.5f); // they rise rather than snap up
+
+            foreach (var spike in spikes)
+            {
+                float d = NormalisedRadius(spike.localPosition);
+                bool shouldBeUp = d > 0.5f;
+
+                // Skip the ones sitting right on the boundary: which side of it they land on is a
+                // matter of floating-point luck, and it is not what this test is about.
+                if (Mathf.Abs(d - 0.5f) < 0.03f) continue;
+
+                Assert.AreEqual(shouldBeUp, spike.localPosition.y > -0.01f,
+                    $"a spike at {d:0.00} of the way out is {(shouldBeUp ? "down" : "up")} " +
+                    "when the danger boundary is at 0.50");
+            }
+        }
+
         /// <summary>
         /// The scene has to ship on the tap control, not merely default to it in code.
         ///
@@ -154,6 +234,20 @@ namespace ColosseumDuel.Tests
             yield return null;
         }
 
+
+        /// <summary>Distance from the centre in wall units, measured on the arena's ellipse.</summary>
+        private float NormalisedRadius(Vector3 localPosition)
+            => new Vector2(localPosition.x / _controller.Arena.WorldRadiusX,
+                           localPosition.z / _controller.Arena.WorldRadiusZ).magnitude;
+
+        /// <summary>Unity's front-face normal for a triangle (v0, v1, v2) is cross(v1-v0, v2-v0).</summary>
+        private static Vector3 FrontFaceNormal(Mesh mesh)
+        {
+            var v = mesh.vertices;
+            var t = mesh.triangles;
+            return Vector3.Cross(v[t[1]] - v[t[0]], v[t[2]] - v[t[0]]).normalized;
+        }
+
         [UnityTest]
         public IEnumerator AGladiatorLaunchedByTheSlingshotActuallyMovesOnScreen()
         {
@@ -182,6 +276,14 @@ namespace ColosseumDuel.Tests
 
         private Transform FindView(string name)
             => _controller.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == name);
+
+        private Renderer[] RingRenderers()
+        {
+            var root = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "HazardRings");
+            Assert.IsNotNull(root, "ArenaView should have built a HazardRings root");
+            return root.GetComponentsInChildren<Renderer>(true);
+        }
 
         private static IEnumerator RunSeconds(float seconds)
         {

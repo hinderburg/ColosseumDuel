@@ -94,7 +94,7 @@ namespace ColosseumDuel.Tests
             Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), WeaponDef.TwoHandedMace.Reach,
                 "they must start out of even the longest weapon's range");
             Assert.LessOrEqual(ArenaShape.NormalizedDistance(p1.Pos), 0.75f,
-                "spawning hard against the wall would leave him no room to go anywhere but forward");
+                "spawning past the first danger ring would start a late round already on fire");
 
             Assert.AreEqual(1f, p1.Facing.y, Tol, "P1 looks towards the bot");
             Assert.AreEqual(-1f, bot.Facing.y, Tol, "the bot looks back");
@@ -182,35 +182,6 @@ namespace ColosseumDuel.Tests
                 "so was she");
             Assert.AreEqual(HitSector.Front, p1.SectorHitFrom(bot.Pos),
                 "after an exchange the two should still be face to face");
-        }
-
-        /// <summary>
-        /// There is no closing arena any more. Standing right against the wall deep into a round,
-        /// which used to be standing in the fire, costs nothing.
-        /// </summary>
-        [Test]
-        public void StandingByTheWallLateInARound_CostsNothing()
-        {
-            var m = StartedRound();
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
-            m.State.Traps.Traps.Clear();
-
-            var p1 = m.State.P1.Active;
-            var bot = m.State.Bot.Active;
-            p1.Pos = new Vector2(0f, -ArenaShape.RadiusY * 0.92f);
-            bot.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.92f);
-
-            // Long past the point the whole floor used to be burning.
-            m.State.Cycle = 40;
-            float p1Hp = p1.Hp, botHp = bot.Hp;
-
-            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
-            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
-
-            Assert.AreEqual(p1Hp, p1.Hp, "a phase by the wall cost him health");
-            Assert.AreEqual(botHp, bot.Hp, "a phase by the wall cost her health");
         }
 
         /// <summary>

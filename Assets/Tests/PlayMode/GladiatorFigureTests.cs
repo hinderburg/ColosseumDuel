@@ -129,8 +129,9 @@ namespace ColosseumDuel.Tests
         [UnityTest]
         public IEnumerator TheThreeArchetypesHaveDifferentBuilds()
         {
-            // Colour alone was doing this job, and colour is also what the two side helmets are using.
-            // A broad figure and a small thin one are legible past all of that, and from further away.
+            // Colour alone was doing this job, and colour is also what the danger rings, the hazard
+            // and the two side helmets are using. A broad figure and a small thin one are legible
+            // past all of that, and from further away.
             _controller.SubmitPlayerPick(GladiatorId.Barbarius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
