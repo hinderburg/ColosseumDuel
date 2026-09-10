@@ -166,7 +166,7 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The scene has to ship on the tap control, not merely default to it in code.
+        /// The scene has to ship on the drawing control, not merely default to it in code.
         ///
         /// This is the bug it exists to catch, and it shipped: the field initialiser was changed to
         /// Tap, but PlayerInputController was already serialised into Arena.unity, and a serialised
@@ -176,11 +176,11 @@ namespace ColosseumDuel.Tests
         /// Asserted against the scene, because the scene is what the player gets.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheSceneShipsWithTappingAsTheControl()
+        public IEnumerator TheSceneShipsWithDrawingAsTheControl()
         {
             var input = Object.FindFirstObjectByType<PlayerInputController>();
             Assert.IsNotNull(input, "the Arena scene must contain a PlayerInputController");
-            Assert.AreEqual(ControlScheme.Tap, input.Scheme,
+            Assert.AreEqual(ControlScheme.Draw, input.Scheme,
                 "the scene did not ship on the control the game is meant to open on");
 
             // A tap has to survive the trip through the scene's own camera and arena scaling, not
@@ -191,7 +191,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(MatchPhase.Planning, _controller.Manager.State.Phase);
 
             var g = _controller.Manager.State.P1.Active;
-            var target = g.Pos + new Vector2(0f, GameConstants.AimedRunLength * 0.5f);
+            var target = g.Pos + new Vector2(0f, GameConstants.TutorialRunLength * 0.5f);
             var screen = input.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
 
             Assert.IsTrue(input.TapTo(screen), "a tap on open sand should file a move");

@@ -337,7 +337,7 @@ namespace ColosseumDuel.Tests
             float miss = WeaponDef.DualSwords.Reach * Mathf.Sin(halfArc) * 0.8f;
             Assert.Greater(miss, GameConstants.CollideDistance,
                 "and still wide enough that running past is a pass and not a crash");
-            p1.Pos = new Vector2(-miss, -GameConstants.AimedRunLength * 0.5f);
+            p1.Pos = new Vector2(-miss, -p1.DashReach() * 0.5f);
             bot.Pos = new Vector2(0f, 0f);
             float botHp = bot.Hp;
 
@@ -572,9 +572,9 @@ namespace ColosseumDuel.Tests
         [Test]
         public void TheTutorialRoundPutsASwordOnTheWayToTheTapPoint()
         {
-            // Whoever was picked. Nobody has a speed any more, so the layout is the same for all
-            // three - but the sword still has to sit between him and the point the tutorial tells
-            // him to tap, or the one sentence the tutorial says is not true.
+            // Whoever was picked. The layout is a fixed distance, so it has to sit inside the reach
+            // of the slowest of the three - and the sword has to be between him and the point the
+            // tutorial tells him to tap, or the one sentence the tutorial says is not true.
             foreach (var def in GladiatorDef.All)
             {
                 var m = new GameManager(new System.Random(def.Id.GetHashCode()));
@@ -585,14 +585,14 @@ namespace ColosseumDuel.Tests
                 var sword = m.State.Items.Items.Find(i => i.Kind == def.SkilledWith);
 
                 Assert.IsNotNull(sword);
-                Assert.Less(Vector2.Distance(player.Pos, sword.Pos), GameConstants.AimedRunLength,
+                Assert.Less(Vector2.Distance(player.Pos, sword.Pos), player.DashReach(),
                     $"{def.Name} cannot reach the weapon the tutorial tells him to run through");
 
                 // And the tap point has to be past it, or running to it stops short of the pickup.
                 float toSword = Vector2.Distance(player.Pos, sword.Pos);
                 float toTap = Vector2.Distance(player.Pos, m.State.TutorialTapPoint);
                 Assert.Greater(toTap, toSword, "the tap has to be beyond the sword, not on it");
-                Assert.Less(toTap, GameConstants.AimedRunLength, "and still inside one dash");
+                Assert.Less(toTap, player.DashReach(), "and still inside one run");
             }
         }
 
@@ -642,17 +642,15 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// A run always arrives, however far it goes.
+        /// A run inside his reach arrives; one beyond it stops where his reach runs out.
         ///
-        /// There is no speed stat any more to run out of: the phase is the same length for everyone
-        /// and a run is paced to fill it, so sending a man most of the way up the arena gets him
-        /// there as surely as sending him a step. Checked from a step to most of the arena, so a cap
-        /// sneaking back in cannot hide behind a test that only ever asked for something short.
+        /// Checked from a step to more than Brutius can run, so neither half can hide behind a test
+        /// that only ever asked for something short.
         /// </summary>
         [Test]
-        public void ARunOfAnyLengthArrivesWithinThePhase()
+        public void ARunArrivesInsideHisReach_AndStopsWhereItRunsOut()
         {
-            foreach (float length in new[] { 40f, GameConstants.AimedRunLength, 520f })
+            foreach (float length in new[] { 40f, 225f, 520f })
             {
                 var m = StartedRound();
                 AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
@@ -666,6 +664,8 @@ namespace ColosseumDuel.Tests
                 p1.Pos = new Vector2(0f, -260f);
                 bot.Pos = new Vector2(240f, 0f);
                 var target = p1.Pos + new Vector2(0f, length);
+                float expected = Mathf.Min(length, p1.DashReach());
+                var end = p1.Pos + new Vector2(0f, expected);
 
                 m.SubmitPlanningMoveTo(PlayerSide.P1, target);
                 m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
@@ -674,9 +674,148 @@ namespace ColosseumDuel.Tests
 
                 // Within a twentieth of the run: the phase is ticked in frames, and a frame of a run
                 // paced to fill one second is a sixtieth of it.
-                Assert.Less(Vector2.Distance(p1.Pos, target), length * 0.05f + 1f,
-                    $"a run of {length:0} finished at {p1.Pos}, short of {target}");
+                Assert.Less(Vector2.Distance(p1.Pos, end), expected * 0.05f + 1f,
+                    $"a run of {length:0} with a reach of {p1.DashReach():0} finished at {p1.Pos}, not {end}");
             }
+        }
+
+        /// <summary>
+        /// One point of speed is three times the run it used to be: 45 units a phase rather than 15.
+        /// Spelled out rather than derived, because the constants that make it up have each been
+        /// moved on purpose, and moving any of them silently changes every run in the game.
+        /// </summary>
+        [Test]
+        public void EachArchetypeRunsThreeTimesItsOldDash()
+        {
+            Assert.AreEqual(450f, new GladiatorInstance(GladiatorDef.Brutius).DashReach(), 0.01f, "Brutius, speed 10");
+            Assert.AreEqual(675f, new GladiatorInstance(GladiatorDef.Barbarius).DashReach(), 0.01f, "Barbarius, speed 15");
+            Assert.AreEqual(900f, new GladiatorInstance(GladiatorDef.Hilius).DashReach(), 0.01f, "Hilius, speed 20");
+        }
+
+        /// <summary>
+        /// A drawn run is run as it was drawn - round its corner, not straight at its end. The shape
+        /// is the order: two runs to the same place by different ways are different decisions.
+        /// </summary>
+        [Test]
+        public void ADrawnRunIsRunAsDrawn_CornerAndAll()
+        {
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+            m.State.Traps.Traps.Clear();
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            // An L on the open sand in the middle: up, then across. Going straight for its end would
+            // pass seventy units wide of the corner, so reaching the corner is only the drawn run.
+            p1.Pos = new Vector2(-40f, -120f);
+            bot.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.85f);
+            var corner = new Vector2(-40f, 100f);
+            var end = new Vector2(40f, 100f);
+
+            Assert.IsTrue(m.SubmitPlanningPath(PlayerSide.P1, new[] { corner, end }));
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+
+            float nearestToCorner = float.MaxValue;
+            for (int i = 0; i < 400 && m.State.Phase == MatchPhase.Action; i++)
+            {
+                m.Tick(Dt);
+                nearestToCorner = Mathf.Min(nearestToCorner, Vector2.Distance(p1.Pos, corner));
+            }
+
+            Assert.Less(nearestToCorner, 6f, "he cut the corner the player drew");
+            Assert.Less(Vector2.Distance(p1.Pos, end), 16f, "and should have finished where the drawing did");
+        }
+
+        /// <summary>
+        /// A drawn run longer than he can run is cut exactly where his reach runs out - when it is
+        /// filed, so the lane can show it, and again in the running.
+        /// </summary>
+        [Test]
+        public void ADrawnRunLongerThanHisReachIsCutWhereItRunsOut()
+        {
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+            m.State.Traps.Traps.Clear();
+
+            var p1 = m.State.P1.Active;
+            p1.Pos = new Vector2(0f, -100f);
+            m.State.Bot.Active.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.85f);
+
+            // Up and down the open middle, two hundred a stroke: eight hundred drawn against the
+            // four hundred and fifty Brutius can run, which runs out fifty units into the third.
+            var strokes = new[]
+            {
+                new Vector2(0f, 100f), new Vector2(0f, -100f), new Vector2(0f, 100f), new Vector2(0f, -100f)
+            };
+            Assert.IsTrue(m.SubmitPlanningPath(PlayerSide.P1, strokes));
+
+            float reach = p1.DashReach();
+            var stop = new Vector2(0f, -50f);
+            Assert.AreEqual(reach, ObstacleField.Length(p1.PlannedPath), 0.5f, "filed longer than he can run");
+            Assert.Less(Vector2.Distance(p1.PlannedTarget, stop), 0.5f, "cut somewhere other than where it ran out");
+
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+
+            Assert.Less(Vector2.Distance(p1.Pos, stop), reach * 0.05f + 1f,
+                "he should have stopped where his reach ran out");
+        }
+
+        /// <summary>
+        /// Armed, Spirit lengthens the run that can be filed by half again - before it has fired,
+        /// because the run is drawn during planning and the ability fires as the action phase opens.
+        /// </summary>
+        [Test]
+        public void ArmedSpiritLengthensTheRunThatCanBeDrawn()
+        {
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            Assert.AreEqual(AbilityKey.Spirit, p1.Def.Ability, "this test needs Brutius and his Spirit");
+            p1.Pos = new Vector2(0f, -100f);
+
+            var strokes = new[]
+            {
+                new Vector2(0f, 100f), new Vector2(0f, -100f), new Vector2(0f, 100f), new Vector2(0f, -100f)
+            };
+
+            p1.Rage = GameConstants.RageMax;
+            Assert.IsTrue(m.SubmitAbility(PlayerSide.P1, true), "the ability did not arm, so this proves nothing");
+            Assert.IsTrue(m.SubmitPlanningPath(PlayerSide.P1, strokes));
+
+            Assert.AreEqual(p1.DashReach() * 1.5f, ObstacleField.Length(p1.PlannedPath), 0.5f,
+                "an armed Spirit should let him be sent half as far again");
+        }
+
+        /// <summary>
+        /// The bot runs at what it wants and through it, not three times past it. A run is three
+        /// times the dash it was, and at the bot's usual three quarters and more of it, it charged
+        /// straight past the player and on into the far wall.
+        /// </summary>
+        [Test]
+        public void TheBotDoesNotRunFarPastWhatItIsGoingFor()
+        {
+            var me = new GladiatorInstance(GladiatorDef.Hilius) { Pos = Vector2.zero };
+            var opp = new GladiatorInstance(GladiatorDef.Brutius) { Pos = new Vector2(0f, 120f) };
+            var items = new ItemSystem(new System.Random(1), ObstacleField.Empty);
+
+            int moves = 0;
+            for (int seed = 0; seed < 20; seed++)
+            {
+                var decision = BotAI.Decide(me, opp, items, new System.Random(seed));
+                if (decision.Action != ActionType.Move) continue;
+                moves++;
+
+                float run = decision.Power * me.DashReach();
+                Assert.LessOrEqual(run, 120f + GameConstants.GladiatorRadius * 2f + 0.01f,
+                    $"the bot ordered a run of {run:0} at a man 120 away");
+            }
+
+            Assert.Greater(moves, 10, "the bot hardly moved, so this proves nothing");
         }
 
         [Test]

@@ -155,7 +155,7 @@ namespace ColosseumDuel.Tests
             var start = _controller.Arena.ToVirtual(line.GetPosition(0));
             var end = _controller.Arena.ToVirtual(line.GetPosition(line.positionCount - 1));
             Assert.Less(Vector2.Distance(start, Player.Pos), 1f, "the lane should start on him");
-            Assert.Greater(Vector2.Distance(start, end), GameConstants.AimedRunLength * 0.5f,
+            Assert.Greater(Vector2.Distance(start, end), Player.PlannedReach() * 0.5f,
                 "a full pull should draw a run most of a dash long");
 
             _input.CancelDrag();
@@ -242,7 +242,7 @@ namespace ColosseumDuel.Tests
 
             var aim = new Vector2(1f, 0f);
             const float power = 0.5f;
-            var target = player.Pos + aim * (power * GameConstants.AimedRunLength);
+            var target = player.Pos + aim * (power * player.PlannedReach());
             var preview = _controller.Manager.ComputeTrajectoryPreview(player, target);
             Vector2 predicted = preview[preview.Count - 1];
 
@@ -431,13 +431,51 @@ namespace ColosseumDuel.Tests
             _input.CancelDrag();
         }
 
+        /// <summary>
+        /// Arming the speed ability lengthens the run the preview promises.
+        ///
+        /// The buff has not fired yet while the player is still planning - it fires at the top of
+        /// the action phase - so the preview was drawing the unbuffed run and then the gladiator
+        /// went half as far again as the line said he would.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ArmingTheSpeedAbilityLengthensThePreviewedRun()
+        {
+            var line = FindLine("TrajectoryPreview");
+            var player = Player;
+            if (player.Def.Ability != AbilityKey.Spirit)
+                Assert.Ignore("This fixture's gladiator does not have the speed ability.");
+
+            _input.Scheme = ControlScheme.Swipe;
+            var anchor = player.Pos + new Vector2(-120f, -120f);
+            var drawnTo = anchor + new Vector2(0f, -GameConstants.MaxDragVirtual);
+
+            _input.TryBeginSwipe(anchor);
+            _input.UpdateDrag(drawnTo);
+            yield return null;
+            float plain = Vector3.Distance(line.GetPosition(0), line.GetPosition(line.positionCount - 1));
+            _input.CancelDrag();
+
+            player.Rage = GameConstants.RageMax;
+            _input.ToggleAbility();
+            Assert.IsTrue(_input.AbilityArmed, "the ability did not arm, so this proves nothing");
+
+            _input.TryBeginSwipe(anchor);
+            _input.UpdateDrag(drawnTo);
+            yield return null;
+            float spirited = Vector3.Distance(line.GetPosition(0), line.GetPosition(line.positionCount - 1));
+
+            Assert.Greater(spirited, plain * 1.3f,
+                $"the previewed run was {plain:0.00} without the ability and {spirited:0.00} with it");
+        }
+
         [Test]
-        public void ATapSendsHimExactlyThere()
+        public void ATapInsideHisReachSendsHimExactlyThere()
         {
             _input.Scheme = ControlScheme.Tap;
             Player.Pos = Vector2.zero;
 
-            var target = new Vector2(0f, GameConstants.AimedRunLength * 0.5f);
+            var target = new Vector2(0f, Player.DashReach() * 0.25f);
             var screen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
 
             Assert.IsTrue(_input.TapTo(screen));
@@ -448,26 +486,30 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// A tap across the whole arena is an order to cross the whole arena. There is no speed left
-        /// to cut it short, so it is filed to the point itself rather than to as far as he can get,
-        /// and the lane drawn under it reaches the ring instead of stopping short of it.
+        /// A tap further away than he can run sends him as far as his speed carries him, and no
+        /// further: the order is filed to that point, and the lane stops there rather than at the tap.
         /// </summary>
         [Test]
-        public void ATapAcrossTheWholeArenaIsAnOrderToGoAllTheWay()
+        public void ATapBeyondHisReachStopsWhereHisSpeedRunsOut()
         {
             _input.Scheme = ControlScheme.Tap;
             Player.Pos = new Vector2(0f, -ArenaShape.RadiusY * 0.8f);
 
             var target = new Vector2(0f, ArenaShape.RadiusY * 0.8f);
-            var screen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
+            float reach = Player.DashReach();
+            Assert.Greater(Vector2.Distance(Player.Pos, target), reach * 1.1f,
+                "the test needs a tap he genuinely cannot reach");
 
+            var screen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target));
             Assert.IsTrue(_input.TapTo(screen));
-            Assert.Less(Vector2.Distance(Player.PlannedTarget, target), 1f,
-                "the order should go all the way, not as far as a run used to carry");
+            Assert.AreEqual(1f, Player.PlannedPower, 0.001f, "out of reach means his whole reach");
 
             var lane = FindLine("TrajectoryPreview");
-            var end = _controller.Arena.ToVirtual(lane.GetPosition(lane.positionCount - 1));
-            Assert.Less(Vector2.Distance(end, target), 1f, "the lane stops short of the tap");
+            var drawn = new System.Collections.Generic.List<Vector2>();
+            for (int i = 0; i < lane.positionCount; i++) drawn.Add(_controller.Arena.ToVirtual(lane.GetPosition(i)));
+            Assert.AreEqual(reach, ObstacleField.Length(drawn), 1f, "the lane should be exactly his reach long");
+            Assert.Greater(Vector2.Distance(drawn[drawn.Count - 1], target), reach * 0.1f,
+                "and stop well short of the tap");
         }
 
 
@@ -485,7 +527,7 @@ namespace ColosseumDuel.Tests
             _input.Scheme = ControlScheme.Tap;
             Player.Pos = Vector2.zero;
 
-            float reach = GameConstants.AimedRunLength;
+            float reach = GameConstants.TutorialRunLength;
             Vector3 Screen(Vector2 virtualPoint)
                 => _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(virtualPoint));
 
@@ -537,7 +579,7 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(marker.gameObject.activeSelf, "nothing tapped yet");
             Assert.IsFalse(dashes.enabled);
 
-            var target = new Vector2(0f, GameConstants.AimedRunLength * 0.6f);
+            var target = new Vector2(0f, GameConstants.TutorialRunLength * 0.6f);
             Assert.IsTrue(_input.TapTo(
                 _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(target))));
 

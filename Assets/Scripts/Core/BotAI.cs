@@ -56,7 +56,14 @@ namespace ColosseumDuel.Core
             Vector2 dir = (target - me.Pos);
             if (dir.sqrMagnitude < 0.0001f) dir = Vector2.up;
             decision.AimDirection = dir.normalized;
-            decision.Power = Lerp((float)rng.NextDouble(), 0.75f, 1.0f); // committed, aggressive pulls
+            float rolled = Lerp((float)rng.NextDouble(), 0.75f, 1.0f); // committed, aggressive pulls
+
+            // But no further than a charge through what it is going for. A run is three times the
+            // dash it used to be, and three quarters of it or more carried the bot straight past
+            // the player and across the arena into the far wall.
+            float reach = me.DashReach();
+            float wanted = dir.magnitude + GameConstants.GladiatorRadius * 2f;
+            decision.Power = reach > 0.0001f ? Mathf.Min(rolled, wanted / reach) : rolled;
             return decision;
         }
 

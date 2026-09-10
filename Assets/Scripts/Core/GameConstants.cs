@@ -87,20 +87,27 @@ namespace ColosseumDuel.Core
         //
         // The cost of spreading them is measured in cycles, not in units: two fighters charging at
         // full power close the gap between them at twice their own speed, and at this distance the
-        // slowest pair (two Brutius, 75/s each) needs two action phases to meet where they used to
-        // need one. The fastest still meets inside a single phase. Lower this if the wait shows.
+        // slowest pair (two Brutius, 450 a phase each) meets inside one phase at full power; the
+        // bot stops short of that on purpose (see BotAI). Lower this if the wait shows.
         public const float SpawnDistanceFraction = 0.55f;
 
         /// <summary>
-        /// How far an order given as an aim and a strength sends a man, at full strength.
+        /// Virtual units per second of running for each point of Speed. A run lasts one action phase,
+        /// so one point of speed is this many units of run: Brutius at 10 draws 450, Barbarius 675,
+        /// Hilius 900.
         ///
-        /// Gladiators have no speed any more: a run always takes the whole action phase and always
-        /// arrives, however far it goes, so a tap is simply a point. The callers that still think in
-        /// aims - the bot, the old drag controls, most of the tests - need a distance for "all the
-        /// way", and this is it: the dash the middle archetype used to have, so the bot's pace
-        /// across the arena is about what it always was.
+        /// Three times the 15 it was before speed was taken away. Speed came back to limit how long
+        /// a drawn run can be, and at 15 the budget was a short dash - drawing a shape with it left
+        /// no room for a shape.
         /// </summary>
-        public const float AimedRunLength = 225f;
+        public const float SpeedScale = 45f;
+
+        /// <summary>
+        /// How far the tutorial puts the sword and the tap point it asks for, measured from the
+        /// player. A fixed distance rather than a share of his reach: at three times the old dash a
+        /// share of it put the sword past the opponent for the fastest of the three.
+        /// </summary>
+        public const float TutorialRunLength = 225f;
 
         public const float MaxDragVirtual = 90f; // max pull-back distance for the slingshot move
 
@@ -134,17 +141,6 @@ namespace ColosseumDuel.Core
         public const float RageBonusOnTakeDamage = 0.10f;
         public const float RageMax = 1.0f;
         public const int AbilityLockCycles = 1; // cycles rage cannot charge after activating an ability
-
-        /// <summary>
-        /// What Brutius's Second Wind gives back, as a share of his full health: a fifth, forty
-        /// points of his two hundred.
-        ///
-        /// Enough to be worth the rage it costs - several cycles of fighting to fill - and not so
-        /// much that the man with twice everybody else's health can outlast every fight by topping
-        /// himself back up. Taken off his full health rather than what he has left, so it is worth
-        /// the same whenever it is spent.
-        /// </summary>
-        public const float SecondWindHealFraction = 0.2f;
 
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending

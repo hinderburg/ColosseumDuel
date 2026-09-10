@@ -390,7 +390,7 @@ namespace ColosseumDuel.Gameplay.Hud
             // written, and it has now been wrong in both directions - "tap" after the swipe took
             // over, then "swipe" after the tap came back. The ring that used to point at the spot is
             // gone, so this line is the only guidance there is; it reads the scheme.
-            var scheme = _input != null ? _input.Scheme : ControlScheme.Tap;
+            var scheme = _input != null ? _input.Scheme : ControlScheme.Draw;
             _instruction.SetText(armed ? ChargeOrder(scheme) : FetchOrder(scheme));
         }
 

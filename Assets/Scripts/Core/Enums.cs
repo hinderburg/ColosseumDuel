@@ -59,7 +59,7 @@ namespace ColosseumDuel.Core
 
     public enum AbilityKey
     {
-        SecondWind, // Brutius - heals a fifth of his health, at once
+        Spirit,   // Brutius - +50% speed for 2 cycles
         Fury,     // Barbarius - -25% damage taken for 2 cycles
         Mongoose  // Hilius - 2 attacks per cycle for 2 cycles
     }

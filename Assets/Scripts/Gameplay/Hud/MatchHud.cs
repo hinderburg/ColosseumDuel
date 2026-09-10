@@ -402,13 +402,14 @@ namespace ColosseumDuel.Gameplay.Hud
 
             // The hint has to say what the chosen control actually is; a line about pulling back is
             // worse than no line at all for a player who picked tapping.
-            _hint.text = HintFor(Input != null ? Input.Scheme : ControlScheme.Tap);
+            _hint.text = HintFor(Input != null ? Input.Scheme : ControlScheme.Draw);
         }
 
         private static string HintFor(ControlScheme scheme)
         {
             switch (scheme)
             {
+                case ControlScheme.Draw: return "Draw his run with your finger - as far as his speed allows";
                 case ControlScheme.Tap: return "Tap the arena and your gladiator runs there";
                 case ControlScheme.Drag: return "Pull back from your gladiator and release to dash";
                 default: return "Swipe anywhere to pull back - he runs the other way, as far as you pull";
@@ -489,7 +490,7 @@ namespace ColosseumDuel.Gameplay.Hud
                     // Damage alongside HP: with the ability spelled out on its own line below, the
                     // stat line is the only place the actual trade between the three is visible.
                     _pickButtonLabels[i].text = alive
-                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} dmg"
+                        ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} dmg · {Mathf.RoundToInt(def.Speed)} spd"
                         : $"{def.Name}\nout";
                     _pickAbilityLabels[i].text = alive
                         ? $"{def.AbilityName}: {def.AbilityDescription}"

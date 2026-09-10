@@ -764,7 +764,7 @@ namespace ColosseumDuel.EditorTools
             // in the .unity file, and it is the one the build actually plays with. The last time
             // this was left to the initialiser the built game shipped on the wrong scheme and every
             // press on the sand did nothing.
-            input.Scheme = ControlScheme.Tap;
+            input.Scheme = ControlScheme.Draw;
 
             // The one thing allowed to move the camera. It reads its home pose off the transform at
             // startup, so it has to be added after the camera has been placed.

@@ -1,22 +1,23 @@
 namespace ColosseumDuel.Gameplay
 {
     /// <summary>
-    /// How the player orders a move. Tapping is what the game offers; the other is kept in code.
+    /// How the player orders a move. Drawing is what the game offers; the others are kept in code.
     ///
-    /// Tap is deliberately the zero value. A C# field initialiser only applies to components created
-    /// after it was written - a scene that already stored this field keeps whatever number is in the
-    /// .unity file, so making Tap the default in code left the built game on Drag and every tap on
-    /// the sand did nothing. Numbering the default zero means both the fresh component and the old
-    /// serialised zero mean the same thing.
+    /// The default is deliberately the zero value. A C# field initialiser only applies to components
+    /// created after it was written - a scene that already stored this field keeps whatever number is
+    /// in the .unity file, and making a new control the default in code once left the built game on
+    /// the old one. Numbering the default zero means both the fresh component and an old serialised
+    /// zero mean the same thing, which is why Draw took zero from Tap rather than taking a new number.
     /// </summary>
     public enum ControlScheme
     {
         /// <summary>
-        /// Tap a spot and he runs all the way to it, round anything in the way, inside the one phase.
-        /// The default, and what the tutorial teaches: one touch instead of a held
-        /// gesture, which is easier on a phone and takes one sentence to explain.
+        /// Draw the run with a finger. The first touch can land on him or anywhere else - he is
+        /// joined to it by the way he would run there - and from then on the run follows the
+        /// finger. It stops where the finger lifts or where his speed runs out, whichever is first.
+        /// A tap without dragging is a straight run to the tap, so this covers tapping too.
         /// </summary>
-        Tap = 0,
+        Draw = 0,
 
         /// <summary>
         /// Pull back from the gladiator and release, slingshot style. The pull length sets the power,
@@ -40,5 +41,11 @@ namespace ColosseumDuel.Gameplay
         /// answer a drag the same way, which two controls in one game had better do.
         /// </summary>
         Swipe = 2,
+
+        /// <summary>
+        /// Tap a spot and he runs to it, round anything in the way - as far as his speed carries him.
+        /// Held and dragged, the order follows the finger. What the game opened on before drawing.
+        /// </summary>
+        Tap = 3,
     }
 }

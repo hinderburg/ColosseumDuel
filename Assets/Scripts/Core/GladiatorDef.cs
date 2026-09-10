@@ -7,10 +7,8 @@ namespace ColosseumDuel.Core
     /// without touching UnityEngine; wrap it in a ScriptableObject later if you want designers to
     /// tweak stats from the Inspector instead of this file.
     ///
-    /// There is no speed stat. There was one, and it decided how far a man could get in a phase;
-    /// a tap now always takes him all the way to where it landed, inside the one phase, so how fast
-    /// he is stopped being a thing that could differ between archetypes. They are told apart by
-    /// what they can take, what they can deal, what they carry and what their ability does.
+    /// Speed is back, and it is what limits a run: how far one phase of running carries him (see
+    /// GladiatorInstance.DashReach). A drawn or tapped run is cut off where that runs out.
     /// </summary>
     public sealed class GladiatorDef
     {
@@ -18,6 +16,13 @@ namespace ColosseumDuel.Core
         public readonly string Name;
         public readonly float MaxHp;
         public readonly float Damage;
+
+        /// <summary>
+        /// How fast he runs. One point of it is GameConstants.SpeedScale units of run in a phase, so
+        /// Hilius at 20 goes twice as far as Brutius at 10.
+        /// </summary>
+        public readonly float Speed;
+
         public readonly AbilityKey Ability;
         public readonly string AbilityName;
         public readonly string AbilityDescription;
@@ -47,7 +52,7 @@ namespace ColosseumDuel.Core
         /// </summary>
         public readonly int Level;
 
-        public GladiatorDef(GladiatorId id, string name, float maxHp, float damage,
+        public GladiatorDef(GladiatorId id, string name, float maxHp, float damage, float speed,
             AbilityKey ability, string abilityName, string abilityDescription,
             WeaponKind skilledWith, float buildWidth = 1f, float buildHeight = 1f, int level = 1)
         {
@@ -55,6 +60,7 @@ namespace ColosseumDuel.Core
             Name = name;
             MaxHp = maxHp;
             Damage = damage;
+            Speed = speed;
             Ability = ability;
             AbilityName = abilityName;
             AbilityDescription = abilityDescription;
@@ -69,25 +75,20 @@ namespace ColosseumDuel.Core
         // seven tenths to one and a half, so the numbers here are what a fighter is worth before
         // anyone hands him anything.
 
-        // Brutius used to have Spirit, half as fast again for two cycles. With no speed left to
-        // add to, it became Second Wind: he is the one who does not die - twice anybody else's
-        // health - and an ability that gives some of it back is that, sharpened. Instant rather
-        // than a buff, so it cannot be wasted by the round ending under it, and it is plainly not
-        // Fury (taking less) or Mongoose (hitting more often).
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Brutius", maxHp: 200f, damage: 10f,
-            ability: AbilityKey.SecondWind, abilityName: "Second Wind",
-            abilityDescription: "Heals 20% of max health",
+            GladiatorId.Brutius, "Brutius", maxHp: 200f, damage: 10f, speed: 10f,
+            ability: AbilityKey.Spirit, abilityName: "Spirit",
+            abilityDescription: "+50% speed for 2 cycles",
             skilledWith: WeaponKind.TwoHandedMace, buildWidth: 1.2f);
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Barbarius", maxHp: 100f, damage: 13f,
+            GladiatorId.Barbarius, "Barbarius", maxHp: 100f, damage: 13f, speed: 15f,
             ability: AbilityKey.Fury, abilityName: "Fury",
             abilityDescription: "-25% damage taken for 2 cycles",
             skilledWith: WeaponKind.DualSwords);
 
         public static readonly GladiatorDef Hilius = new GladiatorDef(
-            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 7f,
+            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 7f, speed: 20f,
             ability: AbilityKey.Mongoose, abilityName: "Mongoose",
             abilityDescription: "2 attacks per cycle, for 2 cycles",
             skilledWith: WeaponKind.SwordAndShield, buildWidth: 0.85f, buildHeight: 0.85f);

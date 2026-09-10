@@ -40,12 +40,15 @@ namespace ColosseumDuel.Tests
             // what is applied on top, so a future balance pass touches this test alone.
             Assert.AreEqual(200f, GladiatorDef.Brutius.MaxHp, Tol);
             Assert.AreEqual(10f, GladiatorDef.Brutius.Damage, Tol);
+            Assert.AreEqual(10f, GladiatorDef.Brutius.Speed, Tol);
 
             Assert.AreEqual(100f, GladiatorDef.Barbarius.MaxHp, Tol);
             Assert.AreEqual(13f, GladiatorDef.Barbarius.Damage, Tol);
+            Assert.AreEqual(15f, GladiatorDef.Barbarius.Speed, Tol);
 
             Assert.AreEqual(150f, GladiatorDef.Hilius.MaxHp, Tol);
             Assert.AreEqual(7f, GladiatorDef.Hilius.Damage, Tol);
+            Assert.AreEqual(20f, GladiatorDef.Hilius.Speed, Tol);
         }
 
         [Test]

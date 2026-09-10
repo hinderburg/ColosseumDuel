@@ -213,9 +213,9 @@ namespace ColosseumDuel.Core
             var player = State.P1.Active;
             if (player == null || State.Items == null) return;
 
-            // A fixed distance, the same for everyone now that nobody has a speed: the sword a short
-            // run up the arena and the tap point a little past it.
-            float reach = GameConstants.AimedRunLength;
+            // A fixed distance rather than a share of his reach, which at three times the old dash
+            // would put the sword past the opponent for Hilius. A short run up the arena for everyone.
+            float reach = GameConstants.TutorialRunLength;
             var forward = player.Facing.sqrMagnitude > 0.0001f ? player.Facing.normalized : Vector2.up;
 
             // The gilded copy of his own weapon, so the first thing the player is ever told to do
@@ -297,20 +297,22 @@ namespace ColosseumDuel.Core
 
             // A direction and a strength, from the callers that still think in those - the bot, the
             // drag controls, the tests - turned into the one thing the action phase actually runs
-            // to: a point, that share of one full aimed run along that heading.
-            g.PlannedTarget = g.Pos + aim * (share * GameConstants.AimedRunLength);
+            // to: a point, that share of his reach along that heading.
+            g.PlannedTarget = g.Pos + aim * (share * g.PlannedReach());
+            g.PlannedPath.Clear();
             g.PlannedAimDirection = aim;
             g.PlannedPower = share;
             return true;
         }
 
         /// <summary>
-        /// Sends a gladiator to a point, round whatever is in the way: the order a tap gives.
+        /// Sends a gladiator towards a point, round whatever is in the way, as far as his speed
+        /// carries him: the order a tap gives.
         ///
         /// Filed as the point the path actually ends at rather than the one asked for, which differ
         /// when the tap lands on a crate or outside the wall. The aim and the power are filled in
         /// from the path too, for everything that still reads them - which way he sets off, and
-        /// how long the run is against one full aimed run.
+        /// how much of his reach the run spends.
         /// </summary>
         public bool SubmitPlanningMoveTo(PlayerSide side, Vector2 target)
         {
@@ -318,12 +320,14 @@ namespace ColosseumDuel.Core
             var g = State.Get(side).Active;
             if (g == null || !g.Alive) return false;
 
-            var path = PlanRun(g, target);
+            float reach = g.PlannedReach();
+            var path = ObstacleField.Truncate(PlanRun(g, target), reach);
 
             g.PlannedAction = ActionType.Move;
             g.PlannedTarget = path[path.Count - 1];
             g.PlannedAimDirection = path.Count > 1 ? (path[1] - path[0]).normalized : Vector2.zero;
-            g.PlannedPower = Mathf.Clamp01(ObstacleField.Length(path) / GameConstants.AimedRunLength);
+            g.PlannedPower = reach > 0.0001f ? Mathf.Clamp01(ObstacleField.Length(path) / reach) : 0f;
+            g.PlannedPath.Clear();
             return true;
         }
 
@@ -335,11 +339,77 @@ namespace ColosseumDuel.Core
         public List<Vector2> PlanRun(GladiatorInstance g, Vector2 target)
             => State.Obstacles.FindPath(g.Pos, target, GameConstants.GladiatorRadius);
 
+        /// <summary>One leg of a run: from one point to the next, round whatever stands between.</summary>
+        public List<Vector2> PlanLeg(Vector2 from, Vector2 to)
+            => State.Obstacles.FindPath(from, to, GameConstants.GladiatorRadius);
+
+        /// <summary>
+        /// Makes a drawn run into one he can actually make: from where he stands, through every
+        /// point in turn, round anything in the way, cut off where the reach given runs out.
+        ///
+        /// The points are the path of a finger, and a finger crosses crates and walls. Each leg goes
+        /// through the same pathfinder a tap uses, so a leg over open sand stays exactly as it was
+        /// drawn and one that is not goes round. Points on top of each other are merged.
+        /// </summary>
+        public List<Vector2> PlanDrawnRun(GladiatorInstance g, IReadOnlyList<Vector2> points, float reach)
+        {
+            var run = new List<Vector2> { g.Pos };
+            if (points == null) return run;
+
+            float length = 0f;
+            foreach (var point in points)
+            {
+                if (length >= reach) break;
+
+                var last = run[run.Count - 1];
+                if ((point - last).sqrMagnitude < 0.25f) continue;
+
+                var leg = PlanLeg(last, point);
+                for (int i = 1; i < leg.Count; i++)
+                {
+                    length += Vector2.Distance(run[run.Count - 1], leg[i]);
+                    run.Add(leg[i]);
+                }
+            }
+
+            return ObstacleField.Truncate(run, reach);
+        }
+
+        /// <summary>
+        /// Files a run the player drew: the order the drawing control gives.
+        ///
+        /// Kept as the drawn corners rather than turned into a point, because the shape is the
+        /// order - two runs to the same place, one straight and one round the back of a column, are
+        /// different decisions. Cut to his reach now for what the lane shows, and again when the
+        /// action phase starts in case the ability was armed or taken back in between.
+        /// </summary>
+        public bool SubmitPlanningPath(PlayerSide side, IReadOnlyList<Vector2> points)
+        {
+            if (State.Phase != MatchPhase.Planning) return false;
+            var g = State.Get(side).Active;
+            if (g == null || !g.Alive) return false;
+
+            float reach = g.PlannedReach();
+            var run = PlanDrawnRun(g, points, reach);
+            if (run.Count < 2) return false;
+
+            g.PlannedAction = ActionType.Move;
+            g.PlannedPath.Clear();
+            g.PlannedPath.AddRange(run);
+            g.PlannedTarget = run[run.Count - 1];
+            g.PlannedAimDirection = FirstHeading(run);
+            g.PlannedPower = reach > 0.0001f ? Mathf.Clamp01(ObstacleField.Length(run) / reach) : 0f;
+            return true;
+        }
+
         /// <summary>Files both at once, for callers that decide them together - the bot, and tests.</summary>
         public bool SubmitPlanningAction(PlayerSide side, ActionType action, Vector2 aimDirection, float power, bool useAbility)
         {
-            if (!SubmitPlanningAction(side, action, aimDirection, power)) return false;
+            // The ability first: an armed Spirit lengthens his reach, and the order is measured
+            // against the reach he will have.
+            if (State.Phase != MatchPhase.Planning) return false;
             SubmitAbility(side, useAbility);
+            if (!SubmitPlanningAction(side, action, aimDirection, power)) return false;
             return true;
         }
 
@@ -364,14 +434,15 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// The run a gladiator would make to a point: the whole path round the obstacles.
+        /// The run a gladiator would make towards a point: the path round the obstacles, cut off
+        /// where one phase of running runs out.
         ///
         /// Built by the same pathfinder the action phase uses, so the lane drawn under the finger is
-        /// the run and not a picture of one. Not cut short anywhere: a run always arrives, however
-        /// far it goes, so the lane always reaches the point it was drawn to.
+        /// the run and not a picture of one. PlannedReach rather than DashReach: an armed ability
+        /// has not fired yet, and this is a drawing of what is about to happen.
         /// </summary>
         public List<Vector2> ComputeTrajectoryPreview(GladiatorInstance g, Vector2 target)
-            => PlanRun(g, target);
+            => ObstacleField.Truncate(PlanRun(g, target), g.PlannedReach());
 
         /// <summary>Advance the simulation. Call every frame with Time.deltaTime; the manager
         /// internally handles phase timers and (during Action) substepped physics.</summary>
@@ -499,13 +570,18 @@ namespace ColosseumDuel.Core
             g.StopRunning();
             if (g.PlannedAction != ActionType.Move) return;   // Defend, or no plan at all - stand still
 
-            var path = PlanRun(g, g.PlannedTarget);
+            // Cut to how far he can run this phase, now that the ability has fired or not. A drawn
+            // run keeps its shape; anything else is a point, routed like a tap.
+            float reach = g.DashReach();
+            var path = g.PlannedPath.Count > 1
+                ? PlanDrawnRun(g, g.PlannedPath, reach)
+                : ObstacleField.Truncate(PlanRun(g, g.PlannedTarget), reach);
             float length = ObstacleField.Length(path);
             if (length < 0.0001f) return;
 
-            // Paced to arrive as the phase ends, whatever the distance. There is no speed stat to cap
-            // it: a short order is a walk and a long one a sprint, and either way he gets there -
-            // which is the whole of what a tap now promises.
+            // Paced to arrive as the phase ends. The cut above is what his speed decides: a short
+            // order is a walk, one that spends his whole reach is him running flat out, and either
+            // way the run he was shown is the run he makes.
             float speed = length / GameConstants.ActionTime;
 
             g.Path.AddRange(path);
@@ -974,8 +1050,11 @@ namespace ColosseumDuel.Core
             // never met.
             if (target.IsRunning)
             {
-                var goal = target.Path[target.Path.Count - 1];
-                var rest = PlanRun(target, goal);
+                // Back onto the run at the corner he was making for, then on along the rest of it
+                // as it was. Routed straight to the end instead, a drawn run lost its shape the
+                // moment anybody hit him.
+                var rest = PlanRun(target, target.Path[target.PathIndex]);
+                for (int i = target.PathIndex + 1; i < target.Path.Count; i++) rest.Add(target.Path[i]);
                 target.Path.Clear();
                 target.Path.AddRange(rest);
                 target.PathIndex = 1;

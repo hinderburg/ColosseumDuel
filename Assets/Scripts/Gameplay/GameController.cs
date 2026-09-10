@@ -444,6 +444,12 @@ namespace ColosseumDuel.Gameplay
             Manager?.SubmitPlanningMoveTo(PlayerSide.P1, target);
         }
 
+        /// <summary>Files a run the player drew, corner to corner from the gladiator.</summary>
+        public void SubmitPlayerPath(IReadOnlyList<Vector2> path)
+        {
+            Manager?.SubmitPlanningPath(PlayerSide.P1, path);
+        }
+
         public void SubmitPlayerDefend()
         {
             Manager?.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f);

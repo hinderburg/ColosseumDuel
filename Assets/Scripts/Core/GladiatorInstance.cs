@@ -146,6 +146,13 @@ namespace ColosseumDuel.Core
         public ActionType PlannedAction = ActionType.None;
         public Vector2 PlannedAimDirection;
         public float PlannedPower; // 0..1 pull strength for Move
+
+        /// <summary>
+        /// The run the player drew, corner to corner from where he stands, or empty when the order
+        /// is a point (a tap, the bot, the drag controls) and the pathfinder is to find the way.
+        /// Cut to his reach when the action phase starts; see GameManager.SubmitPlanningPath.
+        /// </summary>
+        public readonly List<Vector2> PlannedPath = new List<Vector2>();
         public bool AbilityArmed;   // toggle set during Planning; consumed at the start of Action
         public bool DealtDamageThisCycle;
         public bool TookDamageThisCycle;
@@ -239,6 +246,47 @@ namespace ColosseumDuel.Core
             return Vector2.Angle(look, toTarget) <= weapon.SwingArcDegrees * 0.5f;
         }
 
+        public float EffectiveSpeed()
+        {
+            float speed = Def.Speed;
+            if (Buff.IsActive && Buff.Key == AbilityKey.Spirit)
+                speed *= 1.5f;
+            return speed;
+        }
+
+        /// <summary>
+        /// How fast he will be running once this cycle starts, buff included.
+        ///
+        /// The difference from EffectiveSpeed is one phase of timing. An armed ability has not
+        /// fired yet - it fires at the top of the action phase - so during planning EffectiveSpeed
+        /// still reports the unbuffed number. Anything that draws what the player is about to do
+        /// has to look forward instead, or with the speed ability armed the run he is allowed to
+        /// draw would be a third shorter than the one he will actually be able to make.
+        /// </summary>
+        public float PlannedSpeed()
+        {
+            float speed = EffectiveSpeed();
+            bool willBeSpirited = AbilityArmed && Def.Ability == AbilityKey.Spirit
+                                  && !(Buff.IsActive && Buff.Key == AbilityKey.Spirit);
+            return willBeSpirited ? speed * 1.5f : speed;
+        }
+
+        /// <summary>
+        /// How far one phase of running carries him, in virtual units: the longest run he can make,
+        /// and so the longest one the player can draw for him.
+        ///
+        /// Here rather than in the input layer because it is the same product the action phase cuts
+        /// a run to - a second copy of the formula would drift from this one the first time either
+        /// factor moved.
+        /// </summary>
+        public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
+
+        /// <summary>
+        /// How far one phase of running will carry him once this cycle starts, ability included.
+        /// The planning-time twin of DashReach, for the same reason PlannedSpeed exists.
+        /// </summary>
+        public float PlannedReach() => PlannedSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
+
         public void AddRage(float amount)
         {
             if (AbilityLockedCycles > 0) return; // locked out after a recent activation
@@ -251,16 +299,7 @@ namespace ColosseumDuel.Core
         {
             if (!CanActivateAbility) return;
 
-            if (Def.Ability == AbilityKey.SecondWind)
-            {
-                // Instant: the health comes back the moment it fires and nothing is left running. A
-                // lingering buff would light his ability marker for two cycles of doing nothing.
-                Hp = Mathf.Min(Def.MaxHp, Hp + Def.MaxHp * GameConstants.SecondWindHealFraction);
-            }
-            else
-            {
-                Buff = new ActiveBuff { Key = Def.Ability, CyclesLeft = 2 };
-            }
+            Buff = new ActiveBuff { Key = Def.Ability, CyclesLeft = 2 };
 
             // The ability fires at the start of Action, after BeginCycle already set the attack
             // budget for this cycle - so Mongoose has to top it up for the cycle it was used in.
@@ -280,6 +319,7 @@ namespace ColosseumDuel.Core
             PlannedAimDirection = Vector2.zero;
             PlannedPower = 0f;
             PlannedTarget = Vector2.zero;
+            PlannedPath.Clear();
             StopRunning();
 
             AbilityArmed = false;
@@ -315,6 +355,7 @@ namespace ColosseumDuel.Core
             // Winner persists with current HP (not healed) - only a freshly-picked gladiator gets this.
             StopRunning();
             PlannedAction = ActionType.None;
+            PlannedPath.Clear();
             AbilityArmed = false;
             Buff = default;
             AbilityLockedCycles = 0;

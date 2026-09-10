@@ -203,7 +203,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 var label = button.GetComponentInChildren<Text>();
                 label.alignment = TextAnchor.UpperLeft;
                 label.text = $"{def.Name}\n{Mathf.RoundToInt(def.MaxHp)} HP · " +
-                             $"{Mathf.RoundToInt(def.Damage)} dmg";
+                             $"{Mathf.RoundToInt(def.Damage)} dmg · {Mathf.RoundToInt(def.Speed)} spd";
                 label.rectTransform.offsetMin = new Vector2(76f, 0f);
                 label.rectTransform.offsetMax = new Vector2(-62f, -8f);
 
