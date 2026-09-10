@@ -12,8 +12,8 @@ namespace ColosseumDuel.Gameplay
     public enum ControlScheme
     {
         /// <summary>
-        /// Tap a spot and he runs at it - as far as the tap if he can reach it, flat out towards it
-        /// if he cannot. The default, and what the tutorial teaches: one touch instead of a held
+        /// Tap a spot and he runs all the way to it, round anything in the way, inside the one phase.
+        /// The default, and what the tutorial teaches: one touch instead of a held
         /// gesture, which is easier on a phone and takes one sentence to explain.
         /// </summary>
         Tap = 0,
@@ -29,7 +29,7 @@ namespace ColosseumDuel.Gameplay
 
         /// <summary>
         /// A slingshot you can draw anywhere on the screen: pull one way, he runs the other, as far
-        /// as you pulled. What the game now opens on.
+        /// as you pulled.
         ///
         /// The pull's expressiveness without its one real cost. A slingshot has to be started on the
         /// gladiator, so the hand that aims him is also the hand covering him, and on a phone that
