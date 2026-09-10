@@ -45,9 +45,12 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Pos = new Vector2(-40f, 0f);
             State.Bot.Active.Pos = new Vector2(40f, 0f);
 
+            // Nothing on the sand but the two of them. Traps are laid at random, and one under
+            // either man would take health off him on the first step - which reads, to a test
+            // watching for a blow, exactly like a blow.
+            _controller.Manager.State.Traps.Traps.Clear();
 
             // Pointed along the charge. A run leaves along the nose and bends onto its target, so two
-
             // men set down across an axis they did not spawn along would curve away rather than meet.
 
             State.P1.Active.Facing = Vector2.right;
@@ -86,11 +89,13 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
             State.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
 
+            // Nothing on the sand but the two of them. Traps are laid at random, and one under
+            // either man would take health off him on the first step - which reads, to a test
+            // watching for a blow, exactly like a blow.
+            _controller.Manager.State.Traps.Traps.Clear();
 
             // Squared up on each other. A blow only lands inside the swinger's own arc now, and a
-
             // gladiator faces the way he last ran - so set down across the short axis of an arena they
-
             // spawned along, these two would be looking past one another with nobody in reach.
 
             State.P1.Active.Facing = Vector2.right;
@@ -162,13 +167,13 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Pos = new Vector2(-40f, 0f);
             State.Bot.Active.Pos = new Vector2(40f, 0f);
 
-
+            // Nothing on the sand but the two of them. Traps are laid at random, and one under
+            // either man would take health off him on the first step - which reads, to a test
+            // watching for a blow, exactly like a blow.
+            _controller.Manager.State.Traps.Traps.Clear();
 
             // Pointed along the charge. A run leaves along the nose and bends onto its target, so two
-
-
             // men set down across an axis they did not spawn along would curve away rather than meet.
-
 
             State.P1.Active.Facing = Vector2.right;
             State.Bot.Active.Facing = Vector2.left;

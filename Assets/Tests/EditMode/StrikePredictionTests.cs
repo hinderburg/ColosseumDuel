@@ -59,11 +59,8 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
 
-
             // Pointed along the charge they are about to be given. A run leaves along the nose and
-
             // bends onto its target, so two men set down across an axis they did not spawn along
-
             // would each curve away rather than meet.
 
             p1.Facing = Vector2.right;
@@ -135,11 +132,8 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
 
-
             // Pointed along the charge they are about to be given. A run leaves along the nose and
-
             // bends onto its target, so two men set down across an axis they did not spawn along
-
             // would each curve away rather than meet.
 
             p1.Facing = Vector2.right;
@@ -176,16 +170,9 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
 
-
-
             // Pointed along the charge they are about to be given. A run leaves along the nose and
-
-
             // bends onto its target, so two men set down across an axis they did not spawn along
-
-
             // would each curve away rather than meet.
-
 
             p1.Facing = Vector2.right;
             bot.Facing = Vector2.left;
