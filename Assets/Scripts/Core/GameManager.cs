@@ -1097,11 +1097,11 @@ namespace ColosseumDuel.Core
         ///
         /// The damage itself is continuous - it is charged per substep, against the position the
         /// gladiator actually occupied - and this is only how often that running total is announced.
-        /// A quarter of a second gives four ticks for a second spent in the fire, which reads as
+        /// A quarter of a second gives four ticks for every second spent in the fire, which reads as
         /// burning; the whole phase in one number read as a single hit from something invisible, and
         /// per substep would be a hundred numbers a second, each of a fraction of a point.
         /// </summary>
-        private const float ScorchTickInterval = 0.25f;
+        public const float ScorchTickInterval = 0.25f;
 
         private int _scorchTicksSent;
 
@@ -1109,10 +1109,10 @@ namespace ColosseumDuel.Core
         /// Announces the running tally on the beat, without waiting for the phase to end.
         ///
         /// Counted off the phase's own clock rather than a separate accumulator, and that is not
-        /// tidiness. A phase is exactly as long as four intervals, so an accumulator lands its
-        /// fourth tick on the same frame the phase ends - and whether it lands just before or just
+        /// tidiness. A phase is a whole number of intervals long, so an accumulator lands its
+        /// last tick on the same frame the phase ends - and whether it lands just before or just
         /// after is decided by the last bit of a float. Just after, and the phase's closing flush
-        /// finds a frame's worth of damage left and puts a fifth number on screen reading "1".
+        /// finds a frame of damage left and puts one number too many on screen, reading "1".
         ///
         /// Counting instead means the closing flush is the last tick rather than a sliver after it,
         /// however the arithmetic rounds.

@@ -74,10 +74,11 @@ namespace ColosseumDuel.Tests
 
             // The fire is charged six times a frame, in fractions of a point that cannot be put on
             // screen. It is announced on a beat instead - four times a second, so that standing in
-            // it reads as burning rather than as one hit from something invisible - and a phase is
-            // one second long.
-            Assert.AreEqual(4, burnt.Count,
-                $"a phase in the fire should be four ticks, not {burnt.Count}");
+            // it reads as burning rather than as one hit from something invisible - so a phase is as
+            // many ticks as it has quarter seconds.
+            int beats = Mathf.RoundToInt(GameConstants.ActionTime / GameManager.ScorchTickInterval);
+            Assert.AreEqual(beats, burnt.Count,
+                $"a phase in the fire should be {beats} ticks, not {burnt.Count}");
 
             // And the beat does not change the price. Not exact: the phase can be cut short by a
             // collision, and the last tick lands wherever it lands.

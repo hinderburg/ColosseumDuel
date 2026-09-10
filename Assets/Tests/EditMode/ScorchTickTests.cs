@@ -39,13 +39,14 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// A whole action phase standing in the fire is reported as four ticks, not one.
+        /// A whole action phase standing in the fire is reported as a tick every quarter second, not
+        /// as one number.
         ///
         /// Both halves are asserted: the count, which is the point of the change, and the total,
         /// which is what stops the beat from quietly charging four times over.
         /// </summary>
         [Test]
-        public void AFullPhaseInTheFireIsReportedAsFourTicks()
+        public void AFullPhaseInTheFireIsReportedAsATickEveryQuarterSecond()
         {
             var m = StartedRound();
 
@@ -67,14 +68,15 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
-            Assert.AreEqual(4, ticks.Count,
-                $"a second in the fire should read as four ticks, not {ticks.Count}");
+            int beats = Mathf.RoundToInt(GameConstants.ActionTime / GameManager.ScorchTickInterval);
+            Assert.AreEqual(beats, ticks.Count,
+                $"a phase in the fire should read as {beats} ticks, not {ticks.Count}");
 
             // The beat does not change the price. A full phase is still what a full phase cost.
             float total = 0f;
             foreach (float tick in ticks) total += tick;
             Assert.AreEqual(GameConstants.HazardDamagePerPhase, total, 1.5f,
-                $"the four ticks add up to {total:0.0}, not the phase's own {GameConstants.HazardDamagePerPhase}");
+                $"the ticks add up to {total:0.0}, not what a whole phase costs, {GameConstants.HazardDamagePerPhase}");
 
             foreach (float tick in ticks)
                 Assert.Greater(tick, 0f, "an empty tick is a number on screen saying nothing");

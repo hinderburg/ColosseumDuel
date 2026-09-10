@@ -277,15 +277,16 @@ namespace ColosseumDuel.Core
         ///
         /// Here rather than in the input layer because it is the same product the action phase cuts
         /// a run to - a second copy of the formula would drift from this one the first time either
-        /// factor moved.
+        /// factor moved. Not multiplied by the length of the phase: making the phase longer slows the
+        /// run down rather than sending him further.
         /// </summary>
-        public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
+        public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale;
 
         /// <summary>
         /// How far one phase of running will carry him once this cycle starts, ability included.
         /// The planning-time twin of DashReach, for the same reason PlannedSpeed exists.
         /// </summary>
-        public float PlannedReach() => PlannedSpeed() * GameConstants.SpeedScale * GameConstants.ActionTime;
+        public float PlannedReach() => PlannedSpeed() * GameConstants.SpeedScale;
 
         public void AddRage(float amount)
         {

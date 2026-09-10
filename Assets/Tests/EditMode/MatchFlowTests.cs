@@ -693,6 +693,35 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// The action phase lasts two seconds - and a run is no longer for it. The reach above is
+        /// per phase, so doubling the phase halved the pace instead of doubling the ground.
+        /// </summary>
+        [Test]
+        public void TheActionPhaseLastsTwoSeconds()
+        {
+            Assert.AreEqual(2f, GameConstants.ActionTime, 0.0001f, "the action phase is meant to be two seconds");
+
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            // Far apart and standing still, so nothing cuts the phase short.
+            m.State.P1.Active.Pos = new Vector2(0f, -200f);
+            m.State.Bot.Active.Pos = new Vector2(0f, 200f);
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+
+            float spent = 0f;
+            while (m.State.Phase == MatchPhase.Action && spent < 10f)
+            {
+                m.Tick(Dt);
+                spent += Dt;
+            }
+
+            Assert.AreEqual(2f, spent, Dt * 1.5f, "the action phase ran for the wrong length of time");
+        }
+
+        /// <summary>
         /// A drawn run is run as it was drawn - round its corner, not straight at its end. The shape
         /// is the order: two runs to the same place by different ways are different decisions.
         /// </summary>

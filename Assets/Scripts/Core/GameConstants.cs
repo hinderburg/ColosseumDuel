@@ -15,14 +15,12 @@ namespace ColosseumDuel.Core
         // long enough to decide and then draw the decision.
         public const float PlanningTime = 4.0f;
         // How long the gladiators actually move. Cut from 4.0 to 2.0 and then to 1.0 across design
-        // passes - a short burst reads as a charge, a long one as a jog.
+        // passes - a short burst reads as a charge, a long one as a jog - and back up to 2.0 on
+        // request, so a run can be followed by eye.
         //
-        // It sets how far a dash carries, and so how many cycles it takes two fighters to meet:
-        // halving it halves the distance covered per phase. At 1.0 the slowest pair charging head-on
-        // covers 150 units against the 512 between them, so first contact is three or four cycles
-        // out; the fastest pair does it in two. SpawnDistanceFraction is the other end of that
-        // trade if the approach starts to drag.
-        public const float ActionTime = 1.0f;
+        // It no longer decides how far anybody goes. That is speed alone (see SpeedScale): a longer
+        // phase is the same run at half the pace, not twice the ground.
+        public const float ActionTime = 2.0f;
         public const float RevealTime = 1.0f;   // picks stay on screen this long before the round's first Planning
         // Pause after a death, in real seconds. Long enough that the knockout plays out at the
         // slowed rate the camera comes in on: at DeathTimeScale this is roughly half a second of
@@ -92,9 +90,8 @@ namespace ColosseumDuel.Core
         public const float SpawnDistanceFraction = 0.55f;
 
         /// <summary>
-        /// Virtual units per second of running for each point of Speed. A run lasts one action phase,
-        /// so one point of speed is this many units of run: Brutius at 10 draws 450, Barbarius 675,
-        /// Hilius 900.
+        /// Virtual units of run in one action phase for each point of Speed, however long the phase
+        /// is: Brutius at 10 draws 450, Barbarius 675, Hilius 900.
         ///
         /// Three times the 15 it was before speed was taken away. Speed came back to limit how long
         /// a drawn run can be, and at 15 the budget was a short dash - drawing a shape with it left
