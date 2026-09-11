@@ -193,19 +193,19 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The run is drawn like the reference: a white line, thin at his feet and widening towards
-        /// its end, with no texture on it - and an arrow head waiting to be put on the end.
+        /// The run is drawn like the reference: a white line, one width from his feet to the head,
+        /// with no texture on it - and an arrow head waiting to be put on the end.
         /// </summary>
         [Test]
-        public void TheTrajectoryIsAWhiteLineThatWidensIntoAnArrowHead()
+        public void TheTrajectoryIsAWhiteLineOfOneWidthEndingInAnArrowHead()
         {
             var line = FindLine("TrajectoryPreview");
             Assert.IsNotNull(line);
 
             float start = line.widthCurve.Evaluate(0f) * line.widthMultiplier;
-            float end = line.widthCurve.Evaluate(0.99f) * line.widthMultiplier;
-            Assert.AreEqual(0.24f, start, 0.01f, "at his feet it is as thick as the line drawn over the screenshot");
-            Assert.Greater(end, start * 1.15f, "and it widens towards its end, like the reference");
+            float middle = line.widthCurve.Evaluate(0.5f) * line.widthMultiplier;
+            Assert.AreEqual(0.28f, start, 0.01f, "as thick as the line drawn over the screenshot");
+            Assert.AreEqual(start, middle, 0.001f, "and one width all the way along, not growing from a sliver");
 
             var material = line.sharedMaterial;
             Assert.IsNull(material.mainTexture, "a plain line carries no texture");

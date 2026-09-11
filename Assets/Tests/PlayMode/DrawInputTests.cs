@@ -72,7 +72,7 @@ namespace ColosseumDuel.Tests
 
             var lane = FindLine("TrajectoryPreview");
             Assert.IsTrue(lane.enabled, "the drawn run is not shown");
-            Assert.AreEqual(run.Count, lane.positionCount, "the lane is not the run that was filed");
+            AssertLaneFollows(Lane(), run);
         }
 
         [Test]
@@ -152,8 +152,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(plain, ObstacleField.Length(Player.PlannedPath), 0.5f,
                 "taken back, the run should be cut to the reach he has without it");
 
-            var lane = FindLine("TrajectoryPreview");
-            Assert.AreEqual(Player.PlannedPath.Count, lane.positionCount, "the lane still shows the longer run");
+            AssertLaneFollows(Lane(), Player.PlannedPath);
         }
 
         /// <summary>
@@ -232,7 +231,7 @@ namespace ColosseumDuel.Tests
 
         /// <summary>
         /// The head sits on the end of the run, pointing along it and lying flat on the sand, and
-        /// the line under it widens from his feet towards the head and then narrows away to nothing,
+        /// the line under it is one width from his feet to the head and then narrows away to nothing,
         /// so it never pokes out past the point.
         /// </summary>
         [UnityTest]
@@ -257,9 +256,81 @@ namespace ColosseumDuel.Tests
             Assert.Greater(Vector3.Dot(head.up, Vector3.up), 0.98f, "and lie flat on the sand");
 
             var line = FindLine("TrajectoryPreview");
-            Assert.Greater(line.widthCurve.Evaluate(0.5f), line.widthCurve.Evaluate(0f) * 1.05f,
-                "the line should widen from his feet towards the head");
+            Assert.AreEqual(line.widthCurve.Evaluate(0f), line.widthCurve.Evaluate(0.5f), 0.001f,
+                "the line should be one width from his feet to the head");
             Assert.Less(line.widthCurve.Evaluate(1f), 0.005f, "and narrow to nothing under the point");
+        }
+
+        /// <summary>
+        /// A first touch far from him draws the line at its full width from his feet. The width used
+        /// to grow along the whole run, so a long first stretch began as a sliver.
+        /// </summary>
+        [Test]
+        public void AFarFirstTouchDrawsTheLineAtFullWidthFromHisFeet()
+        {
+            Assert.IsTrue(_input.BeginDraw(new Vector2(-40f, 150f)));
+
+            var line = FindLine("TrajectoryPreview");
+            float atFeet = line.widthCurve.Evaluate(0f) * line.widthMultiplier;
+            float halfway = line.widthCurve.Evaluate(0.5f) * line.widthMultiplier;
+            Assert.AreEqual(halfway, atFeet, 0.001f, "the line starts narrower than it goes on");
+            Assert.Greater(atFeet, 0.2f, "and it is the full width at his feet, not a sliver");
+        }
+
+        /// <summary>
+        /// The line turns the corners of the run in a curve rather than a kink: it cuts a little
+        /// inside each corner, and nowhere strays further from the run than the rounding allows.
+        /// </summary>
+        [Test]
+        public void TheLineRoundsTheCornersOfTheRun()
+        {
+            var corner = new Vector2(-40f, 100f);
+            _input.BeginDraw(Player.Pos);
+            _input.DrawTo(new Vector2(-40f, 0f));
+            _input.DrawTo(corner);
+            _input.DrawTo(new Vector2(40f, 100f));
+            _input.EndDraw();
+
+            var lane = Lane();
+            Assert.Greater(lane.Count, Player.PlannedPath.Count, "no curve was put into the corner");
+            Assert.Greater(lane.Min(p => Vector2.Distance(p, corner)), 2f, "the line still goes through the sharp corner");
+            AssertLaneFollows(lane, Player.PlannedPath);
+        }
+
+        /// <summary>The drawn line, read back into the simulation's units.</summary>
+        private System.Collections.Generic.List<Vector2> Lane()
+        {
+            var line = FindLine("TrajectoryPreview");
+            var points = new System.Collections.Generic.List<Vector2>();
+            for (int i = 0; i < line.positionCount; i++) points.Add(_controller.Arena.ToVirtual(line.GetPosition(i)));
+            return points;
+        }
+
+        /// <summary>
+        /// The line starts and ends where the run does, and every point of it lies on the run or
+        /// within the rounding of one of its corners - at most half of one and a half radii inside.
+        /// </summary>
+        private static void AssertLaneFollows(System.Collections.Generic.List<Vector2> lane,
+            System.Collections.Generic.IReadOnlyList<Vector2> run)
+        {
+            Assert.Less(Vector2.Distance(lane[0], run[0]), 0.5f, "the line does not start where the run does");
+            Assert.Less(Vector2.Distance(lane[lane.Count - 1], run[run.Count - 1]), 0.5f,
+                "the line does not end where the run does");
+
+            float allowed = GameConstants.GladiatorRadius * 1.5f * 0.5f + 0.5f;
+            foreach (var p in lane)
+            {
+                float off = float.MaxValue;
+                for (int i = 1; i < run.Count; i++) off = Mathf.Min(off, DistanceToSegment(p, run[i - 1], run[i]));
+                Assert.LessOrEqual(off, allowed, $"the line strays {off:0.0} from the run at {p}");
+            }
+        }
+
+        private static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+        {
+            var ab = b - a;
+            float t = ab.sqrMagnitude < 0.000001f ? 0f : Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude);
+            return Vector2.Distance(p, a + ab * t);
         }
 
         private static LineRenderer FindLine(string name)

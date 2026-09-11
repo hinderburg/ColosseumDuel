@@ -66,17 +66,24 @@ namespace ColosseumDuel.Gameplay
         public Vector2 CurrentAim { get; private set; }
 
         /// <summary>
-        /// How wide the planned run is drawn, in world units, at his feet and where it meets the
-        /// head: a white line that widens towards its end and finishes in an arrow head, like the
-        /// reference drawing.
+        /// How wide the planned run is drawn, in world units: one width from his feet to the head,
+        /// narrowing only under the head so it cannot show past the point.
         ///
         /// It has been a dashed lane his own width, half that, a plain stripe and a hairline; then
-        /// the reference look at 0.04 to 0.09, which on a phone came out at two to four pixels. This
-        /// is the thickness drawn over a screenshot on request - about twelve pixels at 800 wide -
-        /// with the widening kept, since that is what says which end is which.
+        /// the reference look, widening from 0.04 to 0.09 and, on request, from 0.24 to 0.32 to
+        /// match a line drawn over a screenshot. The widening ran over the whole run, so a first
+        /// touch far from him began as a sliver - asked for one width throughout, this is the
+        /// middle of the drawn line, about twelve pixels at 800 wide.
         /// </summary>
-        private const float TrajectoryStartWidth = 0.24f;
-        private const float TrajectoryEndWidth = 0.32f;
+        private const float TrajectoryWidth = 0.28f;
+
+        /// <summary>
+        /// How far back from a corner the line starts to round it, in gladiator radii, and how many
+        /// points the curve round it is drawn with. Capped per corner at under half of either
+        /// stretch beside it; see RoundCorners.
+        /// </summary>
+        private const float CornerRoundingInRadii = 1.5f;
+        private const int CornerSamples = 6;
 
         /// <summary>The pull line of the slingshot controls, a little thinner than the run.</summary>
         private const float PullLineWidth = 0.03f;
@@ -122,7 +129,8 @@ namespace ColosseumDuel.Gameplay
             // Flat ends: the start sits under his feet, and the far end narrows to a point under the
             // arrow head, where a rounded cap would poke out past it.
             _trajectory.numCapVertices = 0;
-            _trajectory.widthCurve = AnimationCurve.Linear(0f, TrajectoryStartWidth, 1f, TrajectoryEndWidth);
+            _trajectory.numCornerVertices = 4;
+            _trajectory.widthCurve = AnimationCurve.Constant(0f, 1f, TrajectoryWidth);
 
             // The pull is drawn a little narrower and fainter, so at a glance the two lines read as
             // different things: what you are doing now, and what will happen when you let go.
@@ -166,8 +174,8 @@ namespace ColosseumDuel.Gameplay
         private GameObject _arrowHead;
 
         /// <summary>
-        /// Puts the head on the end of the run and shapes the line to meet it: thin at his feet,
-        /// widening towards the head, and narrowing away to nothing under it, so the line never
+        /// Puts the head on the end of the run and shapes the line to meet it: one width from his
+        /// feet to the head, then narrowing away to nothing under it, so the line never
         /// shows past the point.
         ///
         /// The head is turned along the run from a head's length back, rather than along the last
@@ -179,7 +187,7 @@ namespace ColosseumDuel.Gameplay
             float total = 0f;
             for (int i = 1; i < worldPoints.Count; i++) total += Vector3.Distance(worldPoints[i - 1], worldPoints[i]);
 
-            _trajectory.widthCurve = AnimationCurve.Linear(0f, TrajectoryStartWidth, 1f, TrajectoryEndWidth);
+            _trajectory.widthCurve = AnimationCurve.Constant(0f, 1f, TrajectoryWidth);
             if (_arrowHead == null || total < 0.0001f)
             {
                 HideArrowHead();
@@ -206,15 +214,14 @@ namespace ColosseumDuel.Gameplay
             _arrowHead.transform.localScale = new Vector3(scale, 1f, scale);
             _arrowHead.SetActive(true);
 
-            // Widening all the way to where the head begins, then to a point under the head's own
-            // point. Tangents set by hand: an AnimationCurve left to itself eases in and out of every
-            // key, and the line would bulge rather than widen.
+            // One width all the way to where the head begins, then down to a point under the head's
+            // own point. Tangents set by hand: an AnimationCurve left to itself eases in and out of
+            // every key, and the line would swell or sag between them.
             float headStarts = Mathf.Clamp(1f - length / total, 0.01f, 0.99f);
-            float widen = (TrajectoryEndWidth - TrajectoryStartWidth) / headStarts;
-            float narrow = -TrajectoryEndWidth / (1f - headStarts);
+            float narrow = -TrajectoryWidth / (1f - headStarts);
             _trajectory.widthCurve = new AnimationCurve(
-                new Keyframe(0f, TrajectoryStartWidth, widen, widen),
-                new Keyframe(headStarts, TrajectoryEndWidth, widen, narrow),
+                new Keyframe(0f, TrajectoryWidth, 0f, 0f),
+                new Keyframe(headStarts, TrajectoryWidth, 0f, narrow),
                 new Keyframe(1f, 0f, narrow, narrow));
         }
 
@@ -837,7 +844,58 @@ namespace ColosseumDuel.Gameplay
             _pullLine.enabled = true;
         }
 
-        /// <summary>Lays the lane along a run, corner to corner, and puts the head on the end of it.</summary>
+        /// <summary>
+        /// Rounds the corners of the drawn line: each bend becomes a short curve, so the line turns
+        /// rather than kinks - at this width a sharp corner reads as a notch.
+        ///
+        /// Drawing only. The run itself still turns at its corners, and the curve cuts inside each
+        /// one by at most half the rounding distance. That distance is capped at under half of
+        /// either stretch beside the corner, so neighbouring bends never run into each other and a
+        /// short stretch is never rounded away.
+        /// </summary>
+        private void RoundCorners(List<Vector3> points)
+        {
+            if (points.Count < 3) return;
+
+            float rounding = Controller.Arena.ScaleLength(GameConstants.GladiatorRadius) * CornerRoundingInRadii;
+            _rounded.Clear();
+            _rounded.Add(points[0]);
+
+            for (int i = 1; i < points.Count - 1; i++)
+            {
+                var corner = points[i];
+                var toPrev = points[i - 1] - corner;
+                var toNext = points[i + 1] - corner;
+                float before = toPrev.magnitude, after = toNext.magnitude;
+
+                // A repeated point, or no real bend: nothing to round.
+                if (before < 0.0001f || after < 0.0001f || Vector3.Angle(-toPrev, toNext) < 2f)
+                {
+                    _rounded.Add(corner);
+                    continue;
+                }
+
+                float d = Mathf.Min(rounding, before * 0.45f, after * 0.45f);
+                var from = corner + toPrev / before * d;
+                var to = corner + toNext / after * d;
+
+                // A quadratic curve with the corner as its control point: it leaves along the
+                // stretch before and arrives along the stretch after, so both joins stay smooth.
+                for (int s = 0; s <= CornerSamples; s++)
+                {
+                    float t = s / (float)CornerSamples;
+                    _rounded.Add((1f - t) * (1f - t) * from + 2f * (1f - t) * t * corner + t * t * to);
+                }
+            }
+
+            _rounded.Add(points[points.Count - 1]);
+            points.Clear();
+            points.AddRange(_rounded);
+        }
+
+        private readonly List<Vector3> _rounded = new List<Vector3>();
+
+        /// <summary>Lays the lane along a run, its corners rounded, and puts the head on the end of it.</summary>
         private void DrawLane(List<Vector2> run)
         {
             if (_trajectory == null || Controller.Arena == null) return;
@@ -852,6 +910,7 @@ namespace ColosseumDuel.Gameplay
             _worldPoints.Clear();
             foreach (var p in run)
                 _worldPoints.Add(Controller.Arena.ToWorld(p, TrajectoryHeight));
+            RoundCorners(_worldPoints);
 
             _trajectory.positionCount = _worldPoints.Count;
             for (int i = 0; i < _worldPoints.Count; i++)
