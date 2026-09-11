@@ -215,9 +215,20 @@ namespace ColosseumDuel.Gameplay
             _arrowHead.SetActive(true);
 
             // One width all the way to where the head begins, then down to a point under the head's
-            // own point. Tangents set by hand: an AnimationCurve left to itself eases in and out of
-            // every key, and the line would swell or sag between them.
-            float headStarts = Mathf.Clamp(1f - length / total, 0.01f, 0.99f);
+            // own point.
+            //
+            // A LineRenderer takes its width at its points and blends between them, so the flat
+            // stretch of the curve only holds if there is a point where the head begins. Without one
+            // a straight run - two points, his feet and the tip - came out as a wedge, full width at
+            // his feet and nothing at the tip. The point goes in, and the key sits at or past it
+            // however the renderer measures its way along the line, by distance or by point.
+            //
+            // Tangents set by hand: an AnimationCurve left to itself eases in and out of every key,
+            // and the line would swell or sag between them.
+            int headStartsAt = InsertPointBack(worldPoints, length);
+            float byDistance = 1f - length / total;
+            float byPoint = headStartsAt / (float)(worldPoints.Count - 1);
+            float headStarts = Mathf.Clamp(Mathf.Max(byDistance, byPoint), 0.01f, 0.99f);
             float narrow = -TrajectoryWidth / (1f - headStarts);
             _trajectory.widthCurve = new AnimationCurve(
                 new Keyframe(0f, TrajectoryWidth, 0f, 0f),
@@ -240,6 +251,27 @@ namespace ColosseumDuel.Gameplay
                 distance -= leg;
             }
             return points[0];
+        }
+
+        /// <summary>
+        /// Puts a point into a polyline a given distance back from its end, unless one is already
+        /// there, and returns the index of the point that is.
+        /// </summary>
+        private static int InsertPointBack(List<Vector3> points, float distance)
+        {
+            for (int i = points.Count - 1; i > 0; i--)
+            {
+                float leg = Vector3.Distance(points[i - 1], points[i]);
+                if (leg >= distance)
+                {
+                    if (distance < 0.0001f) return i;
+                    if (leg - distance < 0.0001f) return i - 1;
+                    points.Insert(i, Vector3.Lerp(points[i], points[i - 1], distance / leg));
+                    return i;
+                }
+                distance -= leg;
+            }
+            return 0;
         }
 
         private LineRenderer CreateLine(string name, Material material, float width)
@@ -911,12 +943,12 @@ namespace ColosseumDuel.Gameplay
             foreach (var p in run)
                 _worldPoints.Add(Controller.Arena.ToWorld(p, TrajectoryHeight));
             RoundCorners(_worldPoints);
+            ShowArrowHead(_worldPoints);   // shapes the width, and adds a point where the head begins
 
             _trajectory.positionCount = _worldPoints.Count;
             for (int i = 0; i < _worldPoints.Count; i++)
                 _trajectory.SetPosition(i, _worldPoints[i]);
             _trajectory.enabled = true;
-            ShowArrowHead(_worldPoints);
         }
 
         /// <summary>

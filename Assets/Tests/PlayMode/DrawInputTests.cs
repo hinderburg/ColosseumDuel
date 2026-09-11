@@ -297,6 +297,41 @@ namespace ColosseumDuel.Tests
             AssertLaneFollows(lane, Player.PlannedPath);
         }
 
+        /// <summary>
+        /// A tap - a straight run, nothing but his feet and the point - draws one width all the way
+        /// to the head. The line takes its width at its points, and with only those two it came out
+        /// as a wedge from his feet to the tip; there has to be a point where the head begins.
+        /// Checked counting along the line both ways the renderer might, by point and by distance.
+        /// </summary>
+        [Test]
+        public void AStraightRunIsOneWidthUpToTheHead()
+        {
+            _input.BeginDraw(new Vector2(-40f, 150f));
+            _input.EndDraw();
+            Assert.AreEqual(2, Player.PlannedPath.Count, "the test needs a run with no corners in it");
+
+            var line = FindLine("TrajectoryPreview");
+            Assert.GreaterOrEqual(line.positionCount, 3, "there is no point where the head begins, so the line is a wedge");
+
+            float total = 0f;
+            var along = new float[line.positionCount];
+            for (int i = 1; i < line.positionCount; i++)
+            {
+                total += Vector3.Distance(line.GetPosition(i - 1), line.GetPosition(i));
+                along[i] = total;
+            }
+
+            float full = line.widthCurve.Evaluate(0f);
+            for (int i = 0; i < line.positionCount - 1; i++)
+            {
+                Assert.AreEqual(full, line.widthCurve.Evaluate(i / (float)(line.positionCount - 1)), 0.001f,
+                    $"point {i} is narrower than his feet, counted by point");
+                Assert.AreEqual(full, line.widthCurve.Evaluate(along[i] / total), 0.001f,
+                    $"point {i} is narrower than his feet, counted by distance");
+            }
+            Assert.Less(line.widthCurve.Evaluate(1f), 0.005f, "and nothing at the tip, under the head's point");
+        }
+
         /// <summary>The drawn line, read back into the simulation's units.</summary>
         private System.Collections.Generic.List<Vector2> Lane()
         {
