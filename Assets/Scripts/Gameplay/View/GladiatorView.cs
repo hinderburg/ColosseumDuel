@@ -790,6 +790,40 @@ namespace ColosseumDuel.Gameplay.View
 
         private float _sinceSwingStarted = float.MaxValue;
 
+        /// <summary>
+        /// How long until this gladiator's weapon reaches whoever he is swinging at, if a blow of his
+        /// landed now: what is left of a swing already on its way, the wait for a scheduled one plus
+        /// its wind-up, or a whole wind-up if there is none and one is about to start.
+        ///
+        /// Asked by the controller the moment a blow of his is resolved, before it starts any swing,
+        /// so the blow's effects - and the fall of a man it kills - can be held back to meet the
+        /// weapon. It used to be worked out once, off the phase's prediction, and a blow the
+        /// prediction had not seen coming went off the moment it resolved, ahead of the weapon.
+        /// </summary>
+        public float SecondsUntilImpact(WeaponKind weapon)
+        {
+            float lead = SwingLead(weapon);
+            if (_swingScheduled) return _scheduledSwingIn + lead;
+            if (_sinceSwingStarted < lead) return lead - _sinceSwingStarted;
+
+            // A swing that has already arrived is still inside the restart guard, so no new one will
+            // start and the weapon is there now; past the guard a fresh swing starts from the top.
+            return _sinceSwingStarted < SwingRestartGuard ? 0f : lead;
+        }
+
+        /// <summary>
+        /// Keeps him on his feet for this long even if he is already dead in the simulation, so the
+        /// blow that killed him is seen landing before he falls. Unscaled, like the held-back effects
+        /// it has to stay in step with.
+        /// </summary>
+        public void HoldDeathFor(float seconds)
+            => _deathShownFrom = Mathf.Max(_deathShownFrom, Time.unscaledTime + seconds);
+
+        private float _deathShownFrom;
+
+        /// <summary>Whether he is drawn as dead yet: dead in the simulation, and past any hold.</summary>
+        private bool ShownDead(GladiatorInstance g) => !g.Alive && Time.unscaledTime >= _deathShownFrom;
+
         /// <summary>Lets a held-back recoil through once the swing has had its moment.</summary>
         private void AdvanceSwingHold(float dt)
         {
@@ -830,7 +864,7 @@ namespace ColosseumDuel.Gameplay.View
             ShowFigureFor(g.Def.Id);
             SyncAnimator(g);
 
-            if (!g.Alive)
+            if (ShownDead(g))
             {
                 // Nothing above the head is worth reading on a body: an empty HP bar and the tags
                 // for gear he is no longer carrying only clutter the end of the round.
@@ -873,8 +907,8 @@ namespace ColosseumDuel.Gameplay.View
         {
             if (_animator == null) return;
 
-            _animator.SetBool(AnimatorParams.DeadId, !g.Alive);
-            if (!g.Alive) return;
+            _animator.SetBool(AnimatorParams.DeadId, ShownDead(g));
+            if (ShownDead(g)) return;
 
             _animator.SetFloat(AnimatorParams.SpeedId, g.Vel.magnitude * _arena.VirtualToWorld);
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);

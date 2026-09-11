@@ -124,6 +124,65 @@ namespace ColosseumDuel.Tests
                 $"the blood came {burstAt - blowAt:0.000}s after the blow - it beat the weapon there");
         }
 
+        /// <summary>
+        /// A killing blow is seen landing before the man it kills falls.
+        ///
+        /// He is dead in the simulation the moment the blow resolves, and the view used to read that
+        /// straight off and play the death - while the blow's own effects were still being held back
+        /// for the weapon to arrive. So he fell, and then the blow that killed him landed. Staged as
+        /// the standing exchange above, the case with the longest wait, with one blow enough.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AKillingBlowLandsBeforeHeFalls()
+        {
+            var pool = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "BloodBursts");
+            var botView = Find("Bot");
+            var animator = botView != null
+                ? botView.GetComponentsInChildren<Animator>(true)
+                    .FirstOrDefault(a => a.isActiveAndEnabled && a.runtimeAnimatorController != null)
+                : null;
+            if (pool == null || animator == null)
+            {
+                Assert.Ignore("No blood prefab or no animator - the art packs are not imported here.");
+                yield break;
+            }
+
+            var bursts = pool.Cast<Transform>().ToList();
+
+            float gap = Mathf.Min(State.P1.Active.WeaponDef.Reach, State.Bot.Active.WeaponDef.Reach) * 0.7f;
+            State.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
+            State.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
+            State.P1.Active.Facing = Vector2.right;
+            State.Bot.Active.Facing = Vector2.left;
+            _controller.Manager.State.Traps.Traps.Clear();
+            State.Bot.Active.Hp = 0.01f;
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+
+            yield return RunUntil(() => State.Phase == MatchPhase.Action, 8f);
+
+            var bot = State.Bot.Active;
+            float killedAt = -1f, burstAt = -1f, fellAt = -1f;
+            float t = 0f;
+            while (t < 2f && (killedAt < 0f || burstAt < 0f || fellAt < 0f))
+            {
+                yield return null;
+                t += Time.unscaledDeltaTime;
+
+                if (killedAt < 0f && !bot.Alive) killedAt = t;
+                if (burstAt < 0f && bursts.Any(b => b.gameObject.activeSelf)) burstAt = t;
+                if (fellAt < 0f && animator.GetBool(AnimatorParams.DeadId)) fellAt = t;
+            }
+
+            Assert.Greater(killedAt, -1f, "the blow did not kill him, so this proves nothing");
+            Assert.Greater(fellAt, -1f, "he never fell");
+            Assert.Greater(burstAt, -1f, "the killing blow spilled no blood");
+            Assert.Greater(fellAt - killedAt, 0.12f,
+                $"he fell {fellAt - killedAt:0.000}s after the blow resolved - ahead of the weapon");
+            Assert.GreaterOrEqual(fellAt, burstAt - 0.05f, "he fell before the blow was seen to land");
+        }
+
         // ------------------------------------------------------------------
 
         [Test]
