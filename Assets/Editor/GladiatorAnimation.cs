@@ -54,17 +54,16 @@ namespace ColosseumDuel.EditorTools
         /// <summary>
         /// Stretches the stance across the phase.
         ///
-        /// It used to divide the planning slow motion back out too: the animator runs on scaled
-        /// time and the phase ran the world at a third speed, so a clip playing at its own rate
-        /// covered only a third of the phase in real seconds. Planning runs at full speed now and
-        /// that factor is gone. The coupling to the phase length is still real and still easy to
-        /// break silently, so ThePlanningStanceFillsTheThinkingTime measures the finished thing in
-        /// real seconds rather than trusting this arithmetic.
+        /// The animator runs on scaled time and the planning phase runs the world at a fifth of its
+        /// speed, so a clip playing at its own rate covers only a fifth of the phase in real seconds -
+        /// the scale is divided back out here or the stance has barely started when the phase ends.
+        /// The coupling is real and easy to break silently, so ThePlanningStanceFillsTheThinkingTime
+        /// measures the finished thing in real seconds rather than trusting this arithmetic.
         /// </summary>
         private static float ReadyStancePlaybackSpeed(AnimationClip clip)
         {
             if (clip == null || clip.length <= 0.001f) return 1f;
-            return clip.length / ReadyStanceSeconds;
+            return clip.length / (ReadyStanceSeconds * GameConstants.PlanningTimeScale);
         }
 
         /// <summary>Builds or rebuilds the controller. Returns null if the clip pack is absent.</summary>

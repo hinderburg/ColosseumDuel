@@ -369,8 +369,9 @@ namespace ColosseumDuel.Tests
         /// sprinted towards the man he was retreating from. Asserted on the blend parameters rather
         /// than by eye, since that is what actually chooses the clip.
         ///
-        /// Damped, so the numbers are read after they have had time to arrive: an assertion on the
-        /// frame the direction changes measures the damping, not the direction.
+        /// Damped, so the numbers are read after they have had time to arrive - in world time, which
+        /// is what the damping runs on and what planning slows to a fifth. An assertion on the frame
+        /// the direction changes, or after too little world time, measures the damping, not the direction.
         /// </summary>
         [UnityTest]
         public IEnumerator RunningBackwardsPlaysABackwardCycleRatherThanACharge()
@@ -390,7 +391,7 @@ namespace ColosseumDuel.Tests
             player.Pos = new Vector2(0f, -60f);
             bot.Pos = new Vector2(0f, 60f);
             player.Vel = new Vector2(0f, -120f);
-            yield return RunSeconds(0.4f);
+            yield return RunWorldSeconds(0.25f);
 
             Assert.Less(animator.GetFloat(AnimatorParams.MoveZ), -0.6f,
                 "running away from the man he faces should read as backwards");
@@ -400,7 +401,7 @@ namespace ColosseumDuel.Tests
             // Now across his own front, which is the case a single speed value cannot express at
             // all: same magnitude, same facing, a different cycle.
             player.Vel = new Vector2(120f, 0f);
-            yield return RunSeconds(0.4f);
+            yield return RunWorldSeconds(0.25f);
 
             Assert.Greater(animator.GetFloat(AnimatorParams.MoveX), 0.6f,
                 "running to his own right should read as a right-hand strafe");
@@ -429,7 +430,7 @@ namespace ColosseumDuel.Tests
                 Assert.Ignore("No animator - the model pack is not imported here.");
 
             // Waited for rather than sampled on the spot. The blend into the taunt takes an eighth
-            // of a second, and planning runs the world at a third speed, so it is nearly half a
+            // of a second, and planning runs the world at a fifth of its speed, so it is over half a
             // second of real time - long enough that a single sample at a fixed moment lands inside
             // it, where the current state is still the one being left.
             yield return RunUntil(() => player.GetCurrentAnimatorStateInfo(0).IsName("Ready")
@@ -530,8 +531,8 @@ namespace ColosseumDuel.Tests
         ///
         /// Measured in real seconds off the running game rather than derived from the clip length,
         /// because the arithmetic behind it depends on the planning phase's time scale - the world
-        /// runs at a third speed while the player thinks, so a clip playing at its own rate finishes
-        /// in a third of the time it looks like it should. That coupling is invisible and easy to
+        /// runs at a fifth of its speed while the player thinks, so a clip playing at its own rate finishes
+        /// in a fifth of the time it looks like it should. That coupling is invisible and easy to
         /// break; this is what catches it.
         /// </summary>
         [UnityTest]
@@ -754,6 +755,22 @@ namespace ColosseumDuel.Tests
             float t = 0f;
             while (!done() && t < maxSeconds) { yield return null; t += Time.unscaledDeltaTime; }
             Assert.IsTrue(done(), $"condition not reached within {maxSeconds}s");
+        }
+
+        /// <summary>
+        /// Waits out a stretch of world time rather than of real time - what the animator and its
+        /// damping run on. Planning slows the world to a fifth, so the two are far apart there. Capped
+        /// in real time so a stopped world cannot hang the test.
+        /// </summary>
+        private static IEnumerator RunWorldSeconds(float seconds)
+        {
+            float world = 0f, real = 0f;
+            while (world < seconds && real < seconds * 10f)
+            {
+                yield return null;
+                world += Time.deltaTime;
+                real += Time.unscaledDeltaTime;
+            }
         }
 
         private static IEnumerator RunSeconds(float seconds)

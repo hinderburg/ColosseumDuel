@@ -186,7 +186,7 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>
         /// A cold tint creeping in from the edges of the screen while the player is planning.
         ///
-        /// The world already runs at a third speed during planning, but on a still arena the only
+        /// The world already runs at a fifth of its speed during planning, but on a still arena the only
         /// thing that showed it was the torches guttering - a detail at the far edge of the frame.
         /// This says the same thing in peripheral vision, which is where a change of tempo is
         /// actually felt.

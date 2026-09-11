@@ -10,11 +10,8 @@ using UnityEngine.TestTools;
 namespace ColosseumDuel.Tests
 {
     /// <summary>
-    /// The planning phase: how long it lasts, and how fast the world runs while it does.
-    ///
-    /// It used to run the world at a third speed. That is gone - the phase is where the player
-    /// reads the fight to decide what to do about it, and at a third speed everything they were
-    /// reading arrived late - and these are what would catch it coming back.
+    /// The planning phase: how long it lasts, and how fast the world runs while it does - a fifth of
+    /// its speed, for the full four real seconds.
     /// </summary>
     public class PlanningPhaseTests
     {
@@ -71,8 +68,8 @@ namespace ColosseumDuel.Tests
         [UnityTest]
         public IEnumerator PlanningLastsItsFullLengthInRealTime()
         {
-            // The phase is timed on unscaled time while the world runs at a third speed, which is
-            // exactly the sort of pairing that quietly turns two seconds into six. Measured on the
+            // The phase is timed on unscaled time while the world runs at a fifth of its speed, which is
+            // exactly the sort of pairing that quietly turns four seconds into twenty. Measured on the
             // wall clock, because that is the only unit the player experiences it in.
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
@@ -89,23 +86,26 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator TheWorldRunsAtFullSpeedWhilePlanning()
+        public IEnumerator TheWorldRunsAtAFifthOfItsSpeedWhilePlanning()
         {
+            Assert.AreEqual(0.2f, GameConstants.PlanningTimeScale, 0.0001f,
+                "planning is meant to run the world at a fifth of its speed");
+
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
             Assert.AreEqual(MatchPhase.Planning, State.Phase);
-            Assert.AreEqual(1f, Time.timeScale, 0.001f,
-                "planning used to run at a third speed; everything the player reads arrived late");
+            Assert.AreEqual(GameConstants.PlanningTimeScale, Time.timeScale, 0.001f,
+                "the world should be slowed while the player decides");
 
             yield return RunSeconds(GameConstants.PlanningTime + 0.2f);
 
             Assert.AreEqual(MatchPhase.Action, State.Phase);
-            Assert.AreEqual(1f, Time.timeScale, 0.001f, "and the action phase always did");
+            Assert.AreEqual(1f, Time.timeScale, 0.001f, "and back at full speed for the action phase");
         }
 
         /// <summary>
-        /// A knockout keeps its slow motion. It is the opposite case to planning - there is nothing
+        /// A knockout has its own slow motion, gentler than planning - there is nothing
         /// to decide and nothing to read, only something to watch.
         /// </summary>
         [UnityTest]

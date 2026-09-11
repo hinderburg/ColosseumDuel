@@ -93,8 +93,8 @@ namespace ColosseumDuel.Tests
             // Long enough for the bursts to finish. A blow throws bright particles at chest height
             // and leaves a dark mark on the sand, and a frame taken while the particles are still in
             // the air is a frame of the particles - they sit directly over the marks and are the
-            // brighter of the two by a long way. The world is running at a third speed here, so this
-            // is about a second of it.
+            // brighter of the two by a long way. The world is running at a fifth of its speed here, so
+            // this is under a second of it.
             yield return RunSeconds(4f);
 
             // Back to a planning phase before anything is aimed. The waits above are long enough to

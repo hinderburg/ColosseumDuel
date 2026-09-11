@@ -170,8 +170,8 @@ namespace ColosseumDuel.Gameplay
             if (Manager == null) return;
 
             // The simulation runs on unscaled time on purpose. Planning slows the world down so the
-            // wall torches visibly drag - but the three seconds the player gets to decide are three
-            // real seconds, not ten. Scaling the tick as well would stretch the phase itself.
+            // wall torches visibly drag - but the four seconds the player gets to decide are four
+            // real seconds, not twenty. Scaling the tick as well would stretch the phase itself.
             Manager.Tick(Time.unscaledDeltaTime);
 
             ApplyTimeScale();
@@ -179,17 +179,18 @@ namespace ColosseumDuel.Gameplay
         }
 
         /// <summary>
-        /// The world's speed for the phase it is in.
+        /// The world's speed for the phase it is in: a fifth while the player plans, slowed for a
+        /// knockout, full speed otherwise.
         ///
-        /// Planning used to run it at a third. It read well on a still arena and it cost more than
-        /// it was worth: the phase is where the player is looking at the fight to decide what to do
-        /// about it, and at a third speed everything they are reading - where the other man is
-        /// going, how far the torches have burned, how the last exchange finished - arrived late.
-        /// A knockout is the opposite case and keeps its slow motion: there is nothing to decide.
+        /// Planning ran at a third once, then at full speed; it is back at a fifth on request. The
+        /// phase still lasts its full real length - the simulation ticks on unscaled time - so only
+        /// what is on screen slows down.
         /// </summary>
         private void ApplyTimeScale()
         {
-            float target = Manager.State.Phase == MatchPhase.RoundEnd ? DeathTimeScale : 1f;
+            float target = 1f;
+            if (Manager.State.Phase == MatchPhase.Planning) target = GameConstants.PlanningTimeScale;
+            else if (Manager.State.Phase == MatchPhase.RoundEnd) target = DeathTimeScale;
             if (!Mathf.Approximately(Time.timeScale, target)) Time.timeScale = target;
         }
 
