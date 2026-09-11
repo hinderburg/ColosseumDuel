@@ -166,6 +166,29 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// The inside of the wall is lined with timber, like the reference arena: one band round the
+        /// whole ellipse, just inside the stone, with planks on it.
+        /// </summary>
+        [Test]
+        public void TheWallIsLinedWithTimber()
+        {
+            var palisade = _controller.Arena.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name == "Palisade");
+            Assert.IsNotNull(palisade, "the wall has no timber lining");
+
+            var renderer = palisade.GetComponent<MeshRenderer>();
+            Assert.IsTrue(renderer.enabled, "the lining is not drawn");
+            Assert.IsNotNull(renderer.sharedMaterial.mainTexture, "the lining has no planks on it");
+
+            var bounds = palisade.GetComponent<MeshFilter>().sharedMesh.bounds;
+            Assert.AreEqual(_controller.Arena.WorldRadiusX, bounds.extents.x, 0.1f,
+                "it does not run round the wall across the arena");
+            Assert.AreEqual(_controller.Arena.WorldRadiusZ, bounds.extents.z, 0.1f,
+                "it does not run round the wall along the arena");
+            Assert.Greater(bounds.size.y, 0.5f, "it is a strip on the floor, not a lining up the wall");
+        }
+
+        /// <summary>
         /// The scene has to ship on the drawing control, not merely default to it in code.
         ///
         /// This is the bug it exists to catch, and it shipped: the field initialiser was changed to

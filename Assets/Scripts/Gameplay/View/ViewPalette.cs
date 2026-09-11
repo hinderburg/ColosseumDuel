@@ -166,6 +166,9 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Stone the fallback wall is painted with, when there is no kit to build it from.</summary>
         public Material WallStone;
 
+        /// <summary>Dark timber lining the inside of the wall, as in the reference arena; see ArenaView.BuildPalisade.</summary>
+        public Material Palisade;
+
         /// <summary>
         /// The gear models, used both for the pickups lying on the sand and for what a gladiator is
         /// carrying or wearing. Built by GearPrefabs from the imported weapon pack, and normalised

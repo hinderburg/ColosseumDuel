@@ -57,6 +57,7 @@ MonoBehaviour:
   GallerySlab: {fileID: 1506131158205574518, guid: eef496009fed37a4ab7f99fd9defacf2, type: 3}
   GalleryRail: {fileID: 3071055550126371973, guid: b178953fcd2b0ec44be67c9b6dd8f930, type: 3}
   WallStone: {fileID: 2100000, guid: fda53a19301cca049b57f93ba5929efd, type: 2}
+  Palisade: {fileID: 2100000, guid: 841aea72fc93aa04c901f690a7816a0c, type: 2}
   SwordModel: {fileID: 8355507498074448756, guid: 3803e291bcc87d64e850c759e73d0275, type: 3}
   MaceModel: {fileID: 4958248887937798342, guid: ffc0f65c12d47044f83a3e937cdb8fc4, type: 3}
   ShieldModel: {fileID: 8736053284591058948, guid: e046966197c3f7c4cbf49c2a615a71de, type: 3}

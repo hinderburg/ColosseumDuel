@@ -27,31 +27,115 @@ namespace ColosseumDuel.EditorTools
         /// </summary>
         private const int SandSize = 1024;
 
+        /// <summary>
+        /// The arena floor: warm packed sand with a scatter of small pebbles, like the reference
+        /// painting. Broad soft patches, a finer mottle and per-pixel grain, then the pebbles - each
+        /// a slightly darker oval, lit on one side - which are what make it read as sand rather than
+        /// as paper.
+        ///
+        /// Pebbles are drawn half as tall as they are wide. The texture is laid once over an ellipse
+        /// twice as long as it is wide, so it is stretched two to one up the arena, and a round
+        /// pebble in the texture would be an upright oval on the floor.
+        /// </summary>
         public static Texture2D EnsureSand(string path, Color baseColor)
         {
             var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             if (existing != null) return existing;
 
-            var pixels = new Color32[SandSize * SandSize];
-            var rng = new System.Random(20260904);
+            var shade = new float[SandSize * SandSize];
+            var rng = new System.Random(20260911);
 
             for (int y = 0; y < SandSize; y++)
             {
                 for (int x = 0; x < SandSize; x++)
                 {
-                    // Broad drifts from fractal noise, fine grain from per-pixel noise, plus a sparse
-                    // scatter of darker specks so it reads as sand rather than as a gradient.
-                    float broad = Fbm(x * 0.006f, y * 0.006f, 4);
+                    float broad = Fbm(x * 0.004f, y * 0.004f, 4);
+                    float mottle = Fbm(x * 0.03f + 57f, y * 0.03f + 91f, 2);
                     float grain = (float)rng.NextDouble();
-
-                    float shade = 0.86f + broad * 0.22f + (grain - 0.5f) * 0.07f;
-                    if (rng.NextDouble() < 0.012) shade *= 0.82f;
-
-                    pixels[y * SandSize + x] = Tint(baseColor, shade);
+                    shade[y * SandSize + x] = 0.92f + (broad - 0.5f) * 0.18f + (mottle - 0.5f) * 0.07f
+                                              + (grain - 0.5f) * 0.04f;
                 }
             }
 
+            const int pebbles = 1400;
+            for (int p = 0; p < pebbles; p++)
+            {
+                float cx = (float)rng.NextDouble() * SandSize;
+                float cy = (float)rng.NextDouble() * SandSize;
+                float rx = 2.5f + (float)rng.NextDouble() * 3f;
+                float ry = rx * 0.5f;
+                float body = 0.74f + (float)rng.NextDouble() * 0.1f;
+
+                int x0 = Mathf.Max(0, (int)(cx - rx - 1f)), x1 = Mathf.Min(SandSize - 1, (int)(cx + rx + 1f));
+                int y0 = Mathf.Max(0, (int)(cy - ry - 1f)), y1 = Mathf.Min(SandSize - 1, (int)(cy + ry + 1f));
+                for (int y = y0; y <= y1; y++)
+                {
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        float dx = (x - cx) / rx, dy = (y - cy) / ry;
+                        float d = dx * dx + dy * dy;
+                        if (d > 1f) continue;
+
+                        // Lighter on one side and darker on the other, so it sits on the sand
+                        // rather than being printed on it; soft at the rim so it has no outline.
+                        float pebble = body + (dy - dx) * 0.05f;
+                        float inside = Mathf.InverseLerp(1f, 0.55f, d);
+                        int i = y * SandSize + x;
+                        shade[i] = Mathf.Lerp(shade[i], pebble, inside);
+                    }
+                }
+            }
+
+            var pixels = new Color32[SandSize * SandSize];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = Tint(baseColor, shade[i]);
             return Write(path, pixels, SandSize);
+        }
+
+        /// <summary>
+        /// Upright timber planks for the lining of the arena wall, tiling across: dark boards with a
+        /// darker gap between them, each board its own shade, the grain running up it.
+        /// </summary>
+        public static Texture2D EnsurePalisade(string path, Color baseColor)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int size = 256;
+            const int plank = 32;   // eight boards to a tile, dividing it exactly so the tile wraps
+            const int gap = 3;
+            var pixels = new Color32[size * size];
+            var rng = new System.Random(91127);
+
+            var boardShade = new float[size / plank];
+            for (int b = 0; b < boardShade.Length; b++) boardShade[b] = 0.82f + (float)rng.NextDouble() * 0.22f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    int within = x % plank;
+                    float shade;
+                    if (within < gap)
+                    {
+                        shade = 0.45f;
+                    }
+                    else
+                    {
+                        // Grain along the board: noise stretched far up it and squeezed across,
+                        // tileable across because the band repeats the texture round the ring.
+                        float grain = TileableFbm(x * 0.35f, y * 0.012f, size * 0.35f, 3);
+                        shade = boardShade[x / plank] * (0.86f + grain * 0.24f)
+                                + (float)(rng.NextDouble() - 0.5) * 0.03f;
+
+                        // A touch of light on the edge beside the gap, so the boards read as boards.
+                        if (within == gap) shade *= 1.12f;
+                    }
+
+                    pixels[y * size + x] = Tint(baseColor, shade);
+                }
+            }
+
+            return Write(path, pixels, size);
         }
 
         public static Texture2D EnsureWall(string path, Color baseColor)

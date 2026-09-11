@@ -355,6 +355,38 @@ namespace ColosseumDuel.Gameplay.View
 
         private readonly List<GameObject> _trapProps = new List<GameObject>();
 
+        // ------------------------------------------------------------------
+        // the timber lining of the wall
+        // ------------------------------------------------------------------
+
+        /// <summary>How much of the inside of the wall the timber covers, from the floor up. The stone shows above it.</summary>
+        private const float PalisadeHeightShare = 0.8f;
+
+        /// <summary>World width of one tile of the plank texture - eight boards.</summary>
+        private const float PalisadeTileWidth = 2.4f;
+
+        /// <summary>
+        /// Lines the inside of the wall with dark timber, the way the reference arena has it: a band
+        /// of planks between the sand and the stone, which makes the floor read as a pit with a wall
+        /// round it rather than as a disc with a kerb. Built here with the other props the match lays
+        /// out rather than baked into the scene, since it is one generated mesh.
+        /// </summary>
+        public void BuildPalisade()
+        {
+            if (Palette == null || Palette.Palisade == null) return;
+
+            var old = transform.Find("Palisade");
+            if (old != null) Destroy(old.gameObject);
+
+            // A hair inside the stone, so the two faces never fight over the same depth. The banners
+            // hang further in still, so they stay in front of it.
+            const float inset = 0.03f;
+            var mesh = ViewPrimitives.CreateEllipseBand(WorldRadiusX - inset, WorldRadiusZ - inset,
+                WallHeight * PalisadeHeightShare, 180, 1f / PalisadeTileWidth);
+            var go = ViewPrimitives.Create(mesh, "Palisade", transform, Palette.Palisade);
+            go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
         /// <summary>
         /// Builds one prop per trap slot: a dark iron ring with teeth around its rim.
         ///

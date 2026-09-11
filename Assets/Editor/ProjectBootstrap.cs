@@ -535,7 +535,16 @@ namespace ColosseumDuel.EditorTools
                 Debug.LogWarning($"[Colosseum] Arena kit not found at {WallBlockPath} - " +
                                  "the wall will be plain blocks. Import LoafbrrAssets/ModularArena to get it.");
 
-            palette.WallStone = Lit("Wall", new Color(0.52f, 0.50f, 0.47f)); // grey stone, per the reference frame
+            // Dark timber for the lining of the wall, as in the reference arena. Double-sided: it is
+            // one band of faces, and seen from the wrong side a culled band is simply missing.
+            palette.Palisade = Lit("Palisade", Color.white);
+            ApplyTexture(palette.Palisade,
+                ProceduralTextures.EnsurePalisade(TexturesDir + "/Palisade.png", new Color(0.46f, 0.29f, 0.17f)),
+                Vector2.one);
+            palette.Palisade.SetFloat("_Cull", 0f);
+            EditorUtility.SetDirty(palette.Palisade);
+
+            palette.WallStone = Lit("Wall", new Color(0.80f, 0.74f, 0.64f)); // warm pale stone, per the reference painting
             ApplyTexture(palette.WallStone,
                          ProceduralTextures.EnsureWall(TexturesDir + "/Wall.png", Color.white),
                          new Vector2(2f, 1f));
@@ -657,13 +666,11 @@ namespace ColosseumDuel.EditorTools
             // The floor gets its texture once across the whole disc - no repeat, so no seams and no
             // tiling pattern to notice. The wall material lives in the palette, since the wall is
             // built at runtime.
-            // Pale bone, matching the reference frame: light and nearly colourless, but warm rather
-            // than grey. It went from orange sand to grey stone dust and has landed between the two,
-            // which is where the reference has it - bright enough that the figures read as dark
-            // shapes on it, drained enough that the red of the danger zone and the blood are the
-            // only saturated things on the floor.
-            var sandMat = Lit("Sand", new Color(0.60f, 0.56f, 0.48f));
-            ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/Sand.png", Color.white), Vector2.one);
+            // Warm light sand with pebbles in it, after the reference painting. It has been orange,
+            // grey stone dust and pale bone; the painting settles it as sunlit sand - still light
+            // enough that the figures read as dark shapes on it.
+            var sandMat = Lit("Sand", new Color(0.80f, 0.70f, 0.54f));
+            ApplyTexture(sandMat, ProceduralTextures.EnsureSand(TexturesDir + "/SandWarm.png", Color.white), Vector2.one);
 
             // Re-loaded here rather than reused from above, and not defensively - it is genuinely
             // needed. Writing the sand texture and building its material runs an asset import, and
@@ -712,7 +719,7 @@ namespace ColosseumDuel.EditorTools
             cam.nearClipPlane = 0.5f;
             cam.farClipPlane = 200f;
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.06f, 0.05f, 0.07f);
+            cam.backgroundColor = new Color(0.10f, 0.07f, 0.06f);
             PlaceArenaCamera(cameraGo.transform, r);
             cameraGo.AddComponent<AudioListener>();
             arena.ArenaCamera = cam;
@@ -725,8 +732,8 @@ namespace ColosseumDuel.EditorTools
             lightGo.transform.rotation = Quaternion.Euler(78f, -30f, 0f);
             var light = lightGo.AddComponent<Light>();
             light.type = LightType.Directional;
-            light.color = new Color(1.00f, 0.96f, 0.88f);   // sunlight, not daylight-balanced white
-            light.intensity = 0.92f;
+            light.color = new Color(1.00f, 0.92f, 0.78f);   // warm late-afternoon sun, like the reference painting
+            light.intensity = 1.0f;
             light.shadows = LightShadows.Soft;
 
             // Half strength. The reference frame is lit like an illustration - shapes read by their
@@ -745,12 +752,12 @@ namespace ColosseumDuel.EditorTools
             // Warm-neutral rather than blue. The cool sky band was the whole reason the stone read as
             // slate: the kit's own texture is already cool, and a blue fill on top of it turned a
             // sandstone arena into a winter one.
-            RenderSettings.ambientSkyColor = new Color(0.34f, 0.33f, 0.31f);
+            RenderSettings.ambientSkyColor = new Color(0.40f, 0.36f, 0.30f);
             // Lifted hard. This band is what lights vertical surfaces, and the inner face of the
             // wall is vertical, faces inward and never catches a sun that comes in at sixty-eight
             // degrees - so the arena was a near-black ring around a bright floor.
-            RenderSettings.ambientEquatorColor = new Color(0.44f, 0.41f, 0.36f);
-            RenderSettings.ambientGroundColor = new Color(0.34f, 0.27f, 0.19f);
+            RenderSettings.ambientEquatorColor = new Color(0.50f, 0.42f, 0.32f);
+            RenderSettings.ambientGroundColor = new Color(0.40f, 0.30f, 0.20f);
 
             // --- game logic host ---
             var gameGo = new GameObject("Game");

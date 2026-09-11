@@ -276,5 +276,59 @@ namespace ColosseumDuel.Gameplay.View
             mesh.RecalculateBounds();
             return mesh;
         }
+
+        /// <summary>
+        /// An upright band round an ellipse on the XZ plane, from the floor to a height, facing in:
+        /// the lining of a round wall. U runs along the band in world units times uPerUnit, so a
+        /// tiled texture keeps its proportions round the whole ring; V runs from floor to top.
+        /// </summary>
+        public static Mesh CreateEllipseBand(float radiusX, float radiusZ, float height, int segments, float uPerUnit)
+        {
+            var vertices = new Vector3[(segments + 1) * 2];
+            var normals = new Vector3[vertices.Length];
+            var uvs = new Vector2[vertices.Length];
+            var triangles = new int[segments * 6];
+
+            float along = 0f;
+            var previous = Vector3.zero;
+            for (int i = 0; i <= segments; i++)
+            {
+                float t = i / (float)segments * Mathf.PI * 2f;
+                var p = new Vector3(Mathf.Cos(t) * radiusX, 0f, Mathf.Sin(t) * radiusZ);
+                if (i > 0) along += Vector3.Distance(previous, p);
+                previous = p;
+
+                var inward = -new Vector3(p.x / (radiusX * radiusX), 0f, p.z / (radiusZ * radiusZ)).normalized;
+                vertices[i * 2] = p;
+                vertices[i * 2 + 1] = p + Vector3.up * height;
+                normals[i * 2] = inward;
+                normals[i * 2 + 1] = inward;
+                uvs[i * 2] = new Vector2(along * uPerUnit, 0f);
+                uvs[i * 2 + 1] = new Vector2(along * uPerUnit, 1f);
+            }
+
+            for (int i = 0; i < segments; i++)
+            {
+                int b = i * 2, k = i * 6;
+
+                // Wound to face the middle of the ellipse: the angle runs anticlockwise seen from
+                // above, so bottom, next bottom, top is clockwise seen from inside. The material is
+                // double-sided as well, since a band culled away from the wrong side just vanishes.
+                triangles[k] = b;
+                triangles[k + 1] = b + 2;
+                triangles[k + 2] = b + 1;
+                triangles[k + 3] = b + 1;
+                triangles[k + 4] = b + 2;
+                triangles[k + 5] = b + 3;
+            }
+
+            var mesh = new Mesh { name = "EllipseBand" };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            return mesh;
+        }
     }
 }

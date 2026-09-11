@@ -141,6 +141,7 @@ namespace ColosseumDuel.Gameplay
             Arena.BuildHazardRings();
             Arena.BuildSpikes();
             Arena.BuildTraps();
+            Arena.BuildPalisade();
 
             // From the simulation's own list, so the stone drawn on the sand is the stone the paths
             // go round. The layout belongs to the arena rather than the match, which is why the

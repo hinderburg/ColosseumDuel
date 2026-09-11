@@ -37,11 +37,11 @@ namespace ColosseumDuel.EditorTools
         private const float MetreToWorld = 1.67f;
 
         /// <summary>
-        /// Pale grey stone, per the reference frame. It was warm sandstone for as long as the floor
-        /// was orange - the two had to agree - and now that the floor is bone, a brown wall around it
-        /// is the only warm thing left and reads as mud.
+        /// Warm pale stone, after the reference painting. It has been warm sandstone, then grey
+        /// once the floor went to bone; with the floor back to sunlit sand the two agree again, and
+        /// the dark timber lining (ArenaView.BuildPalisade) keeps the wall from reading as mud.
         /// </summary>
-        private static readonly Color StoneTint = new Color(0.56f, 0.54f, 0.51f);
+        private static readonly Color StoneTint = new Color(0.82f, 0.76f, 0.66f);
 
         private const string StoneMaterialDir = "Assets/Materials";
 
