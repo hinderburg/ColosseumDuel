@@ -70,12 +70,13 @@ namespace ColosseumDuel.Gameplay
         /// head: a white line that widens towards its end and finishes in an arrow head, like the
         /// reference drawing.
         ///
-        /// It has been a dashed lane his own width, half that, a plain stripe, and a plain line three
-        /// times thinner again. The start is that last line; the widening is what the reference
-        /// asks for, and it says which end is which before the eye has reached the head.
+        /// It has been a dashed lane his own width, half that, a plain stripe and a hairline; then
+        /// the reference look at 0.04 to 0.09, which on a phone came out at two to four pixels. This
+        /// is the thickness drawn over a screenshot on request - about twelve pixels at 800 wide -
+        /// with the widening kept, since that is what says which end is which.
         /// </summary>
-        private const float TrajectoryStartWidth = 0.04f;
-        private const float TrajectoryEndWidth = 0.09f;
+        private const float TrajectoryStartWidth = 0.24f;
+        private const float TrajectoryEndWidth = 0.32f;
 
         /// <summary>The pull line of the slingshot controls, a little thinner than the run.</summary>
         private const float PullLineWidth = 0.03f;

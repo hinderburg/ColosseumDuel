@@ -204,8 +204,8 @@ namespace ColosseumDuel.Tests
 
             float start = line.widthCurve.Evaluate(0f) * line.widthMultiplier;
             float end = line.widthCurve.Evaluate(0.99f) * line.widthMultiplier;
-            Assert.AreEqual(0.04f, start, 0.005f, "at his feet it is the thin line it was asked to be");
-            Assert.Greater(end, start * 1.5f, "and it widens towards its end, like the reference");
+            Assert.AreEqual(0.24f, start, 0.01f, "at his feet it is as thick as the line drawn over the screenshot");
+            Assert.Greater(end, start * 1.15f, "and it widens towards its end, like the reference");
 
             var material = line.sharedMaterial;
             Assert.IsNull(material.mainTexture, "a plain line carries no texture");

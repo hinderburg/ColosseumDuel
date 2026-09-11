@@ -257,7 +257,7 @@ namespace ColosseumDuel.Tests
             Assert.Greater(Vector3.Dot(head.up, Vector3.up), 0.98f, "and lie flat on the sand");
 
             var line = FindLine("TrajectoryPreview");
-            Assert.Greater(line.widthCurve.Evaluate(0.5f), line.widthCurve.Evaluate(0f) * 1.2f,
+            Assert.Greater(line.widthCurve.Evaluate(0.5f), line.widthCurve.Evaluate(0f) * 1.05f,
                 "the line should widen from his feet towards the head");
             Assert.Less(line.widthCurve.Evaluate(1f), 0.005f, "and narrow to nothing under the point");
         }
