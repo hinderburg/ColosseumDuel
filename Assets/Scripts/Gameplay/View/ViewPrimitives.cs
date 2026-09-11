@@ -205,5 +205,76 @@ namespace ColosseumDuel.Gameplay.View
             mesh.RecalculateBounds();
             return mesh;
         }
+
+        /// <summary>
+        /// A notched arrow head lying on the XZ plane, its point at the origin and its body back
+        /// along -Z: the rim as one mesh and the inside as another, so the two can be drawn in two
+        /// strengths of the same white.
+        ///
+        /// Both are double-sided. It is only ever seen from above, and a winding slip that culls a
+        /// mesh away leaves nothing on screen to say so - a second set of triangles costs nothing
+        /// next to that.
+        /// </summary>
+        public static void CreateArrowHead(float length, float width, float notch, float inset,
+            out Mesh rim, out Mesh fill)
+        {
+            var outer = new[]
+            {
+                Vector3.zero,                               // the point
+                new Vector3(width * 0.5f, 0f, -length),     // right barb
+                new Vector3(0f, 0f, -length + notch),       // the notch in the back
+                new Vector3(-width * 0.5f, 0f, -length),    // left barb
+            };
+
+            // The inside is the outline shrunk towards a point well within it, which leaves the rim
+            // as a band round the edge. Not an exact inset of constant width, but at this size the
+            // eye does not measure it.
+            var centre = new Vector3(0f, 0f, -length * 0.55f);
+            var inner = new Vector3[4];
+            for (int i = 0; i < 4; i++) inner[i] = centre + (outer[i] - centre) * inset;
+
+            fill = DoubleSided("ArrowHeadFill", inner, new[] { 0, 1, 2, 0, 2, 3 });
+
+            var ring = new Vector3[8];
+            for (int i = 0; i < 4; i++)
+            {
+                ring[i] = outer[i];
+                ring[i + 4] = inner[i];
+            }
+
+            var band = new int[24];
+            for (int i = 0; i < 4; i++)
+            {
+                int j = (i + 1) % 4, k = i * 6;
+                band[k] = i; band[k + 1] = j; band[k + 2] = j + 4;
+                band[k + 3] = i; band[k + 4] = j + 4; band[k + 5] = i + 4;
+            }
+            rim = DoubleSided("ArrowHeadRim", ring, band);
+        }
+
+        /// <summary>A flat mesh with every triangle in both windings, so it shows from either side.</summary>
+        private static Mesh DoubleSided(string name, Vector3[] vertices, int[] triangles)
+        {
+            var both = new int[triangles.Length * 2];
+            for (int t = 0; t < triangles.Length; t += 3)
+            {
+                both[t] = triangles[t];
+                both[t + 1] = triangles[t + 1];
+                both[t + 2] = triangles[t + 2];
+                both[triangles.Length + t] = triangles[t];
+                both[triangles.Length + t + 1] = triangles[t + 2];
+                both[triangles.Length + t + 2] = triangles[t + 1];
+            }
+
+            var normals = new Vector3[vertices.Length];
+            for (int i = 0; i < normals.Length; i++) normals[i] = Vector3.up;
+
+            var mesh = new Mesh { name = name };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.triangles = both;
+            mesh.RecalculateBounds();
+            return mesh;
+        }
     }
 }

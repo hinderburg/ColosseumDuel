@@ -35,8 +35,11 @@ namespace ColosseumDuel.Gameplay.View
         public Material BarRage;
 
         [Header("Input")]
-        /// <summary>Thin plain white stripe: the run the gladiator has been given.</summary>
+        /// <summary>White line: the run he has been given, thin at his feet and widening into the head.</summary>
         public Material Trajectory;
+
+        /// <summary>The inside of the arrow head on the end of the run: the same white, fainter.</summary>
+        public Material TrajectoryFill;
 
         /// <summary>Solid white line: the pull itself, from the gladiator back to the pointer.</summary>
         public Material PullLine;

@@ -456,6 +456,10 @@ namespace ColosseumDuel.EditorTools
             palette.Trajectory.mainTextureScale = Vector2.one;
             EditorUtility.SetDirty(palette.Trajectory);
 
+            // The inside of the arrow head: the same white, weaker, so the head reads as a solid rim
+            // round a lighter body, the way the reference drawing has it.
+            palette.TrajectoryFill = TransparentUnlit("TrajectoryFill", new Color(1f, 1f, 1f, 0.78f));
+
             palette.PullLine = TransparentUnlit("PullLine", new Color(1f, 1f, 1f, 0.75f));
 
             // The ground his weapon covers, drawn on the sand. Faint enough to read as light on the

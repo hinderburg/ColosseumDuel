@@ -193,23 +193,19 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The run is drawn as a plain white line - no texture, no dashes, no arrow head.
-        ///
-        /// It started as a thin yellow hairline that vanished against the sand, became a dashed lane
-        /// as wide as a gladiator with a head on the end, then half that, then a plain stripe at
-        /// 0.12, and was asked to go three times thinner again. The width is pinned around that
-        /// third, and the material is checked for a texture under both of its names, because the
-        /// bootstrap reuses the material from disk and the old dash texture once rode along on it.
+        /// The run is drawn like the reference: a white line, thin at his feet and widening towards
+        /// its end, with no texture on it - and an arrow head waiting to be put on the end.
         /// </summary>
         [Test]
-        public void TheTrajectoryIsAPlainWhiteLine()
+        public void TheTrajectoryIsAWhiteLineThatWidensIntoAnArrowHead()
         {
             var line = FindLine("TrajectoryPreview");
             Assert.IsNotNull(line);
 
-            const float stripe = 0.12f;
-            Assert.LessOrEqual(line.widthMultiplier, stripe / 2.5f, "not about three times thinner than the stripe it was");
-            Assert.GreaterOrEqual(line.widthMultiplier, stripe / 4f, "thinner than that and it is lost on a phone screen");
+            float start = line.widthCurve.Evaluate(0f) * line.widthMultiplier;
+            float end = line.widthCurve.Evaluate(0.99f) * line.widthMultiplier;
+            Assert.AreEqual(0.04f, start, 0.005f, "at his feet it is the thin line it was asked to be");
+            Assert.Greater(end, start * 1.5f, "and it widens towards its end, like the reference");
 
             var material = line.sharedMaterial;
             Assert.IsNull(material.mainTexture, "a plain line carries no texture");
@@ -222,7 +218,15 @@ namespace ColosseumDuel.Tests
 
             var head = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .FirstOrDefault(t => t.name == "TrajectoryHead");
-            Assert.IsNull(head, "the arrow head was taken off with the dashes");
+            Assert.IsNotNull(head, "there is no arrow head to put on the end of the run");
+            Assert.IsFalse(head.gameObject.activeSelf, "nothing has been ordered, so there is nothing to point at");
+
+            foreach (var part in head.GetComponentsInChildren<Renderer>(true))
+            {
+                Assert.IsNull(part.sharedMaterial.mainTexture, $"the head {part.name} carries a texture");
+                var c = part.sharedMaterial.color;
+                Assert.Greater(Mathf.Min(c.r, c.g, c.b), 0.9f, $"the head {part.name} is not white");
+            }
         }
 
         [UnityTest]
@@ -521,20 +525,23 @@ namespace ColosseumDuel.Tests
                 "the lane ends where the finger is, not where it started");
         }
 
+        /// <summary>
+        /// A tap leaves the run drawn and an arrow head on the spot, for the rest of the phase and no
+        /// longer. The head is the mark of where he was sent now - the ring that used to sit there is
+        /// gone, since the reference drawing has none and under the head it was only clutter.
+        /// </summary>
         [UnityTest]
-        public IEnumerator ATapLeavesAMarkerAndADottedRunBehindIt()
+        public IEnumerator ATapLeavesAnArrowHeadAndARunBehindIt()
         {
             _input.Scheme = ControlScheme.Tap;
             Player.Pos = Vector2.zero;
 
-            var marker = _controller.Arena.GetComponentsInChildren<Transform>(true)
-                .FirstOrDefault(t => t.name == "TapMarker");
-            var dashes = _input.GetComponentsInChildren<LineRenderer>(true)
-                .First(l => l.name == "TrajectoryPreview");
-
-            Assert.IsNotNull(marker, "no tap marker was built");
-            Assert.IsFalse(marker.gameObject.activeSelf, "nothing tapped yet");
-            Assert.IsFalse(dashes.enabled);
+            var head = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(t => t.name == "TrajectoryHead");
+            var line = FindLine("TrajectoryPreview");
+            Assert.IsNotNull(head, "no arrow head was built");
+            Assert.IsFalse(head.gameObject.activeSelf, "nothing tapped yet");
+            Assert.IsFalse(line.enabled);
 
             var target = new Vector2(0f, GameConstants.TutorialRunLength * 0.6f);
             Assert.IsTrue(_input.TapTo(
@@ -542,20 +549,23 @@ namespace ColosseumDuel.Tests
 
             // Tapping used to acknowledge nothing at all: the order went in and the screen stayed
             // exactly as it was, so a registered tap and a missed one looked identical.
-            Assert.IsTrue(marker.gameObject.activeSelf, "the tapped point is not marked");
-            Assert.AreEqual(_controller.Arena.ToWorld(target).x, marker.position.x, 0.1f);
-            Assert.AreEqual(_controller.Arena.ToWorld(target).z, marker.position.z, 0.1f);
+            Assert.IsTrue(head.gameObject.activeSelf, "the tapped point is not marked");
+            var spot = _controller.Arena.ToWorld(target);
+            Assert.AreEqual(spot.x, head.position.x, 0.05f, "the point of the head is not on the tapped spot");
+            Assert.AreEqual(spot.z, head.position.z, 0.05f, "the point of the head is not on the tapped spot");
+            Assert.IsTrue(line.enabled, "the run to the tap is not drawn");
+            Assert.Greater(line.positionCount, 1);
 
-            Assert.IsTrue(dashes.enabled, "the run to the tap is not drawn");
-            Assert.Greater(dashes.positionCount, 1);
+            Assert.IsNull(Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .FirstOrDefault(t => t.name == "TapMarker"), "the ring is gone - the head marks the spot now");
 
             // And it belongs to this planning phase only - left up, it would still be describing an
             // order while that order was being carried out.
             yield return RunSeconds(GameConstants.PlanningTime + 0.3f);
 
             Assert.AreEqual(MatchPhase.Action, _controller.Manager.State.Phase);
-            Assert.IsFalse(marker.gameObject.activeSelf, "the marker outlived its phase");
-            Assert.IsFalse(dashes.enabled);
+            Assert.IsFalse(head.gameObject.activeSelf, "the head outlived its phase");
+            Assert.IsFalse(line.enabled);
         }
 
         [Test]

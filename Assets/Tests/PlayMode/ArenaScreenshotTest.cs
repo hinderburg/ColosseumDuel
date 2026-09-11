@@ -468,8 +468,8 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The tap control, which the previous summary describes: the marker on the tapped point and
-        /// the dashed run to it are the only feedback tapping gives, and they are worth an eye.
+        /// The drawn run as the player sees it: the line widening from his feet into the arrow head,
+        /// round a bend the way a finger draws one. The look is copied from a reference and worth an eye.
         /// </summary>
         [UnityTest]
         public IEnumerator TapControlRendersAFrame()
@@ -482,7 +482,7 @@ namespace ColosseumDuel.Tests
 
             var controller = Object.FindFirstObjectByType<GameController>();
             var input = Object.FindFirstObjectByType<PlayerInputController>();
-            input.Scheme = ControlScheme.Tap;
+            input.Scheme = ControlScheme.Draw;
 
             var canvas = Object.FindFirstObjectByType<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -497,10 +497,16 @@ namespace ColosseumDuel.Tests
             controller.SubmitPlayerPick(GladiatorId.Hilius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
-            // Half a dash up the arena, so the stripe reaches the ring rather than stopping short.
+            // Up the open middle and bending off to one side, the way a finger draws a run, clear of
+            // the columns - so the frame shows the widening line, its bend, and the head turned along it.
             var player = controller.Manager.State.P1.Active;
-            var target = player.Pos + new Vector2(0f, GameConstants.TutorialRunLength * 0.5f);
-            input.TapTo(controller.Arena.ArenaCamera.WorldToScreenPoint(controller.Arena.ToWorld(target)));
+            input.BeginDraw(player.Pos);
+            for (int i = 1; i <= 12; i++)
+            {
+                float t = i / 12f;
+                input.DrawTo(player.Pos + new Vector2(-Mathf.Sin(t * 1.4f) * 50f, t * 260f));
+            }
+            input.EndDraw();
             yield return null;
 
             yield return Capture(SuffixPath("-tap"));

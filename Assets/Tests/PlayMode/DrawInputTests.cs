@@ -230,6 +230,38 @@ namespace ColosseumDuel.Tests
             Assert.Less(Vector2.Distance(Player.Pos, end), 16f, "and should have finished where the drawing did");
         }
 
+        /// <summary>
+        /// The head sits on the end of the run, pointing along it and lying flat on the sand, and
+        /// the line under it widens from his feet towards the head and then narrows away to nothing,
+        /// so it never pokes out past the point.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRunEndsInAnArrowHeadPointingAlongIt()
+        {
+            var end = new Vector2(-40f, 100f);
+            _input.BeginDraw(Player.Pos);
+            _input.DrawTo(new Vector2(-40f, 0f));
+            _input.DrawTo(end);
+            _input.EndDraw();
+            yield return null;
+
+            var head = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .First(t => t.name == "TrajectoryHead");
+            Assert.IsTrue(head.gameObject.activeSelf, "the run has no head on it");
+
+            var tip = _controller.Arena.ToWorld(end);
+            Assert.Less(Vector2.Distance(new Vector2(head.position.x, head.position.z), new Vector2(tip.x, tip.z)), 0.02f,
+                "the point of the head should be on the end of the run");
+            Assert.Greater(Vector3.Dot(head.forward, Vector3.forward), 0.98f,
+                "the run goes straight up the arena and the head should point the same way");
+            Assert.Greater(Vector3.Dot(head.up, Vector3.up), 0.98f, "and lie flat on the sand");
+
+            var line = FindLine("TrajectoryPreview");
+            Assert.Greater(line.widthCurve.Evaluate(0.5f), line.widthCurve.Evaluate(0f) * 1.2f,
+                "the line should widen from his feet towards the head");
+            Assert.Less(line.widthCurve.Evaluate(1f), 0.005f, "and narrow to nothing under the point");
+        }
+
         private static LineRenderer FindLine(string name)
             => Object.FindObjectsByType<LineRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .FirstOrDefault(l => l.name == name);
