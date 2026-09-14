@@ -38,17 +38,28 @@ namespace ColosseumDuel.Tests
             // The one place the actual numbers are stated. They dropped by a factor of ten when the
             // weapon started carrying a multiplier of its own; everything else in this file checks
             // what is applied on top, so a future balance pass touches this test alone.
-            Assert.AreEqual(160f, GladiatorDef.Brutius.MaxHp, Tol);
-            Assert.AreEqual(9f, GladiatorDef.Brutius.Damage, Tol);
+            // Damage raised about two and a half times and the shields softened, so a clash run
+            // head on is four to six rounds rather than five to twenty (see HeadOnHarness).
+            Assert.AreEqual(150f, GladiatorDef.Brutius.MaxHp, Tol);
+            Assert.AreEqual(20f, GladiatorDef.Brutius.Damage, Tol);
             Assert.AreEqual(10f, GladiatorDef.Brutius.Speed, Tol);
 
-            Assert.AreEqual(115f, GladiatorDef.Barbarius.MaxHp, Tol);
-            Assert.AreEqual(13f, GladiatorDef.Barbarius.Damage, Tol);
+            Assert.AreEqual(125f, GladiatorDef.Barbarius.MaxHp, Tol);
+            Assert.AreEqual(23f, GladiatorDef.Barbarius.Damage, Tol);
             Assert.AreEqual(15f, GladiatorDef.Barbarius.Speed, Tol);
 
-            Assert.AreEqual(150f, GladiatorDef.Hilius.MaxHp, Tol);
-            Assert.AreEqual(8f, GladiatorDef.Hilius.Damage, Tol);
+            Assert.AreEqual(110f, GladiatorDef.Hilius.MaxHp, Tol);
+            Assert.AreEqual(28f, GladiatorDef.Hilius.Damage, Tol);
             Assert.AreEqual(20f, GladiatorDef.Hilius.Speed, Tol);
+
+            Assert.AreEqual(125f, GladiatorDef.Scutarius.MaxHp, Tol);
+            Assert.AreEqual(25f, GladiatorDef.Scutarius.Damage, Tol);
+
+            Assert.AreEqual(125f, GladiatorDef.Hastarius.MaxHp, Tol);
+            Assert.AreEqual(29f, GladiatorDef.Hastarius.Damage, Tol);
+
+            Assert.AreEqual(135f, GladiatorDef.Retiarius.MaxHp, Tol);
+            Assert.AreEqual(22f, GladiatorDef.Retiarius.Damage, Tol);
         }
 
         [Test]
@@ -70,7 +81,7 @@ namespace ColosseumDuel.Tests
 
             Assert.AreEqual(1f, WeaponDef.SwordAndShield.DamageMultiplier, Tol);
             Assert.AreEqual(1, WeaponDef.SwordAndShield.Attacks);
-            Assert.AreEqual(0.5f, WeaponDef.SwordAndShield.IncomingDamageMultiplier, Tol);
+            Assert.AreEqual(0.7f, WeaponDef.SwordAndShield.IncomingDamageMultiplier, Tol);
 
             Assert.AreEqual(1.3f, WeaponDef.TwoHandedMace.DamageMultiplier, Tol);
             Assert.AreEqual(1, WeaponDef.TwoHandedMace.Attacks);
@@ -114,17 +125,17 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void AShieldHalvesWhatItsCarrierTakes_AndStacksWithDefending()
+        public void AShieldTakesItsShareOffWhatItsCarrierTakes_AndStacksWithDefending()
         {
             var shielded = With(WeaponKind.SwordAndShield);
-            Assert.AreEqual(Base * 0.5f,
+            Assert.AreEqual(Base * GameConstants.ShieldDamageMult,
                 CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), shielded), Tol);
 
             var both = With(WeaponKind.SwordAndShield);
             both.PlannedAction = ActionType.Defend;
-            Assert.AreEqual(Base * 0.35f,
+            Assert.AreEqual(Base * GameConstants.ShieldDamageMult * GameConstants.DefendDamageMult,
                 CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), both), Tol,
-                "0.5 shield x 0.7 defend = 0.35");
+                "the shield's share times the guard's, one on top of the other");
         }
 
         [Test]

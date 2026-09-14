@@ -77,17 +77,17 @@ namespace ColosseumDuel.Core
         // anyone hands him anything.
 
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Brutius", maxHp: 160f, damage: 9f, speed: 10f,
+            GladiatorId.Brutius, "Brutius", maxHp: 150f, damage: 20f, speed: 10f,
             abilities: new[] { AbilityKey.Earthshaker, AbilityKey.Rampage, AbilityKey.StoneSkin },
             skilledWith: WeaponKind.TwoHandedMace, buildWidth: 1.2f);
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Barbarius", maxHp: 115f, damage: 13f, speed: 15f,
+            GladiatorId.Barbarius, "Barbarius", maxHp: 125f, damage: 23f, speed: 15f,
             abilities: new[] { AbilityKey.Bloodlust, AbilityKey.Frenzy, AbilityKey.Berserk },
             skilledWith: WeaponKind.DualSwords);
 
         public static readonly GladiatorDef Hilius = new GladiatorDef(
-            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 8f, speed: 20f,
+            GladiatorId.Hilius, "Hilius", maxHp: 110f, damage: 28f, speed: 20f,
             abilities: new[] { AbilityKey.Backstab, AbilityKey.Riposte, AbilityKey.Mongoose },
             skilledWith: WeaponKind.SwordAndShield, buildWidth: 0.85f, buildHeight: 0.85f);
 
@@ -96,17 +96,17 @@ namespace ColosseumDuel.Core
         // BalanceHarness rather than by argument.
 
         public static readonly GladiatorDef Scutarius = new GladiatorDef(
-            GladiatorId.Scutarius, "Scutarius", maxHp: 150f, damage: 9f, speed: 12f,
+            GladiatorId.Scutarius, "Scutarius", maxHp: 125f, damage: 25f, speed: 12f,
             abilities: new[] { AbilityKey.Bulwark, AbilityKey.Testudo, AbilityKey.ShieldBash },
             skilledWith: WeaponKind.ScutumAndGladius, buildWidth: 1.1f);
 
         public static readonly GladiatorDef Hastarius = new GladiatorDef(
-            GladiatorId.Hastarius, "Hastarius", maxHp: 140f, damage: 12f, speed: 16f,
+            GladiatorId.Hastarius, "Hastarius", maxHp: 125f, damage: 29f, speed: 16f,
             abilities: new[] { AbilityKey.Lunge, AbilityKey.Brace, AbilityKey.SecondWind },
             skilledWith: WeaponKind.SpearAndShield, buildHeight: 1.08f);
 
         public static readonly GladiatorDef Retiarius = new GladiatorDef(
-            GladiatorId.Retiarius, "Retiarius", maxHp: 130f, damage: 12f, speed: 18f,
+            GladiatorId.Retiarius, "Retiarius", maxHp: 135f, damage: 22f, speed: 18f,
             abilities: new[] { AbilityKey.Net, AbilityKey.Shackles, AbilityKey.TridentThrow },
             skilledWith: WeaponKind.Trident, buildWidth: 0.9f);
 

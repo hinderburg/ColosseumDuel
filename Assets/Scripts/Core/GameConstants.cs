@@ -153,9 +153,13 @@ namespace ColosseumDuel.Core
 
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
-        public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
-        public const float ScutumDamageMult = 0.75f;      // the scutum: less than the shield, and it shoves
-        public const float RoundShieldDamageMult = 0.80f; // the spearman's small round shield
+        // What each shield lets through. Softened (from 0.5, 0.75 and 0.8) when the clashes were cut
+        // to four to six rounds head on: behind a shield that halved every blow, Hilius took twenty
+        // exchanges to bring down, and the spread from the lightest defence to the heaviest has to
+        // fit inside the spread from four rounds to six.
+        public const float ShieldDamageMult = 0.70f;      // what the sword-and-shield wielder takes
+        public const float ScutumDamageMult = 0.80f;      // the scutum: less than the shield, and it shoves
+        public const float RoundShieldDamageMult = 0.85f; // the spearman's small round shield
 
         /// <summary>How far a blow from behind the scutum shoves its target - half the mace's throw.</summary>
         public const float ShieldBashKnockback = GladiatorRadius * 0.8f;
