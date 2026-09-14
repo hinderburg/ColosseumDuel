@@ -214,9 +214,9 @@ namespace ColosseumDuel.Tests
                 .Any(t => t.name == GearSizes.ShellName && t.gameObject.activeInHierarchy);
 
         [UnityTest]
-        public IEnumerator ABlessedWeaponTurnsGoldAndGlows_BlinkingThroughItsLastCycle()
+        public IEnumerator ABlessedWeaponTurnsRedAndGlows_BlinkingThroughItsLastCycle()
         {
-            // Gold and a glow are the whole of how the player is told his blows are worth more, and
+            // Red and a glow are the whole of how the player is told his blows are worth more, and
             // the blink is how he is told this is the last turn they will be.
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
@@ -235,7 +235,7 @@ namespace ColosseumDuel.Tests
 
             g.WeaponBuffCyclesLeft = GameConstants.WeaponBuffCycles;
             yield return null;
-            Assert.AreEqual(GearSizes.GildedTint, TintOf(main, block), "blessed, it should turn gold");
+            Assert.AreEqual(GearSizes.BlessedTint, TintOf(main, block), "blessed, it should turn red");
             Assert.IsTrue(main.GetComponentsInChildren<Transform>(true)
                     .Any(t => t.name == GearSizes.GlowShellName && t.gameObject.activeInHierarchy),
                 "and a glow should be showing round it");

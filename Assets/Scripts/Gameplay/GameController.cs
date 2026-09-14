@@ -365,9 +365,9 @@ namespace ColosseumDuel.Gameplay
 
 
         /// <summary>Colour of the ring that goes out from a gladiator taking up the blessing.</summary>
-        private static readonly Color BlessingBurstColor = new Color(1f, 0.82f, 0.30f);
+        private static readonly Color BlessingBurstColor = new Color(1f, 0.24f, 0.16f);
 
-        /// <summary>A gladiator took up the blessing off the sand: a ring of gold goes out from him.</summary>
+        /// <summary>A gladiator took up the blessing off the sand: a red ring goes out from him.</summary>
         private void OnWeaponBlessed(PlayerSide side) => ViewFor(side).PlayAbility(BlessingBurstColor);
 
         /// <summary>

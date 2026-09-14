@@ -283,9 +283,9 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             switch (scheme)
             {
-                case ControlScheme.Drag: return "Pull back from your gladiator, away from the golden blessing";
-                case ControlScheme.Swipe: return "Swipe away from the golden blessing - you take it on the way";
-                default: return "Tap just past the golden blessing - you take it on the way";
+                case ControlScheme.Drag: return "Pull back from your gladiator, away from the red blessing";
+                case ControlScheme.Swipe: return "Swipe away from the red blessing - you take it on the way";
+                default: return "Tap just past the red blessing - you take it on the way";
             }
         }
 

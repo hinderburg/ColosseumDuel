@@ -3,7 +3,7 @@ using UnityEngine;
 namespace ColosseumDuel.Gameplay.View
 {
     /// <summary>
-    /// The weapon blessing lying on the sand: a gold blade turning slowly over a glowing ring, so it
+    /// The weapon blessing lying on the sand: a red blade turning slowly over a glowing ring, so it
     /// reads from across the arena as the one thing on the floor worth running for.
     ///
     /// Built once and moved: there is only ever one blessing on the sand, and a view that appears
@@ -52,9 +52,9 @@ namespace ColosseumDuel.Gameplay.View
                 blade.name = "Blade";
                 blade.localRotation = GearSizes.LyingDown;
                 blade.localScale = Vector3.one * length;
-                GearSizes.Tint(blade.gameObject, GearSizes.GildedTint);
+                GearSizes.Tint(blade.gameObject, GearSizes.BlessedTint);
 
-                // A black edge round the gold blade: gold lying on sand is yellow on yellow. Drawn as
+                // A black edge round the blade: a bright blade on bright sand needs one. Drawn as
                 // an inside-out copy, the same way the untrained-weapon outline is, in that shell's
                 // material washed black.
                 if (palette.GearUntrained != null)
@@ -81,7 +81,7 @@ namespace ColosseumDuel.Gameplay.View
                 // No model pack: a gold bead, which at least reads as the one bright thing there.
                 var bead = ViewPrimitives.Create(palette.MeshFor(PrimitiveType.Sphere), "Blade", spin, palette.Weapon);
                 bead.transform.localScale = Vector3.one * length * 0.35f;
-                GearSizes.Tint(bead, GearSizes.GildedTint);
+                GearSizes.Tint(bead, GearSizes.BlessedTint);
             }
 
             if (palette != null && palette.WeaponGlow != null)

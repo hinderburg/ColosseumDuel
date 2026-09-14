@@ -91,15 +91,17 @@ namespace ColosseumDuel.Gameplay.View
         public const float GripFromEnd = 0.34f;
 
         /// <summary>
-        /// Cool steel for what a gladiator brought with him, gold for the better copies on the sand.
+        /// Cool steel for what a gladiator brought with him, red while the weapon blessing is on it -
+        /// and red for the blessing lying on the sand, so the weapon visibly becomes the thing he ran
+        /// over. It was gold, and gold on this sand was yellow on yellow.
         ///
         /// Tinted through a property block rather than built as two sets of materials: the models
         /// keep their own texture, only the wash over it changes, and a shield and a blade can be
-        /// gilded by the same one line without either losing its own face.
+        /// washed by the same one line without either losing its own face.
         /// </summary>
         public static readonly Color CarriedTint = new Color(0.82f, 0.84f, 0.90f);
 
-        public static readonly Color GildedTint = new Color(1.00f, 0.78f, 0.22f);
+        public static readonly Color BlessedTint = new Color(0.95f, 0.18f, 0.14f);
 
         /// <summary>
         /// How much bigger the red shell around an untrained weapon is drawn than the weapon.
@@ -139,7 +141,7 @@ namespace ColosseumDuel.Gameplay.View
         public static readonly Vector3 GlowShell = new Vector3(5f, 1.07f, 1.65f);
 
         /// <summary>
-        /// The black outline round the blessing lying on the sand: gold on sand is gold on yellow, and
+        /// The black outline round the blessing lying on the sand: a bright blade on bright sand, and
         /// without an edge it does not read from across the arena. Tighter than the glow, so the glow
         /// shows round it.
         /// </summary>

@@ -531,8 +531,8 @@ namespace ColosseumDuel.Gameplay.View
                 _shownWeapon = g.Weapon;
                 _shownBuffed = g.WeaponBuffed;
 
-                // Steel for the weapon he walked in with, gold while the blessing is on it.
-                var tint = g.WeaponBuffed ? GearSizes.GildedTint : GearSizes.CarriedTint;
+                // Steel for the weapon he walked in with, red while the blessing is on it.
+                var tint = g.WeaponBuffed ? GearSizes.BlessedTint : GearSizes.CarriedTint;
                 GearSizes.Tint(_mainHand.gameObject, tint);
                 if (_offHand != null) GearSizes.Tint(_offHand.gameObject, tint);
 

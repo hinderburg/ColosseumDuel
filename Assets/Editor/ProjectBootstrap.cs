@@ -654,9 +654,9 @@ namespace ColosseumDuel.EditorTools
             palette.RoundShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.RoundShieldPath);
             palette.GearUntrained = InsideOutUnlit("GearUntrained", new Color(0.95f, 0.12f, 0.10f));
 
-            // The blessing's gold: a transparent glow, faded per object, drawn round a blessed weapon
+            // The blessing's red: a transparent glow, faded per object, drawn round a blessed weapon
             // and round the blessing on the sand.
-            palette.WeaponGlow = TransparentUnlit("WeaponGlow", new Color(1f, 0.80f, 0.28f, 0.55f));
+            palette.WeaponGlow = TransparentUnlit("WeaponGlow", new Color(1f, 0.20f, 0.14f, 0.55f));
             if (palette.SwordModel == null)
                 Debug.LogWarning($"[Colosseum] Gear prefabs missing at {GearPrefabs.SwordPath} - pickups " +
                                  "will be primitives and nobody will carry anything visible.");
