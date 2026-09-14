@@ -235,6 +235,23 @@ namespace ColosseumDuel.Core
                               * (Has(AbilityKey.Lunge) ? GameConstants.LungeReachMult : 1f)
                               * (Has(AbilityKey.TridentThrow) ? GameConstants.TridentThrowReachMult : 1f);
 
+        /// <summary>
+        /// The planning-time twin of Reach, as PlannedSpeed is of his speed: with Lunge or Trident
+        /// Throw armed and not yet working, the reach it will have once it goes off at the top of the
+        /// action phase. What the wedge on the sand is drawn to - drawn to the weapon alone, it said
+        /// a Lunge made no difference at all.
+        /// </summary>
+        public float PlannedWeaponReach()
+        {
+            if (!AbilityArmed || Has(Ability)) return Reach;
+            return WeaponDef.Reach * ReachMultiplierOf(Ability);
+        }
+
+        private static float ReachMultiplierOf(AbilityKey key)
+            => key == AbilityKey.Lunge ? GameConstants.LungeReachMult
+             : key == AbilityKey.TridentThrow ? GameConstants.TridentThrowReachMult
+             : 1f;
+
         public GladiatorInstance(GladiatorDef def)
         {
             Def = def;

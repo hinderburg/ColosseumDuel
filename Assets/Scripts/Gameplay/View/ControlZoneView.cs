@@ -15,8 +15,8 @@ namespace ColosseumDuel.Gameplay.View
     /// when the arena got obstacles and a tap became an order to go anywhere: with no limit on where
     /// he can run there is nothing for it to draw.
     ///
-    /// Rebuilt only when the wedge's shape changes, which is when he picks a different weapon off
-    /// the sand - during a planning phase, never - so in the ordinary case this allocates nothing.
+    /// Rebuilt only when the wedge's shape changes - a different man, or Lunge or Trident Throw
+    /// armed or wearing off - so in the ordinary case this allocates nothing.
     /// </summary>
     public class ControlZoneView : MonoBehaviour
     {
@@ -70,7 +70,7 @@ namespace ColosseumDuel.Gameplay.View
                 return;
             }
 
-            Rebuild(g.WeaponDef);
+            Rebuild(g.PlannedWeaponReach(), g.WeaponDef.SwingArcDegrees);
 
             // Built about +Z, so pointing the root at his heading points the wedge.
             _root.position = _arena.ToWorld(g.Pos);
@@ -89,19 +89,24 @@ namespace ColosseumDuel.Gameplay.View
             return direction.sqrMagnitude > 0.000001f ? direction.normalized : Vector3.forward;
         }
 
-        private void Rebuild(WeaponDef weapon)
+        /// <summary>
+        /// To his reach rather than his weapon's: Lunge and Trident Throw lengthen it, and the wedge
+        /// was drawn the weapon's length through both - through the rounds they were working and
+        /// through the planning phase they were armed in, which is when it matters.
+        /// </summary>
+        private void Rebuild(float weaponReach, float swingDegrees)
         {
-            float reach = _arena.ScaleLength(weapon.Reach);
+            float reach = _arena.ScaleLength(weaponReach);
             if (Mathf.Approximately(reach, _builtReach)
-                && Mathf.Approximately(weapon.SwingArcDegrees, _builtSwing))
+                && Mathf.Approximately(swingDegrees, _builtSwing))
                 return;
 
             // From his own edge rather than from his feet: the middle of it is where he is standing,
             // and a wedge drawn through him reads as a stain rather than as reach.
             _strike.sharedMesh = ViewPrimitives.CreateAnnulusSector(
-                _arena.ScaleLength(GameConstants.GladiatorRadius * 0.6f), reach, weapon.SwingArcDegrees);
+                _arena.ScaleLength(GameConstants.GladiatorRadius * 0.6f), reach, swingDegrees);
             _builtReach = reach;
-            _builtSwing = weapon.SwingArcDegrees;
+            _builtSwing = swingDegrees;
         }
 
         private void SetVisible(bool visible)

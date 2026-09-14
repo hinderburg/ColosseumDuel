@@ -98,6 +98,37 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// Lunge reaches half as far again, and the wedge says so: while it is armed for the round
+        /// about to be played - which is when it is being decided on - and while it is working. It
+        /// was drawn the weapon's length through both.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWedgeReachesAsFarAsALunge()
+        {
+            yield return ReachPlanning();
+
+            var player = _controller.Manager.State.P1.Active;
+            player.Ability = AbilityKey.Lunge;
+            float plain = _controller.Arena.ScaleLength(player.WeaponDef.Reach);
+            float lunge = _controller.Arena.ScaleLength(player.WeaponDef.Reach * GameConstants.LungeReachMult);
+
+            player.Rage = GameConstants.RageMax;
+            Assert.IsTrue(_controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, true));
+            Assert.IsTrue(player.AbilityArmed, "the rage is full, and the ability should have armed");
+            yield return null;
+            Assert.AreEqual(lunge, Extent(Layer("StrikeZone")), 0.01f, "armed, the wedge should reach as far as the lunge will");
+
+            player.AbilityArmed = false;
+            player.Buff = new ActiveBuff { Key = AbilityKey.Lunge, RoundsLeft = 2 };
+            yield return null;
+            Assert.AreEqual(lunge, Extent(Layer("StrikeZone")), 0.01f, "working, the wedge should reach as far as it does");
+
+            player.Buff = default;
+            yield return null;
+            Assert.AreEqual(plain, Extent(Layer("StrikeZone")), 0.01f, "and back to the weapon's length once it is over");
+        }
+
+        /// <summary>
         /// The wedge is struck about the way he is looking. Pinned by turning him and reading the
         /// drawing back - a wedge bolted to the arena would promise blows in a direction he is not
         /// facing.
