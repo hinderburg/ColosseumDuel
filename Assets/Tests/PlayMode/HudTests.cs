@@ -234,6 +234,21 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(name.transform.parent.gameObject.activeSelf, "the callout never went away");
         }
 
+        /// <summary>Every one of the eighteen abilities has an icon, and no two share one.</summary>
+        [Test]
+        public void EveryAbilityHasItsOwnIcon()
+        {
+            var palette = _controller.Arena.Palette;
+            var seen = new List<Sprite>();
+            foreach (var ability in AbilityDef.All)
+            {
+                var icon = palette.AbilityIconFor(ability.Key);
+                Assert.IsNotNull(icon, $"{ability.Name} has no icon - run the bootstrap");
+                CollectionAssert.DoesNotContain(seen, icon, $"{ability.Name} shares an icon with another ability");
+                seen.Add(icon);
+            }
+        }
+
         [Test]
         public void EveryArchetypeHasItsOwnIcon()
         {

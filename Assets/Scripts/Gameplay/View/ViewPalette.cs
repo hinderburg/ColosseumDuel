@@ -151,6 +151,13 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public Sprite[] AbilityIcons;
 
+        /// <summary>
+        /// True when the ability icons are the painted ones cut from the ability sheet rather than
+        /// the icon pack's white glyphs. A painted icon is drawn as painted - tinting it would wash
+        /// the art in one colour.
+        /// </summary>
+        public bool AbilityIconsArePictures;
+
         public Sprite AbilityIconFor(ColosseumDuel.Core.AbilityKey key)
         {
             int index = (int)key;

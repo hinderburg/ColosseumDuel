@@ -257,6 +257,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             // With a glyph the name drops below it; without one - no icon pack - it keeps the middle.
             HudFactory.UseSprite(_abilityIcon, _palette != null ? _palette.AbilityIconFor(gladiator.Ability) : null);
+            _abilityIcon.color = _palette != null && _palette.AbilityIconsArePictures ? Color.white : HudFactory.RageColor;
             bool hasIcon = _abilityIcon.sprite != null;
             if (_abilityIcon.enabled != hasIcon) _abilityIcon.enabled = hasIcon;
             _abilityLabel.alignment = hasIcon ? TextAnchor.LowerCenter : TextAnchor.MiddleCenter;

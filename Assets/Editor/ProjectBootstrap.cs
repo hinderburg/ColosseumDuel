@@ -546,10 +546,18 @@ namespace ColosseumDuel.EditorTools
                     ?? ProceduralTextures.EnsureArchetypeIcon($"{TexturesDir}/Icon_{def.Id}.png", def.Id);
             }
 
+            // The painted icons cut from the ability sheet when it is in the project; the icon pack's
+            // white glyphs otherwise, which the UI tints.
+            var abilityArt = AbilityIconSheet.Ensure();
+            palette.AbilityIconsArePictures = abilityArt != null;
             var abilities = (AbilityKey[])Enum.GetValues(typeof(AbilityKey));
             palette.AbilityIcons = new Sprite[abilities.Length];
             foreach (var key in abilities)
-                palette.AbilityIcons[(int)key] = IconPack.Sprite(IconPack.ForAbility(key));
+            {
+                Sprite art = null;
+                if (abilityArt != null) abilityArt.TryGetValue(key, out art);
+                palette.AbilityIcons[(int)key] = art != null ? art : IconPack.Sprite(IconPack.ForAbility(key));
+            }
 
             palette.WeaponIcons = new Sprite[WeaponDef.All.Count];
             for (int i = 0; i < WeaponDef.All.Count; i++)

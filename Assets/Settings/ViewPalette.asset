@@ -54,24 +54,25 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 1b8c77ec49e8a174dbc6990d9395b5b2, type: 3}
   ArchetypeIconsArePortraits: 1
   AbilityIcons:
-  - {fileID: 798309987, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1386808307, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: -2081245629, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 381300419, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1744151977, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: -1756047590, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 566335295, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1510120445, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: -1107025847, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1822879496, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1087086722, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1502802138, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1870898176, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: -897676795, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 994223573, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: -248196999, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1426590355, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 151241378, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 21300000, guid: ee487310de4a0f242afca8b5abf3a751, type: 3}
+  - {fileID: 21300000, guid: 12456493453dcc14080a4d4942a2311a, type: 3}
+  - {fileID: 21300000, guid: 360cc609d181500469b647dde0ed4ab8, type: 3}
+  - {fileID: 21300000, guid: a5c1c85ddb9997846b8696363c1b486b, type: 3}
+  - {fileID: 21300000, guid: 064a3f9f2b8c20147b64f21ef3c3e5b7, type: 3}
+  - {fileID: 21300000, guid: c82b0665847c8cc4f826632cab98d7e0, type: 3}
+  - {fileID: 21300000, guid: 5c8b43cf1f34b9d4ba036c27933464fa, type: 3}
+  - {fileID: 21300000, guid: 078c905b80b2fbd45914b6120ea6c1f8, type: 3}
+  - {fileID: 21300000, guid: 3e2806a014226cc498a07d6c875573a3, type: 3}
+  - {fileID: 21300000, guid: ebb3836c4188b274889f1767b90847bb, type: 3}
+  - {fileID: 21300000, guid: 72760940f863a4442b75c2312c2b89a0, type: 3}
+  - {fileID: 21300000, guid: c2b84e0a00851db4488d82ef6c72cc96, type: 3}
+  - {fileID: 21300000, guid: 0bfe315b94c2dad4582c41cd456048e5, type: 3}
+  - {fileID: 21300000, guid: 258383db06be5f54b87de13898b9f93d, type: 3}
+  - {fileID: 21300000, guid: 30622567185c15546bc7728881961a49, type: 3}
+  - {fileID: 21300000, guid: a2d8366f52e1c1b4b8b66416a71270b4, type: 3}
+  - {fileID: 21300000, guid: 5e5ee2fd936b0c8459073a35435a41f6, type: 3}
+  - {fileID: 21300000, guid: 1d027ece898220340a526a33c47fcb41, type: 3}
+  AbilityIconsArePictures: 1
   ArchetypeColors:
   - {r: 0.4126481, g: 0.30002418, b: 0.64342517, a: 1}
   - {r: 0.982971, g: 0.4779909, b: 0.16305146, a: 1}
