@@ -60,14 +60,16 @@ namespace ColosseumDuel.Gameplay.View
         private GameObject _netFx;
 
         /// <summary>
-        /// How much bigger than authored an ability's effect is drawn. The pack builds them round a
-        /// figure of a unit or two; these men stand four and a half. The flame is a torch's, sized for
-        /// a sconce, and hidden under his body at the common size - so it is drawn larger than the rest.
-        /// The sphere round Bulwark is drawn large enough to hold the whole man. Set by eye against
-        /// EachAbilityEffectRendersAFrame.
+        /// How much bigger than authored an ability's effect is drawn. The flame is a torch's, sized
+        /// for a sconce, and the sphere round Bulwark has to reach past his shoulders, so those two
+        /// are drawn larger than the rest.
+        ///
+        /// Halved from what they first were, on request: at twice authored size the auras swept a
+        /// third of the arena's width and the sphere swallowed the man, and an effect is there to
+        /// mark him, not to cover the sand round him. Set against EachAbilityEffectRendersAFrame.
         /// </summary>
         private static float AbilityFxScale(AbilityKey key)
-            => key == AbilityKey.Fury || key == AbilityKey.Bulwark ? 3.5f : 2f;
+            => key == AbilityKey.Fury || key == AbilityKey.Bulwark ? 1.75f : 1f;
 
         /// <summary>
         /// How far up him an effect sits, in world units. The auras and the net are on the ground and
