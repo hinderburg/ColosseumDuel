@@ -234,6 +234,111 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(name.transform.parent.gameObject.activeSelf, "the callout never went away");
         }
 
+        /// <summary>
+        /// One that lasts does not just fade: once it has been read over the man it goes down into
+        /// the player's strip - low on the screen by his squad, on the right, the ability's side -
+        /// and stays there with the rounds it has left, the last of them in yellow. Over, it goes.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ALastingAbilityGoesDownIntoTheStripAndCountsDownItsRounds()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, 5f);
+
+            var g = State.P1.Active;
+            g.Ability = AbilityKey.Bulwark;
+            g.Rage = GameConstants.RageMax;
+            Assert.IsTrue(_controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, true));
+            yield return RunUntil(() => State.Phase == MatchPhase.Action, 6f);
+
+            var callouts = Object.FindFirstObjectByType<AbilityCalloutView>(FindObjectsInactive.Include);
+            yield return RunUntil(() => callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Ability),
+                AbilityCalloutView.RiseSeconds + AbilityCalloutView.FlySeconds + 0.5f);
+            Assert.IsTrue(callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Ability),
+                "Bulwark is still working and never went into the strip");
+            Assert.IsFalse(callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Blessing), "nothing was blessed");
+
+            var dock = callouts.DockFor(PlayerSide.P1, AbilityCalloutView.Slot.Ability);
+            var labels = dock.GetComponentsInChildren<Text>(true);
+            Assert.AreEqual(g.AbilityInfo.Name, labels.First(l => l.name == "Name").text);
+            StringAssert.AreEqualIgnoringCase(g.AbilityInfo.Description, labels.First(l => l.name == "Description").text);
+
+            var centre = Centre(dock);
+            Assert.Less(centre.y, Screen.height * 0.3f, "the player's strip belongs low, by his squad");
+            Assert.Greater(centre.x, Screen.width * 0.5f, "the ability goes on the right");
+
+            // Into the next round, which is its last: a steady moment to read the count at.
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, 4f);
+            yield return null;
+            var timer = labels.First(l => l.name == "Timer");
+            Assert.AreEqual(1, g.Buff.RoundsLeft, "this test expects Bulwark's last round here");
+            Assert.AreEqual("1", timer.text, "the count should be the rounds it has left");
+            var badge = dock.GetComponentsInChildren<Image>(true).First(i => i.name == "TimerBadge");
+            Assert.AreEqual(HudFactory.RageColor.r, badge.color.r, 0.01f, "the last round should be marked in yellow");
+            Assert.AreEqual(HudFactory.RageColor.g, badge.color.g, 0.01f, "the last round should be marked in yellow");
+
+            g.Buff = default;
+            yield return RunSeconds(0.5f);
+            Assert.IsFalse(callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Ability), "it is over and is still in the strip");
+            Assert.IsFalse(dock.gameObject.activeSelf, "it is over and its place is still drawn");
+        }
+
+        /// <summary>
+        /// Taking up the blessing is announced the way an ability is - its name over the man, and an
+        /// effect on him - and it goes into the left of his strip with its three rounds to run.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TakingUpTheBlessingIsAnnouncedLikeAnAbility_AndGoesIntoTheLeftOfTheStrip()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, 5f);
+
+            var g = State.P1.Active;
+            State.Buffs.PlaceAt(g.Pos);
+            Assert.IsTrue(_controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false));
+            yield return RunUntil(() => g.WeaponBuffed, 6f);
+            Assert.IsTrue(g.WeaponBuffed, "standing on the blessing, he should have taken it up");
+            yield return null;
+
+            var callouts = Object.FindFirstObjectByType<AbilityCalloutView>(FindObjectsInactive.Include);
+            var shown = callouts.GetComponentsInChildren<Transform>(true)
+                .Where(t => t.name.StartsWith("Callout_") && t.gameObject.activeSelf)
+                .Select(t => t.GetComponentsInChildren<Text>(true))
+                .FirstOrDefault(labels => labels.Any(l => l.name == "Name" && l.text == AbilityCalloutView.BlessingName));
+            Assert.IsNotNull(shown, "the blessing was taken up and nothing said so");
+
+            var palette = _controller.Arena.Palette;
+            if (palette.BlessingFx != null)
+            {
+                var fx = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                    .FirstOrDefault(t => t.name == "BlessingFx" && t.parent != null && t.parent.name == "Player");
+                Assert.IsNotNull(fx, "the player's gladiator has no blessing effect");
+                Assert.IsTrue(fx.gameObject.activeInHierarchy, "the blessing effect should be playing on him");
+            }
+
+            yield return RunUntil(() => callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Blessing),
+                AbilityCalloutView.RiseSeconds + AbilityCalloutView.FlySeconds + 0.5f);
+            Assert.IsTrue(callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Blessing),
+                "the blessing is working and never went into the strip");
+
+            var dock = callouts.DockFor(PlayerSide.P1, AbilityCalloutView.Slot.Blessing);
+            Assert.AreEqual(GameConstants.WeaponBuffRounds.ToString(),
+                dock.GetComponentsInChildren<Text>(true).First(l => l.name == "Timer").text,
+                "freshly taken, it has all its rounds to run");
+            Assert.Less(Centre(dock).x, Screen.width * 0.5f, "the blessing goes on the left");
+
+            g.WeaponBuffRoundsLeft = 0;
+            yield return RunSeconds(0.5f);
+            Assert.IsFalse(callouts.IsDocked(PlayerSide.P1, AbilityCalloutView.Slot.Blessing), "it is over and is still in the strip");
+        }
+
+        private static Vector3 Centre(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return (corners[0] + corners[2]) * 0.5f;
+        }
+
         /// <summary>Every one of the eighteen abilities has an icon, and no two share one.</summary>
         [Test]
         public void EveryAbilityHasItsOwnIcon()

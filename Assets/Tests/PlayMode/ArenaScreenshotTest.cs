@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using System.Linq;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay;
 using ColosseumDuel.Gameplay.View;
@@ -549,9 +550,17 @@ namespace ColosseumDuel.Tests
             canvas.worldCamera = Camera.main;
             canvas.planeDistance = 1f;
 
-            controller.Manager.State.P1.Active.Rage = GameConstants.RageMax;
+            // Stone Skin rather than his first ability, Earthshaker: that one lasts the round it is
+            // used in and is over before the second frame, which is for what a lasting one leaves -
+            // the aura at his feet and his side's strip. The blessing under him and the opponent's
+            // own ability as well, so the frame has all three places in the strips filled.
+            var state = controller.Manager.State;
+            state.P1.Active.Ability = AbilityKey.StoneSkin;
+            state.P1.Active.Rage = GameConstants.RageMax;
+            state.Bot.Active.Rage = GameConstants.RageMax;
+            state.Buffs.PlaceAt(state.P1.Active.Pos);
             controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, useAbility: true);
-            controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, useAbility: true);
 
             // Late enough in the expansion that the ring has cleared the gladiator's own body -
             // early on it is smaller than he is and hides behind him. The ability's name is up over
@@ -610,6 +619,16 @@ namespace ColosseumDuel.Tests
                 FrameOnPair(camera, controller.Arena, player.Pos, 90f, 110f);
                 yield return Capture(SuffixPath($"-fx-{key}"));
             }
+
+            // And the blessing's, played once as he takes it up: caught while it is still spreading.
+            // On the world's clock, which planning slows - the effect's own clock.
+            player.Buff = default;
+            player.EnsnaredRoundsLeft = 0;
+            var view = Object.FindObjectsByType<GladiatorView>(FindObjectsSortMode.None).First(v => v.name == "Player");
+            view.PlayBlessing();
+            yield return new WaitForSeconds(0.3f);
+            FrameOnPair(camera, controller.Arena, player.Pos, 90f, 110f);
+            yield return Capture(SuffixPath("-fx-Blessing"));
 
             if (cameraDriver != null) cameraDriver.enabled = true;
         }

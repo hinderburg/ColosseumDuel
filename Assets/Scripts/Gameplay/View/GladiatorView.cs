@@ -59,6 +59,21 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>The net's effect, on him when a net has been thrown over him.</summary>
         private GameObject _netFx;
 
+        /// <summary>The blessing's effect, played once on him as he takes it up.</summary>
+        private GameObject _blessingFx;
+
+        /// <summary>
+        /// He has just taken up the blessing: its effect plays on him once. Restarted by switching it
+        /// off and on, which replays a one-shot from the top - taken up again while the last one is
+        /// still playing, it starts over rather than being missed.
+        /// </summary>
+        public void PlayBlessing()
+        {
+            if (_blessingFx == null) return;
+            _blessingFx.SetActive(false);
+            _blessingFx.SetActive(true);
+        }
+
         /// <summary>
         /// How much bigger than authored an ability's effect is drawn. The flame is a torch's, sized
         /// for a sconce, and the sphere round Bulwark has to reach past his shoulders, so those two
@@ -1062,6 +1077,7 @@ namespace ColosseumDuel.Gameplay.View
             foreach (var fx in _abilityFx)
                 if (fx != null && fx.activeSelf) fx.SetActive(false);
             if (_netFx != null && _netFx.activeSelf) _netFx.SetActive(false);
+            if (_blessingFx != null && _blessingFx.activeSelf) _blessingFx.SetActive(false);
         }
 
         /// <summary>
@@ -1072,7 +1088,9 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         private void BuildAbilityFx(ViewPalette palette)
         {
-            if (palette == null || palette.AbilityFx == null) return;
+            if (palette == null) return;
+            if (palette.BlessingFx != null) _blessingFx = MakeFx(palette.BlessingFx, "BlessingFx", 1f, 0f);
+            if (palette.AbilityFx == null) return;
 
             foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))
             {

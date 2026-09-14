@@ -397,8 +397,33 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Colour of the ring that goes out from a gladiator taking up the blessing.</summary>
         private static readonly Color BlessingBurstColor = new Color(1f, 0.24f, 0.16f);
 
-        /// <summary>A gladiator took up the blessing off the sand: a red ring goes out from him.</summary>
-        private void OnWeaponBlessed(PlayerSide side) => ViewFor(side).PlayAbility(BlessingBurstColor);
+        /// <summary>
+        /// A gladiator took up the blessing off the sand: a red ring goes out from him and its effect
+        /// plays on him, and its name goes up over him the way an ability's does - then down into
+        /// the left of his side's strip, counting its rounds, for as long as it lasts.
+        /// </summary>
+        private void OnWeaponBlessed(PlayerSide side)
+        {
+            var view = ViewFor(side);
+            view.PlayAbility(BlessingBurstColor);
+            view.PlayBlessing();
+
+            var g = Manager.State.Get(side).Active;
+            if (g == null || Callouts == null) return;
+
+            // At most the three rounds the rule promises: the rest of the round it is taken up in
+            // comes free, and a count that opened on four would contradict the caption beside it.
+            Callouts.ShowBlessing(g.Pos, side, () => StillFighting(side, g) && g.WeaponBuffed
+                ? Mathf.Min(g.WeaponBuffRoundsLeft, GameConstants.WeaponBuffRounds)
+                : 0);
+        }
+
+        /// <summary>
+        /// Whether this is still the man fighting for that side, and on his feet. What a strip's count
+        /// is read through: once he falls or the match is thrown away, what he had is over.
+        /// </summary>
+        private bool StillFighting(PlayerSide side, GladiatorInstance g)
+            => Manager != null && ReferenceEquals(Manager.State.Get(side).Active, g) && g.Alive;
 
         /// <summary>
         /// A wound opened up at the top of a round.
@@ -440,18 +465,22 @@ namespace ColosseumDuel.Gameplay
 
         /// <summary>
         /// An ability went off: a ring in its colour from the man who used it, and its name going up
-        /// over him - large, with what it does underneath.
+        /// over him - large, with what it does underneath - then down into the right of his side's
+        /// strip, counting its rounds, for as long as it lasts.
         /// </summary>
         private void OnAbilityFired(PlayerSide side)
         {
             var g = Manager.State.Get(side).Active;
             ViewFor(side).PlayAbility(g != null ? AbilityVisuals.ColorFor(g.Ability) : AbilityBurstColor);
-            if (g == null) return;
+            if (g == null || Callouts == null) return;
 
-            // Found on demand, like the damage numbers: the HUD builds it in its own Start.
-            if (_callouts == null) _callouts = FindFirstObjectByType<AbilityCalloutView>();
-            if (_callouts != null) _callouts.Show(g.Pos, g.Ability, side);
+            Callouts.Show(g.Pos, g.Ability, side,
+                () => StillFighting(side, g) && g.Buff.IsActive ? g.Buff.RoundsLeft : 0);
         }
+
+        /// <summary>Found on demand, like the damage numbers: the HUD builds it in its own Start.</summary>
+        private AbilityCalloutView Callouts
+            => _callouts != null ? _callouts : (_callouts = FindFirstObjectByType<AbilityCalloutView>());
 
         private AbilityCalloutView _callouts;
 

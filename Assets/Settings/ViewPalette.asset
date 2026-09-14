@@ -100,6 +100,7 @@ MonoBehaviour:
   - {fileID: 134560, guid: 4f491700992cb06488116943d3b5c9b8, type: 3}
   - {fileID: 0}
   - {fileID: 158776, guid: 524b12464dce5b248a893d67a188da05, type: 3}
+  BlessingFx: {fileID: 184608, guid: 9edc33f62cf3ae849badc4cc12fe5f8a, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}

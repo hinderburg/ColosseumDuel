@@ -185,6 +185,13 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public GameObject[] AbilityFx;
 
+        /// <summary>
+        /// Played once on a gladiator taking up the weapon blessing: a burst of red fire, the
+        /// blessing's own colour, so it is announced on him the way an ability is. From Epic Toon FX -
+        /// absent in a clean clone, and then only the ring goes out.
+        /// </summary>
+        public GameObject BlessingFx;
+
         public GameObject AbilityFxFor(ColosseumDuel.Core.AbilityKey key)
         {
             int index = (int)key;
