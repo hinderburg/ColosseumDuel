@@ -54,6 +54,20 @@ namespace ColosseumDuel.Gameplay.View
                 blade.localScale = Vector3.one * length;
                 GearSizes.Tint(blade.gameObject, GearSizes.GildedTint);
 
+                // A black edge round the gold blade: gold lying on sand is yellow on yellow. Drawn as
+                // an inside-out copy, the same way the untrained-weapon outline is, in that shell's
+                // material washed black.
+                if (palette.GearUntrained != null)
+                {
+                    var outline = GearSizes.MakeShell(palette.SwordModel, blade, GearSizes.OutlineShellName,
+                        GearSizes.OutlineShell, palette.GearUntrained);
+                    var ink = new MaterialPropertyBlock();
+                    ink.SetColor(BaseColorId, Color.black);
+                    foreach (var renderer in outline.GetComponentsInChildren<Renderer>(true))
+                        renderer.SetPropertyBlock(ink);
+                    outline.SetActive(true);
+                }
+
                 if (palette.WeaponGlow != null)
                 {
                     var halo = GearSizes.MakeShell(palette.SwordModel, blade, GearSizes.GlowShellName,
@@ -77,6 +91,18 @@ namespace ColosseumDuel.Gameplay.View
                     "Ring", root.transform, palette.WeaponGlow);
                 ring.transform.localPosition = new Vector3(0f, 0.03f, 0f);
                 view._glow.Add(ring.GetComponent<Renderer>());
+
+                // And a dark rim on both edges of the ring, for the same reason as the blade's outline.
+                var rimMaterial = palette.BarBackground;
+                if (rimMaterial != null)
+                {
+                    var rim = ViewPrimitives.Create(ViewPrimitives.CreateAnnulus(radius, radius * 1.12f, 40),
+                        "Rim", root.transform, rimMaterial);
+                    rim.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+                    var inner = ViewPrimitives.Create(ViewPrimitives.CreateAnnulus(radius * 0.63f, radius * 0.72f, 40),
+                        "RimInner", root.transform, rimMaterial);
+                    inner.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+                }
             }
 
             foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))

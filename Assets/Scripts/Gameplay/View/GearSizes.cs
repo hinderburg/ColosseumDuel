@@ -136,13 +136,23 @@ namespace ColosseumDuel.Gameplay.View
         /// sliver of a unit thick, so the glow is pushed out by about the same absolute amount on
         /// every axis rather than by one ratio.
         /// </summary>
-        public static readonly Vector3 GlowShell = new Vector3(7f, 1.12f, 2.2f);
+        public static readonly Vector3 GlowShell = new Vector3(5f, 1.07f, 1.65f);
+
+        /// <summary>
+        /// The black outline round the blessing lying on the sand: gold on sand is gold on yellow, and
+        /// without an edge it does not read from across the arena. Tighter than the glow, so the glow
+        /// shows round it.
+        /// </summary>
+        public static readonly Vector3 OutlineShell = new Vector3(3.2f, 1.045f, 1.35f);
 
         /// <summary>Name of the inside-out copy that draws the untrained-weapon outline.</summary>
         public const string ShellName = "UntrainedShell";
 
         /// <summary>Name of the copy that draws the blessing's glow round a weapon.</summary>
         public const string GlowShellName = "GlowShell";
+
+        /// <summary>Name of the copy that draws the black outline round the blessing on the sand.</summary>
+        public const string OutlineShellName = "OutlineShell";
 
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -170,7 +180,8 @@ namespace ColosseumDuel.Gameplay.View
         public static bool IsUnderShell(Transform t)
         {
             for (var walk = t; walk != null; walk = walk.parent)
-                if (walk.name == ShellName || walk.name == GlowShellName) return true;
+                if (walk.name == ShellName || walk.name == GlowShellName || walk.name == OutlineShellName)
+                    return true;
             return false;
         }
 

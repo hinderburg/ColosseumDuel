@@ -87,6 +87,34 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(view.gameObject.activeInHierarchy, "a blessing taken should not still be drawn");
         }
 
+        /// <summary>
+        /// The blessing on the sand is edged in black - its blade and both edges of its ring. Gold on
+        /// sand is yellow on yellow, and without an edge it does not read from across the arena.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBlessingOnTheSandIsEdgedInBlack()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return null;
+            _controller.Manager.State.Buffs.PlaceAt(new Vector2(40f, 60f));
+            yield return null;
+
+            var parts = FindView("WeaponBlessing").GetComponentsInChildren<Transform>(true);
+            var rim = parts.FirstOrDefault(t => t.name == "Rim");
+            Assert.IsNotNull(rim, "the blessing's ring has no dark rim");
+            Assert.IsTrue(rim.gameObject.activeInHierarchy, "the rim is not drawn");
+            Assert.IsNotNull(parts.FirstOrDefault(t => t.name == "RimInner"), "the ring's inner edge has no rim");
+
+            var outline = parts.FirstOrDefault(t => t.name == GearSizes.OutlineShellName);
+            if (outline == null) Assert.Ignore("No gear models - there is no blade to draw the outline round.");
+            Assert.IsTrue(outline.gameObject.activeInHierarchy, "the blade's black outline is not showing");
+
+            var block = new MaterialPropertyBlock();
+            outline.GetComponentInChildren<Renderer>(true).GetPropertyBlock(block);
+            var color = block.GetColor(Shader.PropertyToID("_BaseColor"));
+            Assert.Less(color.r + color.g + color.b, 0.3f, "the outline should be black");
+        }
+
         [UnityTest]
         public IEnumerator HazardRingsStayHiddenWhileTheArenaIsSafe()
         {
