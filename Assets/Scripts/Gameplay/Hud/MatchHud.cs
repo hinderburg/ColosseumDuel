@@ -32,7 +32,16 @@ namespace ColosseumDuel.Gameplay.Hud
         private ActionButtonsView _actionButtons;
 
         private GameObject _overlay;
+        private Image _overlayPanel;
+        private Image _revealBand;
         private Text _overlayTitle;
+
+        /// <summary>
+        /// The clash's announcement is played over the two men walking out, so it barely dims the
+        /// arena: the dark is a band across the middle, behind the words, where neither man is.
+        /// </summary>
+        private static readonly Color RevealDimColor = new Color(0.03f, 0.03f, 0.05f, 0.18f);
+        private static readonly Color RevealBandColor = new Color(0.03f, 0.03f, 0.05f, 0.78f);
         private Text _overlaySubtitle;
         private RectTransform _pickRow;
         private TutorialView _tutorial;
@@ -270,6 +279,16 @@ namespace ColosseumDuel.Gameplay.Hud
             var panel = HudFactory.CreatePanel("Overlay", root, HudFactory.OverlayColor);
             HudFactory.Stretch(panel.rectTransform);
             _overlay = panel.gameObject;
+            _overlayPanel = panel;
+
+            _revealBand = HudFactory.CreatePanel("RevealBand", panel.transform, RevealBandColor);
+            _revealBand.raycastTarget = false;
+            var band = _revealBand.rectTransform;
+            band.anchorMin = new Vector2(0f, 0.5f);
+            band.anchorMax = new Vector2(1f, 0.5f);
+            band.pivot = new Vector2(0.5f, 0.5f);
+            band.sizeDelta = new Vector2(0f, 120f);
+            band.anchoredPosition = Vector2.zero;
 
             _overlayTitle = HudFactory.CreateLabel("Title", panel.transform, "", 42);
             _overlayTitle.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
@@ -487,6 +506,14 @@ namespace ColosseumDuel.Gameplay.Hud
             bool visible = picking || matchOver || banner;
             if (_overlay.activeSelf != visible) _overlay.SetActive(visible);
             if (!visible) return;
+
+            // The announcement sits on its band in the middle of an arena left almost undimmed, so
+            // the two men walking out can be seen doing it; every other screen dims the whole frame.
+            bool reveal = state.Phase == MatchPhase.Reveal;
+            _overlayPanel.color = reveal ? RevealDimColor : HudFactory.OverlayColor;
+            SetActive(_revealBand.gameObject, reveal);
+            _overlayTitle.rectTransform.anchoredPosition = new Vector2(0f, reveal ? 22f : 210f);
+            _overlaySubtitle.rectTransform.anchoredPosition = new Vector2(0f, reveal ? -30f : 165f);
 
             SetActive(_pickRow.gameObject, picking);
             SetActive(_restartButton.gameObject, matchOver);

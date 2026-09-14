@@ -231,7 +231,14 @@ namespace ColosseumDuel.Tests
             Assert.Greater(name.transform.position.y, onScreen.y, "the name should go up over him, not under him");
 
             yield return RunSeconds(AbilityCalloutView.Seconds + 0.3f);
-            Assert.IsFalse(name.transform.parent.gameObject.activeSelf, "the callout never went away");
+
+            // By what it says rather than by the object: the pool hands a finished one straight to
+            // the next thing announced - the opponent taking up the tutorial's blessing on his way
+            // over, say - and then the same object is up again, saying something else.
+            Assert.IsFalse(callouts.GetComponentsInChildren<Transform>(true)
+                    .Where(t => t.name.StartsWith("Callout_") && t.gameObject.activeSelf)
+                    .Any(t => t.GetComponentsInChildren<Text>(true).Any(l => l.name == "Name" && l.text == g.AbilityInfo.Name)),
+                "the callout never went away");
         }
 
         /// <summary>

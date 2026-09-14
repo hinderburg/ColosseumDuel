@@ -996,6 +996,78 @@ namespace ColosseumDuel.Gameplay.View
             _burstColor = color;
         }
 
+        // ------------------------------------------------------------------
+        // walking out at the start of a clash
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Where on his side's half of the long axis he walks out from: just inside the wall, as a
+        /// share of the long semi-axis - the wall itself is at 1.
+        /// </summary>
+        public const float EntranceFromFraction = 0.94f;
+
+        /// <summary>
+        /// How long the walk out takes, in real seconds. Inside the clash's announcement, with a
+        /// moment on his mark before the planning opens - a man still arriving when he is asked
+        /// where to go next has been given less than the full four seconds to decide.
+        /// </summary>
+        public const float EntranceSeconds = GameConstants.RevealTime - 0.35f;
+
+        private Vector3 _entranceFrom;
+        private float _entranceStarted = -1f;
+        private float _entranceSeconds;
+        private bool _animatorResetPending;
+
+        /// <summary>
+        /// A clash is starting: whatever the last one left playing on him is thrown away, and he walks
+        /// out to his mark from the given point - in the space his own position is set in - over the
+        /// given real seconds.
+        ///
+        /// The reset waits for the next Sync rather than happening here, because the man walking out
+        /// may not be the one on the figure yet - a fresh pick swaps it in that Sync, and resetting the
+        /// old one would leave the new one exactly as it was last seen.
+        /// </summary>
+        public void EnterArena(Vector3 from, float seconds)
+        {
+            _entranceFrom = from;
+            _entranceStarted = Time.unscaledTime;
+            _entranceSeconds = Mathf.Max(0.01f, seconds);
+            _animatorResetPending = true;
+
+            _swingScheduled = false;
+            _swingHoldLeft = 0f;
+            _hitWaiting = false;
+            _hitThisFrame = false;
+            _blowTrigger = -1;
+            _sinceSwingStarted = float.MaxValue;
+            _deathShownFrom = 0f;
+            _hitPunchLeft = 0f;
+            _burstLeft = 0f;
+        }
+
+        /// <summary>How far through the walk out he is, 0 to 1; 1 when he is not walking out.</summary>
+        private float EntranceProgress()
+        {
+            if (_entranceStarted < 0f) return 1f;
+            float t = (Time.unscaledTime - _entranceStarted) / _entranceSeconds;
+            if (t >= 1f) _entranceStarted = -1f;
+            return Mathf.Clamp01(t);
+        }
+
+        /// <summary>
+        /// Back to the controller's entry state with every parameter at its default: a guard still up,
+        /// a trigger still standing, a clip half played. Rebind rather than Play on a named state, so
+        /// it holds for whatever the controller's layers and defaults are, and Update(0) so the reset
+        /// pose is the one drawn this frame rather than the next.
+        /// </summary>
+        private void ResetAnimatorIfPending()
+        {
+            if (!_animatorResetPending || _animator == null) return;
+            _animatorResetPending = false;
+            _animator.Rebind();
+            _animator.Update(0f);
+        }
+
         /// <summary>Pushes one frame of simulation state onto the visuals. Safe to call with null.</summary>
         public void Sync(GladiatorInstance g)
         {
@@ -1007,7 +1079,16 @@ namespace ColosseumDuel.Gameplay.View
             if (!visible) return;
 
             ShowFigureFor(g.Def.Id);
-            SyncAnimator(g);
+            ResetAnimatorIfPending();
+
+            // Walking out at the start of a clash: drawn between the wall and his mark, with the step
+            // he is taking fed to the run blend - so he runs out rather than sliding - while the
+            // simulation has him on his mark already.
+            var mark = _arena.ToWorld(g.Pos);
+            float entrance = EntranceProgress();
+            bool entering = entrance < 1f && g.Alive;
+            var step = entering ? (mark - _entranceFrom) / _entranceSeconds : Vector3.zero;
+            SyncAnimator(g, entering ? new Vector2(step.x, step.z) / _arena.VirtualToWorld : g.Vel);
 
             if (ShownDead(g))
             {
@@ -1021,7 +1102,7 @@ namespace ColosseumDuel.Gameplay.View
             }
 
             if (!_bars.gameObject.activeSelf) _bars.gameObject.SetActive(true);
-            transform.localPosition = _arena.ToWorld(g.Pos);
+            transform.localPosition = entering ? Vector3.Lerp(_entranceFrom, mark, entrance) : mark;
 
             var forward = new Vector3(g.Facing.x, 0f, g.Facing.y);
             if (forward.sqrMagnitude > 0.0001f)
@@ -1161,18 +1242,18 @@ namespace ColosseumDuel.Gameplay.View
         /// expressed in - the simulation's own units are a different scale entirely, and mixing the
         /// two would put a walking gladiator into a sprint or leave a sprinting one standing still.
         /// </summary>
-        private void SyncAnimator(GladiatorInstance g)
+        private void SyncAnimator(GladiatorInstance g, Vector2 vel)
         {
             if (_animator == null) return;
 
             _animator.SetBool(AnimatorParams.DeadId, ShownDead(g));
             if (ShownDead(g)) return;
 
-            _animator.SetFloat(AnimatorParams.SpeedId, g.Vel.magnitude * _arena.VirtualToWorld);
+            _animator.SetFloat(AnimatorParams.SpeedId, vel.magnitude * _arena.VirtualToWorld);
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
             _animator.SetBool(AnimatorParams.TwoHandedId, GearSizes.TwoHanded(g.Weapon));
 
-            SyncRunDirection(g);
+            SyncRunDirection(g, vel);
         }
 
         /// <summary>
@@ -1187,9 +1268,8 @@ namespace ColosseumDuel.Gameplay.View
         /// blend somewhere between the idle at the centre and a run at the rim, which reads as a
         /// man wading.
         /// </summary>
-        private void SyncRunDirection(GladiatorInstance g)
+        private void SyncRunDirection(GladiatorInstance g, Vector2 vel)
         {
-            var vel = g.Vel;
             if (vel.sqrMagnitude > 0.0001f) vel.Normalize();
 
             var facing = g.Facing;

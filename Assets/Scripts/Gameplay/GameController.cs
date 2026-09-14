@@ -274,6 +274,14 @@ namespace ColosseumDuel.Gameplay
 
         private void OnPhaseChanged(MatchState state)
         {
+            // A clash is being announced: both men walk out to their marks, with whatever the last
+            // clash left playing on them thrown away.
+            if (state.Phase == MatchPhase.Reveal)
+            {
+                EnterArena(_playerView, state.P1.Active);
+                EnterArena(_botView, state.Bot.Active);
+            }
+
             if (state.Phase == MatchPhase.Action) ScheduleSwings(state);
             else
             {
@@ -282,6 +290,22 @@ namespace ColosseumDuel.Gameplay
             }
 
             PhaseChanged?.Invoke(state);
+        }
+
+        /// <summary>
+        /// Sends a man walking out to his mark from the wall behind it. Behind him along the way he
+        /// is facing - the marks are down the long axis, each man facing the other end - out to just
+        /// inside the wall.
+        /// </summary>
+        private void EnterArena(GladiatorView view, GladiatorInstance g)
+        {
+            if (view == null || g == null) return;
+
+            var back = g.Facing.sqrMagnitude > 0.0001f
+                ? -g.Facing.normalized
+                : (g.Pos.y < 0f ? Vector2.down : Vector2.up);
+            float walk = Mathf.Max(0f, ArenaShape.RadiusY * GladiatorView.EntranceFromFraction - g.Pos.magnitude);
+            view.EnterArena(Arena.ToWorld(g.Pos + back * walk), GladiatorView.EntranceSeconds);
         }
 
         /// <summary>

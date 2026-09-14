@@ -910,5 +910,77 @@ namespace ColosseumDuel.Tests
             float t = 0f;
             while (t < seconds) { yield return null; t += Time.unscaledDeltaTime; }
         }
+
+        /// <summary>
+        /// A clash opens with both men walking out from the wall behind their marks while it is being
+        /// announced - running, not sliding - rather than standing on them from its first frame, and
+        /// they are on their marks by the time planning opens. The simulation has them there all
+        /// along: this is only where they are drawn.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EachClashOpensWithBothWalkingOutFromTheWall()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return null;
+            yield return null;
+
+            var state = _controller.Manager.State;
+            Assert.AreEqual(MatchPhase.Reveal, state.Phase, "the clash should be being announced");
+
+            foreach (var (name, g) in new[] { ("Player", state.P1.Active), ("Bot", state.Bot.Active) })
+            {
+                var view = View(name);
+                float mark = FromCentre(_controller.Arena.ToWorld(g.Pos));
+                Assert.Greater(FromCentre(view.transform.localPosition), mark + 0.5f,
+                    $"the {name}'s gladiator is already on his mark - he should be walking out to it");
+            }
+
+            var animator = FindIn("Player", $"Figure_{GladiatorId.Brutius}")?.GetComponentInChildren<Animator>(true);
+            if (animator != null && animator.runtimeAnimatorController != null)
+                Assert.Greater(animator.GetFloat(AnimatorParams.SpeedId), AnimatorParams.RunThreshold,
+                    "on his way out he should be running, not sliding");
+
+            yield return RunUntil(() => state.Phase == MatchPhase.Planning, GameConstants.RevealTime + 1f);
+            yield return null;
+
+            foreach (var (name, g) in new[] { ("Player", state.P1.Active), ("Bot", state.Bot.Active) })
+                Assert.AreEqual(0f, Flat(View(name).transform.localPosition - _controller.Arena.ToWorld(g.Pos)).magnitude, 0.05f,
+                    $"the {name}'s gladiator should be on his mark by the time planning opens");
+        }
+
+        /// <summary>
+        /// The next clash starts clean: whatever the survivor was in the middle of - a swing, a
+        /// guard - is thrown away, and he walks out from the idle like the man picked fresh.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANewClashThrowsAwayWhateverTheLastOneLeftPlaying()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Planning, GameConstants.RevealTime + 1f);
+
+            var animator = FindIn("Player", $"Figure_{GladiatorId.Brutius}")?.GetComponentInChildren<Animator>(true);
+            if (animator == null || animator.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            // Left mid-guard with a swing still waiting to go, the way a clash can end.
+            animator.SetBool(AnimatorParams.DefendingId, true);
+            animator.SetTrigger(AnimatorParams.AttackId);
+
+            View("Player").EnterArena(_controller.Arena.ToWorld(Vector2.zero), 0.5f);
+            yield return null;
+
+            Assert.IsFalse(animator.GetBool(AnimatorParams.DefendingId) && !_controller.Manager.State.P1.Active.IsDefending,
+                "the guard from the last clash is still up");
+            Assert.IsFalse(animator.GetCurrentAnimatorStateInfo(0).IsName("Attack")
+                           || animator.GetNextAnimatorStateInfo(0).IsName("Attack"),
+                "the swing left over from the last clash went off in the new one");
+        }
+
+        private GladiatorView View(string name)
+            => _controller.GetComponentsInChildren<GladiatorView>(true).First(v => v.name == name);
+
+        private float FromCentre(Vector3 local) => Flat(local - _controller.Arena.ToWorld(Vector2.zero)).magnitude;
+
+        private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
     }
 }

@@ -69,7 +69,11 @@ namespace ColosseumDuel.Tests
             yield return Capture(SuffixPath("-pick"));
 
             controller.SubmitPlayerPick(GladiatorId.Brutius);
-            yield return RunSeconds(GameConstants.RevealTime + 0.1f);
+
+            // The clash being announced, with the two of them partway out from the wall.
+            yield return RunSeconds(GladiatorView.EntranceSeconds * 0.45f);
+            yield return Capture(SuffixPath("-reveal"));
+            yield return RunUntil(() => controller.Manager.State.Phase == MatchPhase.Planning, GameConstants.RevealTime + 1f);
 
             // Jump the round counter so the frame also shows the closing danger rings, which would
             // otherwise take seven real rounds (~35 seconds) to appear.

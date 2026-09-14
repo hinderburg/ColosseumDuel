@@ -30,7 +30,10 @@ namespace ColosseumDuel.Core
         // It no longer decides how far anybody goes. That is speed alone (see SpeedScale): a longer
         // phase is the same run at half the pace, not twice the ground.
         public const float ActionTime = 2.0f;
-        public const float RevealTime = 1.0f;   // picks stay on screen this long before the clash's first Planning
+        // Picks stay on screen this long before the clash's first Planning - and the two men walk out
+        // to their marks from the wall behind them in it (see GladiatorView.EntranceSeconds). A
+        // second was over before the walk could be seen.
+        public const float RevealTime = 1.8f;
         // Pause after a death, in real seconds. Long enough that the knockout plays out at the
         // slowed rate the camera comes in on: at DeathTimeScale this is roughly half a second of
         // animation, which is what a fall takes.
