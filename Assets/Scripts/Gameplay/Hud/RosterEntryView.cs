@@ -130,7 +130,7 @@ namespace ColosseumDuel.Gameplay.Hud
             {
                 HudFactory.UseSprite(_icon, _palette != null ? _palette.IconFor(g.Def.Id) : null);
                 _icon.enabled = _icon.sprite != null && alive;
-                if (_palette != null) _icon.color = _palette.ArchetypeColor(g.Def.Id);
+                if (_palette != null) _icon.color = _palette.IconTint(g.Def.Id);
             }
 
             HudFactory.SetFill(_hpFill, g.Def.MaxHp > 0f ? g.Hp / g.Def.MaxHp : 0f);

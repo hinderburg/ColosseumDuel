@@ -54,8 +54,14 @@ namespace ColosseumDuel.Core
 
         public static float DealDamage(GladiatorInstance attacker, GladiatorInstance defender)
         {
-            float raw = ComputeAttackDamage(attacker)
-                        * SectorMultiplier(defender.SectorHitFrom(attacker.Pos));
+            var sector = defender.SectorHitFrom(attacker.Pos);
+
+            // Bulwark: a blow into the front of the shield wall lands on nothing - no damage, no
+            // wound, and no credit to the man who swung it.
+            if (sector == HitSector.Front && defender.Buff.IsActive && defender.Buff.Key == AbilityKey.Bulwark)
+                return 0f;
+
+            float raw = ComputeAttackDamage(attacker) * SectorMultiplier(sector);
             float final = ApplyMitigation(defender, raw);
 
             defender.TakeDamage(final);

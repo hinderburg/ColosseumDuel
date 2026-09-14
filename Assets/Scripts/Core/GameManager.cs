@@ -501,6 +501,12 @@ namespace ColosseumDuel.Core
             Bleed(PlayerSide.P1, State.P1.Active);
             Bleed(PlayerSide.Bot, State.Bot.Active);
 
+            // Both abilities before either run is laid out. A net lands on the other man, and it has
+            // to shorten the run he ordered this phase - which it could not do for the bot's run
+            // if the player's side were laid out, ability and all, before the bot's net was thrown.
+            FireAbility(PlayerSide.P1, State.P1.Active, State.Bot.Active);
+            FireAbility(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
+
             ApplyPlannedAction(PlayerSide.P1, State.P1.Active, State.Bot.Active);
             ApplyPlannedAction(PlayerSide.Bot, State.Bot.Active, State.P1.Active);
             FaceTravel();
@@ -526,16 +532,22 @@ namespace ColosseumDuel.Core
             if (amount > 0f) Bled?.Invoke(side, amount);
         }
 
+        /// <summary>
+        /// Fires an armed ability. A supplementary effect - it does not consume the turn. The net is
+        /// the one that acts on the other man rather than on the one who used it.
+        /// </summary>
+        private void FireAbility(PlayerSide side, GladiatorInstance g, GladiatorInstance opponent)
+        {
+            if (g == null || !g.Alive || !g.AbilityArmed || !g.CanActivateAbility) return;
+
+            g.ActivateAbility();
+            if (g.Def.Ability == AbilityKey.Net && opponent != null && opponent.Alive) opponent.Ensnare();
+            AbilityFired?.Invoke(side);
+        }
+
         private void ApplyPlannedAction(PlayerSide side, GladiatorInstance g, GladiatorInstance opponent)
         {
             if (g == null || !g.Alive) return;
-
-            // Ability is a supplementary effect - it does NOT consume the whole turn.
-            if (g.AbilityArmed && g.CanActivateAbility)
-            {
-                g.ActivateAbility();
-                AbilityFired?.Invoke(side);
-            }
 
             // Facing is not set here - see FaceTravel, which runs once both sides have their
             // velocity and turns each of them to face along the first leg of his run.

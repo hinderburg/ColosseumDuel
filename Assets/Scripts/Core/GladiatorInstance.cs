@@ -96,7 +96,19 @@ namespace ColosseumDuel.Core
         public WeaponDef WeaponDef => WeaponDef.Get(Weapon);
 
         /// <summary>Whether he is behind a shield. A property of the weapon now, not a slot.</summary>
-        public bool HasShield => Weapon == WeaponKind.SwordAndShield;
+        public bool HasShield => Weapon == WeaponKind.SwordAndShield || Weapon == WeaponKind.ScutumAndGladius
+                                 || Weapon == WeaponKind.SpearAndShield;
+
+        /// <summary>
+        /// Cycles still to run on a net thrown over him, the one it landed in counted. He runs at
+        /// half speed while it lasts - see EffectiveSpeed.
+        /// </summary>
+        public int EnsnaredCyclesLeft;
+
+        public bool IsEnsnared => EnsnaredCyclesLeft > 0;
+
+        /// <summary>A net lands on him. Thrown again while one is on him, it starts the count over.</summary>
+        public void Ensnare() => EnsnaredCyclesLeft = GameConstants.NetCycles;
 
         /// <summary>Arms him with the weapon he trained on. Called when he enters the arena.</summary>
         public void EquipTrainedWeapon()
@@ -259,6 +271,8 @@ namespace ColosseumDuel.Core
             float speed = Def.Speed;
             if (Buff.IsActive && Buff.Key == AbilityKey.Spirit)
                 speed *= 1.5f;
+            if (IsEnsnared)
+                speed *= GameConstants.NetSpeedMult;
             return speed;
         }
 
@@ -310,6 +324,10 @@ namespace ColosseumDuel.Core
 
             Buff = new ActiveBuff { Key = Def.Ability, CyclesLeft = 2 };
 
+            // Second Wind is the one ability that is spent the moment it fires rather than lasting.
+            if (Def.Ability == AbilityKey.SecondWind)
+                Hp = Mathf.Min(Def.MaxHp, Hp + Def.MaxHp * GameConstants.SecondWindHeal);
+
             // The ability fires at the start of Action, after BeginCycle already set the attack
             // budget for this cycle - so Mongoose has to top it up for the cycle it was used in.
             AttacksRemainingThisCycle = AttacksPerCycle;
@@ -336,6 +354,7 @@ namespace ColosseumDuel.Core
             TookDamageThisCycle = false;
             if (AbilityLockedCycles > 0) AbilityLockedCycles--;
             if (WeaponBuffCyclesLeft > 0) WeaponBuffCyclesLeft--;
+            if (EnsnaredCyclesLeft > 0) EnsnaredCyclesLeft--;
             if (Buff.CyclesLeft > 0)
             {
                 Buff.CyclesLeft--;
@@ -368,6 +387,7 @@ namespace ColosseumDuel.Core
             PlannedPath.Clear();
             AbilityArmed = false;
             Buff = default;
+            EnsnaredCyclesLeft = 0;
             AbilityLockedCycles = 0;
 
             // His own weapon, unblessed. The blessing is the reward for crossing the arena under fire

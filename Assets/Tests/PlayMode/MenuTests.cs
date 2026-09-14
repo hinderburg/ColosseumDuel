@@ -133,7 +133,7 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator TheRosterScreenOffersTwoOfEachAndOpensOnWhatYouAlreadyHave()
+        public IEnumerator TheRosterScreenOffersOneOfEachAndOpensOnWhatYouAlreadyHave()
         {
             FindButton("ChooseGladiators").onClick.Invoke();
             yield return null;
@@ -141,9 +141,12 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(MenuView.Screen.Roster, _menu.Current);
 
             int offers = GladiatorDef.All.Count * MenuView.CopiesPerArchetype;
+            Assert.AreEqual(6, offers, "six archetypes, one card each");
             for (int i = 0; i < offers; i++)
                 Assert.IsNotNull(FindButton($"Offer_{i}"), $"no card for offer {i}");
-            Assert.IsNull(FindButton($"Offer_{offers}"), "there should be exactly two of each");
+            Assert.IsNull(FindButton($"Offer_{offers}"), "there should be exactly one of each");
+            foreach (var def in GladiatorDef.All)
+                Assert.AreEqual(1, OffersOf(def.Id).Count(), $"{def.Name} should be on offer exactly once");
 
             // Opened on the squad they already have, so swapping one fighter does not mean
             // re-picking the other two.
@@ -155,14 +158,14 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator ASquadCanBeTwoOfTheSameFighter()
+        public IEnumerator ASquadOfNewArchetypesIsFought_AndTheBotFieldsTheThreeLeftOver()
         {
-            // The whole reason two of each are offered. Anything that quietly collapsed the pair
-            // would leave the player looking at a composition they cannot actually field.
+            // Six on offer and three taken: the three the player leaves are the bot's, so the two
+            // squads between them are all six men and neither side fights its own mirror.
             FindButton("ChooseGladiators").onClick.Invoke();
             yield return null;
 
-            // Clear whatever was carried in, then take both Brutius and one Hilius.
+            // Clear whatever was carried in, then take the three that came with the new weapons.
             int offers = GladiatorDef.All.Count * MenuView.CopiesPerArchetype;
             for (int i = 0; i < offers; i++)
                 if (Find($"OfferFrame_{i}").GetComponent<Image>().enabled)
@@ -171,31 +174,45 @@ namespace ColosseumDuel.Tests
                     yield return null;
                 }
 
-            foreach (int offer in OffersOf(GladiatorId.Brutius))
+            var chosen = new[] { GladiatorId.Retiarius, GladiatorId.Scutarius, GladiatorId.Hastarius };
+            foreach (var id in chosen)
             {
-                FindButton($"Offer_{offer}").onClick.Invoke();
+                FindButton($"Offer_{OffersOf(id).First()}").onClick.Invoke();
                 yield return null;
             }
-            FindButton($"Offer_{OffersOf(GladiatorId.Hilius).First()}").onClick.Invoke();
-            yield return null;
 
             Assert.IsTrue(FindButton("ConfirmSquad").interactable, "three are chosen");
             FindButton("ConfirmSquad").onClick.Invoke();
             yield return null;
 
-            CollectionAssert.AreEqual(
-                new[] { GladiatorId.Brutius, GladiatorId.Brutius, GladiatorId.Hilius },
-                _controller.Squad);
+            CollectionAssert.AreEqual(chosen, _controller.Squad, "in the order they were chosen");
 
-            // And the match under the menu is fought with it - two separate men, two pick cards.
-            var roster = _controller.Manager.State.P1.Roster;
-            Assert.AreEqual(2, roster.Count(g => g.Def.Id == GladiatorId.Brutius));
-            Assert.AreNotSame(roster[0], roster[1], "two Brutius must be two instances, not one twice");
+            var state = _controller.Manager.State;
+            CollectionAssert.AreEqual(chosen, state.P1.Roster.Select(g => g.Def.Id));
+            CollectionAssert.AreEquivalent(
+                new[] { GladiatorId.Brutius, GladiatorId.Barbarius, GladiatorId.Hilius },
+                state.Bot.Roster.Select(g => g.Def.Id),
+                "the bot should field exactly the three the player did not take");
+
+            // Each walks in with his own weapon.
+            foreach (var g in state.P1.Roster)
+                Assert.AreEqual(g.Def.SkilledWith, g.Weapon, $"{g.Def.Name} is not holding his own weapon");
 
             _menu.StartMatch();
             yield return null;
             for (int slot = 0; slot < GameConstants.SquadSize; slot++)
                 Assert.IsTrue(FindButton($"Pick_{slot}").interactable, $"slot {slot} should be pickable");
+        }
+
+        [UnityTest]
+        public IEnumerator TheSameFighterCannotBeTakenTwice()
+        {
+            FindButton("ChooseGladiators").onClick.Invoke();
+            yield return null;
+
+            CollectionAssert.AllItemsAreUnique(_controller.Squad);
+            Assert.IsNull(FindButton($"Offer_{GladiatorDef.All.Count}"),
+                "a second card for anybody would let the same man be taken twice");
         }
 
         [UnityTest]

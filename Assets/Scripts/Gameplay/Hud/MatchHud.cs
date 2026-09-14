@@ -484,7 +484,7 @@ namespace ColosseumDuel.Gameplay.Hud
                     _pickButtons[i].interactable = alive;
 
                     HudFactory.UseSprite(_pickIcons[i], palette != null ? palette.IconFor(def.Id) : null);
-                    _pickIcons[i].color = palette != null ? palette.ArchetypeColor(def.Id) : Color.white;
+                    _pickIcons[i].color = palette != null ? palette.IconTint(def.Id) : Color.white;
                     _pickIcons[i].enabled = _pickIcons[i].sprite != null;
 
                     // Damage alongside HP: with the ability spelled out on its own line below, the

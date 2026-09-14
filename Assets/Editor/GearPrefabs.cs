@@ -31,6 +31,10 @@ namespace ColosseumDuel.EditorTools
         public const string MacePath = PrefabDir + "/Gear_Mace.prefab";
         public const string ShieldPath = PrefabDir + "/Gear_Shield.prefab";
         public const string HelmetPath = PrefabDir + "/Gear_Helmet.prefab";
+        public const string SpearPath = PrefabDir + "/Gear_Spear.prefab";
+        public const string TridentPath = PrefabDir + "/Gear_Trident.prefab";
+        public const string ScutumPath = PrefabDir + "/Gear_Scutum.prefab";
+        public const string RoundShieldPath = PrefabDir + "/Gear_RoundShield.prefab";
 
         /// <summary>
         /// Which of the pack's models each piece of gear is.
@@ -43,6 +47,13 @@ namespace ColosseumDuel.EditorTools
         private const string MaceModel = "Battle_Hammer_01";
         private const string ShieldModel = "Heater_Shield_01";
         private const string HelmetModel = "Tophelm";
+
+        // The second three archetypes' gear. The pack has a spear and a round shield as they are,
+        // and its crossbowman's pavise is the nearest thing in it to a scutum: tall, flat-topped and
+        // meant to be hidden behind. It has no trident, so that one is built here from primitives.
+        private const string SpearModel = "Spear_01";
+        private const string ScutumModel = "Crossbowman's_Shield_01";
+        private const string RoundShieldModel = "Round_Shield_01";
 
         /// <summary>True if the pack is imported at all. A clean clone has none of this.</summary>
         public static bool PackImported => AssetDatabase.IsValidFolder(PackPrefabs);
@@ -73,10 +84,19 @@ namespace ColosseumDuel.EditorTools
             // the opponent - so what it is built with only shows if that ever fails to happen.
             var helmet = HelmetMaterial("Gear_Helmet", Color.white);
 
+            // Each model on the texture set it was made for - read off the pack's own prefabs. Put on
+            // another set's texture a model is painted with somebody else's UV layout.
+            var spear = TexturedMaterial("Gear_Spear", "Gate_Lift_01", Color.white, 0.40f);
+            var pavise = TexturedMaterial("Gear_Scutum", "Quiver_Arrows", Color.white, 0.20f);
+
             bool ok = Build(SwordModel, SwordPath, steel)
                       & Build(MaceModel, MacePath, steel)
                       & Build(ShieldModel, ShieldPath, shield)
-                      & Build(HelmetModel, HelmetPath, helmet);
+                      & Build(HelmetModel, HelmetPath, helmet)
+                      & Build(SpearModel, SpearPath, spear)
+                      & Build(ScutumModel, ScutumPath, pavise)
+                      & Build(RoundShieldModel, RoundShieldPath, shield)
+                      & BuildTrident(TridentPath, steel);
 
             AssetDatabase.SaveAssets();
             return ok;
@@ -125,6 +145,53 @@ namespace ColosseumDuel.EditorTools
                 Object.DestroyImmediate(root);
                 if (instance != null) Object.DestroyImmediate(instance);
             }
+        }
+
+        /// <summary>
+        /// The trident, which the pack does not have: a haft, a crossbar and three prongs.
+        ///
+        /// Laid out the way the pack lays out its blades, so everything that holds and turns a
+        /// sword holds and turns this: length along +Y with the points at the -Y end, and the prongs
+        /// spread across Z so its broad side faces +X. Normalise then makes it one unit long like
+        /// every other piece of gear.
+        /// </summary>
+        private static bool BuildTrident(string outputPath, Material material)
+        {
+            var root = new GameObject(System.IO.Path.GetFileNameWithoutExtension(outputPath));
+            try
+            {
+                var model = new GameObject("Trident");
+                model.transform.SetParent(root.transform, false);
+
+                var cylinder = Resources.GetBuiltinResource<Mesh>("Cylinder.fbx");
+                var cube = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
+
+                // The built-in cylinder is two units tall at scale one: this haft runs from -0.85 to 1.15.
+                Part(model, "Haft", cylinder, material, new Vector3(0f, 0.15f, 0f), new Vector3(0.05f, 1.0f, 0.05f));
+                Part(model, "Crossbar", cube, material, new Vector3(0f, -0.85f, 0f), new Vector3(0.05f, 0.05f, 0.36f));
+                Part(model, "Prong", cube, material, new Vector3(0f, -1.10f, 0f), new Vector3(0.04f, 0.50f, 0.04f));
+                Part(model, "ProngLeft", cube, material, new Vector3(0f, -1.05f, -0.155f), new Vector3(0.04f, 0.40f, 0.04f));
+                Part(model, "ProngRight", cube, material, new Vector3(0f, -1.05f, 0.155f), new Vector3(0.04f, 0.40f, 0.04f));
+
+                Normalise(model);
+                PrefabUtility.SaveAsPrefabAsset(root, outputPath);
+                return true;
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void Part(GameObject parent, string name, Mesh mesh, Material material,
+            Vector3 position, Vector3 scale)
+        {
+            var part = new GameObject(name);
+            part.transform.SetParent(parent.transform, false);
+            part.transform.localPosition = position;
+            part.transform.localScale = scale;
+            part.AddComponent<MeshFilter>().sharedMesh = mesh;
+            part.AddComponent<MeshRenderer>().sharedMaterial = material;
         }
 
         /// <summary>

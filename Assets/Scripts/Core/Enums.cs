@@ -19,15 +19,18 @@ namespace ColosseumDuel.Core
     }
 
     /// <summary>
-    /// The three ways to fight. See WeaponDef for what each one does; every gladiator is trained in
-    /// exactly one of them and starts the match holding it.
+    /// The six ways to fight, one per archetype. See WeaponDef for what each one does; every
+    /// gladiator is trained in exactly one of them and starts the match holding it.
     /// </summary>
     public enum WeaponKind
     {
         None,
         DualSwords,
         SwordAndShield,
-        TwoHandedMace
+        TwoHandedMace,
+        ScutumAndGladius,
+        SpearAndShield,
+        Trident
     }
 
     public enum PlayerSide
@@ -40,7 +43,10 @@ namespace ColosseumDuel.Core
     {
         Brutius,
         Barbarius,
-        Hilius
+        Hilius,
+        Scutarius,
+        Hastarius,
+        Retiarius
     }
 
     /// <summary>
@@ -61,6 +67,9 @@ namespace ColosseumDuel.Core
     {
         Spirit,   // Brutius - +50% speed for 2 cycles
         Fury,     // Barbarius - -25% damage taken for 2 cycles
-        Mongoose  // Hilius - 2 attacks per cycle for 2 cycles
+        Mongoose,   // Hilius - 2 attacks per cycle for 2 cycles
+        Bulwark,    // Scutarius - blows from the front do nothing for 2 cycles
+        SecondWind, // Hastarius - heals a quarter of his health at once
+        Net         // Retiarius - the enemy runs at half speed for 2 cycles
     }
 }

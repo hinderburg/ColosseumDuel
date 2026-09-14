@@ -147,7 +147,13 @@ namespace ColosseumDuel.Tests
 
             foreach (var def in GladiatorDef.All)
             {
-                controller.RestartMatch();
+                // A squad with him in it - six archetypes do not fit in one squad of three - and so
+                // the bot fields the three he was not picked with, which puts the new men in frame
+                // opposite the old ones as well as the other way round.
+                var squad = new System.Collections.Generic.List<GladiatorId> { def.Id };
+                foreach (var other in GladiatorDef.All)
+                    if (other.Id != def.Id && squad.Count < GameConstants.SquadSize) squad.Add(other.Id);
+                controller.SetSquad(squad);
                 yield return null;
 
                 controller.SubmitPlayerPick(def.Id);
@@ -162,7 +168,6 @@ namespace ColosseumDuel.Tests
                 // Each in the weapon he trained on, so the three frames between them cover all
                 // three loadouts rather than showing the same pair three times.
                 player.Weapon = def.SkilledWith;
-                bot.Weapon = WeaponKind.SwordAndShield;
                 yield return null;
 
                 yield return Capture(SuffixPath($"-{def.Id}"));

@@ -126,6 +126,31 @@ namespace ColosseumDuel.Core
             reach: Scaled(78f), swingArcDegrees: 120f,   // 132
             description: "One heavy blow that throws them back");
 
+        // The second three, one for each of the archetypes that came with them. Each takes one of
+        // the first three's strengths and pays for it somewhere else: the scutum is the shield
+        // made shorter-reaching and shoving, the spear is the longest reach there is down the
+        // narrowest line, and the trident reaches most of the way the mace does and cuts instead
+        // of throwing.
+
+        public static readonly WeaponDef ScutumAndGladius = new WeaponDef(
+            WeaponKind.ScutumAndGladius, "Scutum and gladius", damageMultiplier: 1.1f, attacks: 1,
+            incomingDamageMultiplier: GameConstants.ScutumDamageMult, bleeds: false,
+            knockback: GameConstants.ShieldBashKnockback,
+            reach: Scaled(30f), swingArcDegrees: 80f,   // 74.4 - a short stab from behind the wall
+            description: "A short stab from behind a tall shield that shoves them back");
+
+        public static readonly WeaponDef SpearAndShield = new WeaponDef(
+            WeaponKind.SpearAndShield, "Spear and round shield", damageMultiplier: 1.0f, attacks: 1,
+            incomingDamageMultiplier: GameConstants.RoundShieldDamageMult, bleeds: false, knockback: 0f,
+            reach: Scaled(100f), swingArcDegrees: 50f,   // 158.4 - the longest, and the narrowest
+            description: "The longest reach there is, down a narrow line");
+
+        public static readonly WeaponDef Trident = new WeaponDef(
+            WeaponKind.Trident, "Trident", damageMultiplier: 1.2f, attacks: 1,
+            incomingDamageMultiplier: 1f, bleeds: true, knockback: 0f,
+            reach: Scaled(74f), swingArcDegrees: 70f,   // 127.2 - just short of the mace
+            description: "Three points that reach far and leave a wound");
+
         /// <summary>
         /// A reach set against the models at their original size, grown with the man.
         ///
@@ -137,10 +162,10 @@ namespace ColosseumDuel.Core
         private static float Scaled(float beyondTwoBodies)
             => (GameConstants.BaseGladiatorRadius * 2f + beyondTwoBodies) * GameConstants.GladiatorScale;
 
-        /// <summary>The three a gladiator can be trained in, in the order the UI lists them.</summary>
+        /// <summary>The six a gladiator can be trained in, in the order the UI lists them.</summary>
         public static readonly IReadOnlyList<WeaponDef> All = new List<WeaponDef>
         {
-            DualSwords, SwordAndShield, TwoHandedMace
+            DualSwords, SwordAndShield, TwoHandedMace, ScutumAndGladius, SpearAndShield, Trident
         };
 
         public static WeaponDef Get(WeaponKind kind)
@@ -150,6 +175,9 @@ namespace ColosseumDuel.Core
                 case WeaponKind.DualSwords: return DualSwords;
                 case WeaponKind.SwordAndShield: return SwordAndShield;
                 case WeaponKind.TwoHandedMace: return TwoHandedMace;
+                case WeaponKind.ScutumAndGladius: return ScutumAndGladius;
+                case WeaponKind.SpearAndShield: return SpearAndShield;
+                case WeaponKind.Trident: return Trident;
                 default: return Unarmed;
             }
         }

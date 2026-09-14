@@ -151,6 +151,18 @@ namespace ColosseumDuel.Core
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
         public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
+        public const float ScutumDamageMult = 0.80f;      // the scutum: less than the shield, and it shoves
+        public const float RoundShieldDamageMult = 0.80f; // the spearman's small round shield
+
+        /// <summary>How far a blow from behind the scutum shoves its target - half the mace's throw.</summary>
+        public const float ShieldBashKnockback = GladiatorRadius * 0.8f;
+
+        /// <summary>Share of his own health Second Wind gives back, at once.</summary>
+        public const float SecondWindHeal = 0.25f;
+
+        /// <summary>What a net leaves of a man's speed, and for how many cycles (the one it lands in counted).</summary>
+        public const float NetSpeedMult = 0.5f;
+        public const int NetCycles = 2;
 
         /// <summary>
         /// What a blow is worth for landing behind a gladiator, and for landing on his flank.

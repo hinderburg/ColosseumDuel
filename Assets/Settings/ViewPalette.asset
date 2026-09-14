@@ -42,10 +42,31 @@ MonoBehaviour:
   - {fileID: 623849741, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: -1756047590, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 1386808307, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1087086722, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 699413217, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 151241378, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   WeaponIcons:
   - {fileID: 1744151977, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: -2081245629, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 798309987, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 21300000, guid: 69383b1564e6840459a96cc4a2a0bce6, type: 3}
+  - {fileID: 21300000, guid: c41138ee72254bf4ca8c7501a8c9ee90, type: 3}
+  - {fileID: 21300000, guid: 1b8c77ec49e8a174dbc6990d9395b5b2, type: 3}
+  ArchetypeIconsArePortraits: 0
+  AbilityIcons:
+  - {fileID: 1386808307, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 381300419, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: -1756047590, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1822879496, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 994223573, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: -248196999, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  ArchetypeColors:
+  - {r: 0.49, g: 0.33, b: 0.76, a: 1}
+  - {r: 0.98, g: 0.52, b: 0.15, a: 1}
+  - {r: 0.78, g: 0.2, b: 0.18, a: 1}
+  - {r: 0.2, g: 0.45, b: 0.85, a: 1}
+  - {r: 0.33, g: 0.6, b: 0.43, a: 1}
+  - {r: 0.93, g: 0.72, b: 0.2, a: 1}
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
@@ -59,6 +80,10 @@ MonoBehaviour:
   SwordModel: {fileID: 8355507498074448756, guid: 3803e291bcc87d64e850c759e73d0275, type: 3}
   MaceModel: {fileID: 4958248887937798342, guid: ffc0f65c12d47044f83a3e937cdb8fc4, type: 3}
   ShieldModel: {fileID: 8736053284591058948, guid: e046966197c3f7c4cbf49c2a615a71de, type: 3}
+  SpearModel: {fileID: 6617482392911195490, guid: 933bb97939e006249a013310c7a68d2e, type: 3}
+  TridentModel: {fileID: 455367526220779727, guid: 7daf0a77374e39e429e03b73970dd57c, type: 3}
+  ScutumModel: {fileID: 5150344428278006776, guid: 0001afdaf10a9f548ae15f550e4440c1, type: 3}
+  RoundShieldModel: {fileID: 4442155007861836072, guid: b8f7a1d7d0736d849a1de6c8f8b0db38, type: 3}
   HelmetModel: {fileID: 4097255080222555793, guid: 4af2d004a52a4e745a543a2c1cc3ed35, type: 3}
   GearUntrained: {fileID: 2100000, guid: 7a788bc76103d72478365eb78b39fc34, type: 2}
   WeaponGlow: {fileID: 2100000, guid: 27e628f0ef97c804b82ec9fb0334986e, type: 2}
@@ -67,10 +92,16 @@ MonoBehaviour:
   - {fileID: 2668578167718699114, guid: 9168f9738c480124fadf9ac585529992, type: 3}
   - {fileID: 9187501524033622830, guid: d00863a97b540fc488b4cf29f2356893, type: 3}
   - {fileID: 8201797615313982386, guid: 74f1c03d17b52ae4db7f1d61f4f8e008, type: 3}
+  - {fileID: 4924172732080405724, guid: 97d0dae46aa0f3e45ad0602025e50ec6, type: 3}
+  - {fileID: 2850411983291817232, guid: fe54cd2d3a7cede4bb6a01cd61f82a2b, type: 3}
+  - {fileID: 580499523267204791, guid: 711084c5f73a0fe48abc8b8b7e3faca3, type: 3}
   ArchetypeBodies:
   - {fileID: 2100000, guid: 38e71fad12e695c4b9ff149deea431fa, type: 2}
   - {fileID: 2100000, guid: 79c9e177fed072e418d56768efedb6b0, type: 2}
   - {fileID: 2100000, guid: 2f8c771bc04b89e439ec74bfcb4989f7, type: 2}
+  - {fileID: 2100000, guid: 3ed8ece6d855b97438927d8658590993, type: 2}
+  - {fileID: 2100000, guid: 49eb8e3b13275084099e64b026ba0a0a, type: 2}
+  - {fileID: 2100000, guid: d458fcaca69607249a30d4f4d8815f65, type: 2}
   Cube: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   Sphere: {fileID: 10200, guid: 0000000000000000e000000000000000, type: 0}
   Capsule: {fileID: 10205, guid: 0000000000000000e000000000000000, type: 0}

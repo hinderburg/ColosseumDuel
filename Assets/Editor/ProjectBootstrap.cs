@@ -487,13 +487,32 @@ namespace ColosseumDuel.EditorTools
             ApplyTexture(palette.Banner,
                 ProceduralTextures.EnsureBanner(TexturesDir + "/Banner.png"), Vector2.one);
 
+            // The portraits, when the sheet is in the project: each is the gladiator's icon, and the
+            // colour it is painted on is his colour everywhere - so the bodies below are built from
+            // it too. Without the sheet the icon pack's glyphs stand in, tinted with the colour the
+            // portrait was described as having.
+            var portraits = PortraitSprites.Ensure();
+            palette.ArchetypeIconsArePortraits = portraits != null;
+            palette.ArchetypeColors = new Color[GladiatorDef.All.Count];
             palette.ArchetypeIcons = new Sprite[GladiatorDef.All.Count];
             for (int i = 0; i < GladiatorDef.All.Count; i++)
             {
                 var def = GladiatorDef.All[i];
-                palette.ArchetypeIcons[i] = IconPack.Sprite(IconPack.ForArchetype(def.Id))
+                PortraitSprites.Portrait portrait = null;
+                if (portraits != null) portraits.TryGetValue(def.Id, out portrait);
+
+                palette.ArchetypeColors[i] = portrait != null
+                    ? portrait.Background
+                    : PortraitSheet.ExpectedBackground(def.Id);
+                palette.ArchetypeIcons[i] = (portrait != null ? portrait.Sprite : null)
+                    ?? IconPack.Sprite(IconPack.ForArchetype(def.Id))
                     ?? ProceduralTextures.EnsureArchetypeIcon($"{TexturesDir}/Icon_{def.Id}.png", def.Id);
             }
+
+            var abilities = (AbilityKey[])Enum.GetValues(typeof(AbilityKey));
+            palette.AbilityIcons = new Sprite[abilities.Length];
+            foreach (var key in abilities)
+                palette.AbilityIcons[(int)key] = IconPack.Sprite(IconPack.ForAbility(key));
 
             palette.WeaponIcons = new Sprite[WeaponDef.All.Count];
             for (int i = 0; i < WeaponDef.All.Count; i++)
@@ -594,6 +613,10 @@ namespace ColosseumDuel.EditorTools
             palette.MaceModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.MacePath);
             palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.ShieldPath);
             palette.HelmetModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.HelmetPath);
+            palette.SpearModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.SpearPath);
+            palette.TridentModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.TridentPath);
+            palette.ScutumModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.ScutumPath);
+            palette.RoundShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.RoundShieldPath);
             palette.GearUntrained = InsideOutUnlit("GearUntrained", new Color(0.95f, 0.12f, 0.10f));
 
             // The blessing's gold: a transparent glow, faded per object, drawn round a blessed weapon

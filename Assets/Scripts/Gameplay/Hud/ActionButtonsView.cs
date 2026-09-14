@@ -69,7 +69,12 @@ namespace ColosseumDuel.Gameplay.Hud
         private ArenaView _arena;
         private Canvas _canvas;
         private Text _abilityLabel;
+        private Image _abilityIcon;
+        private ViewPalette _palette;
         private Image _abilityBackground;
+
+        /// <summary>Across the ability glyph, in reference pixels: the upper half of the button.</summary>
+        private const float AbilityIconSize = 28f;
         private Image _defendBackground;
         private Image _defendGlow;
         private Image _timer;
@@ -101,6 +106,18 @@ namespace ColosseumDuel.Gameplay.Hud
                 out view._abilityRect, out view._abilityGroup);
             view._abilityLabel = view._abilityRect.GetComponentInChildren<Text>();
             view._abilityBackground = (Image)view.Ability.targetGraphic;
+            view._palette = palette;
+
+            // The ability's own glyph above its name: six abilities now, and the button should say
+            // which one it is before the name is read.
+            view._abilityIcon = HudFactory.CreatePanel("AbilityIcon", view._abilityRect, HudFactory.RageColor);
+            view._abilityIcon.raycastTarget = false;
+            view._abilityIcon.preserveAspect = true;
+            var iconRect = view._abilityIcon.rectTransform;
+            iconRect.anchorMin = iconRect.anchorMax = new Vector2(0.5f, 0.5f);
+            iconRect.pivot = new Vector2(0.5f, 0.5f);
+            iconRect.sizeDelta = new Vector2(AbilityIconSize, AbilityIconSize);
+            iconRect.anchoredPosition = new Vector2(0f, 10f);
 
             // The rage gauge rides on the ability button as a ring, so charge is read in the same
             // glance as the button itself rather than from a bar elsewhere on screen.
@@ -237,6 +254,15 @@ namespace ColosseumDuel.Gameplay.Hud
             // The ability differs per gladiator, so name it rather than saying "special" - the
             // names are short enough to fit and tell the player what the button will actually do.
             _abilityLabel.text = gladiator.Def.AbilityName;
+
+            // With a glyph the name drops below it; without one - no icon pack - it keeps the middle.
+            HudFactory.UseSprite(_abilityIcon, _palette != null ? _palette.AbilityIconFor(gladiator.Def.Ability) : null);
+            bool hasIcon = _abilityIcon.sprite != null;
+            if (_abilityIcon.enabled != hasIcon) _abilityIcon.enabled = hasIcon;
+            _abilityLabel.alignment = hasIcon ? TextAnchor.LowerCenter : TextAnchor.MiddleCenter;
+            _abilityLabel.rectTransform.offsetMin = new Vector2(4f, hasIcon ? 12f : 0f);
+            _abilityLabel.rectTransform.offsetMax = new Vector2(-4f, 0f);
+            _abilityLabel.fontSize = hasIcon ? 12 : 15;
 
             _rageGauge.fillAmount = Mathf.Clamp01(gladiator.Rage / GameConstants.RageMax);
 

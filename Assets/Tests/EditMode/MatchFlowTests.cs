@@ -577,7 +577,8 @@ namespace ColosseumDuel.Tests
             foreach (var def in GladiatorDef.All)
             {
                 var m = new GameManager(new System.Random(def.Id.GetHashCode()));
-                m.StartMatch(Squad, Squad, tutorial: true);
+                // A squad of him alone: the six are not all in any one squad of three any more.
+                m.StartMatch(new[] { def }, Squad, tutorial: true);
                 m.SubmitPick(PlayerSide.P1, def.Id);
 
                 var player = m.State.P1.Active;

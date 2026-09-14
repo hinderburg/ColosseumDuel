@@ -317,9 +317,13 @@ namespace ColosseumDuel.Gameplay.View
         private Transform _mainHand;      // holder, on the right hand
         private Transform _mainSword;
         private Transform _mainMace;
+        private Transform _mainSpear;
+        private Transform _mainTrident;
         private Transform _offHand;       // holder, on the left hand
         private Transform _offSword;
         private Transform _offShield;
+        private Transform _offScutum;
+        private Transform _offRoundShield;
         private WeaponKind? _shownWeapon;
         private bool _shownBuffed;
 
@@ -350,6 +354,12 @@ namespace ColosseumDuel.Gameplay.View
             _mainMace = palette.MaceModel != null
                 ? Grip(palette.MaceModel, _mainHand, "Mace", GearSizes.GripAlong(WeaponKind.TwoHandedMace))
                 : null;
+            _mainSpear = palette.SpearModel != null
+                ? Grip(palette.SpearModel, _mainHand, "Spear", GearSizes.GripAlong(WeaponKind.SpearAndShield))
+                : null;
+            _mainTrident = palette.TridentModel != null
+                ? Grip(palette.TridentModel, _mainHand, "Trident", GearSizes.GripAlong(WeaponKind.Trident))
+                : null;
             _mainHand.gameObject.SetActive(false);
 
             var off = new GameObject("HeldOffHand");
@@ -357,7 +367,36 @@ namespace ColosseumDuel.Gameplay.View
             _offHand = off.transform;
             _offSword = Grip(palette.SwordModel, _offHand, "Sword");
             _offShield = palette.ShieldModel != null ? Grip(palette.ShieldModel, _offHand, "Shield", 0f) : null;
+            _offScutum = palette.ScutumModel != null ? Grip(palette.ScutumModel, _offHand, "Scutum", 0f) : null;
+            _offRoundShield = palette.RoundShieldModel != null
+                ? Grip(palette.RoundShieldModel, _offHand, "RoundShield", 0f)
+                : null;
             _offHand.gameObject.SetActive(false);
+        }
+
+        /// <summary>What this weapon puts in his right fist, falling back to the sword where a model is missing.</summary>
+        private Transform MainPieceFor(WeaponKind kind)
+        {
+            switch (kind)
+            {
+                case WeaponKind.TwoHandedMace: return _mainMace ?? _mainSword;
+                case WeaponKind.SpearAndShield: return _mainSpear ?? _mainSword;
+                case WeaponKind.Trident: return _mainTrident ?? _mainSword;
+                default: return _mainSword;
+            }
+        }
+
+        /// <summary>What this weapon puts in his left hand, or null when it leaves it empty.</summary>
+        private Transform OffPieceFor(WeaponKind kind)
+        {
+            switch (kind)
+            {
+                case WeaponKind.DualSwords: return _offSword;
+                case WeaponKind.SwordAndShield: return _offShield;
+                case WeaponKind.ScutumAndGladius: return _offScutum ?? _offShield;
+                case WeaponKind.SpearAndShield: return _offRoundShield ?? _offShield;
+                default: return null;
+            }
         }
 
         /// <summary>
@@ -443,7 +482,7 @@ namespace ColosseumDuel.Gameplay.View
             bool armed = g.Weapon != WeaponKind.None;
             if (_mainHand.gameObject.activeSelf != armed) _mainHand.gameObject.SetActive(armed);
 
-            bool offHanded = g.Weapon == WeaponKind.DualSwords || g.Weapon == WeaponKind.SwordAndShield;
+            bool offHanded = g.Weapon == WeaponKind.DualSwords || g.HasShield;
             if (_offHand != null && _offHand.gameObject.activeSelf != offHanded)
                 _offHand.gameObject.SetActive(offHanded);
 
@@ -457,19 +496,22 @@ namespace ColosseumDuel.Gameplay.View
                 GearSizes.Tint(_mainHand.gameObject, tint);
                 if (_offHand != null) GearSizes.Tint(_offHand.gameObject, tint);
 
-                bool mace = GearSizes.UsesMace(g.Weapon) && _mainMace != null;
-                SetActive(_mainSword, !mace);
-                SetActive(_mainMace, mace);
+                var main = MainPieceFor(g.Weapon);
+                SetActive(_mainSword, main == _mainSword);
+                SetActive(_mainMace, main == _mainMace);
+                SetActive(_mainSpear, main == _mainSpear);
+                SetActive(_mainTrident, main == _mainTrident);
 
-                bool shield = g.Weapon == WeaponKind.SwordAndShield && _offShield != null;
-                SetActive(_offSword, offHanded && !shield);
-                SetActive(_offShield, shield);
+                var off = offHanded ? OffPieceFor(g.Weapon) : null;
+                SetActive(_offSword, off != null && off == _offSword);
+                SetActive(_offShield, off != null && off == _offShield);
+                SetActive(_offScutum, off != null && off == _offScutum);
+                SetActive(_offRoundShield, off != null && off == _offRoundShield);
 
-                // The same length it had lying on the sand. It used to be shortened in the fist
-                // by a factor of its own, so the weapon the player crossed the arena for arrived
-                // visibly smaller than the one they had been looking at.
+                // One size per piece, whatever it is: a weapon in the fist is the size it is drawn
+                // everywhere else, and a shield is the height of that shield.
                 SetWorldSize(_mainHand, GearSizes.MainHandLength(g.Weapon));
-                SetWorldSize(_offHand, shield ? GearSizes.ShieldHeight : GearSizes.SwordLength);
+                SetWorldSize(_offHand, GearSizes.OffHandSize(g.Weapon));
             }
 
             if (armed) TurnBladeFlatUpwards(_mainHand);
@@ -700,7 +742,10 @@ namespace ColosseumDuel.Gameplay.View
             switch (weapon)
             {
                 case WeaponKind.TwoHandedMace: return 0.40f;
+                case WeaponKind.Trident: return 0.36f;
+                case WeaponKind.SpearAndShield: return 0.30f;
                 case WeaponKind.SwordAndShield: return 0.28f;
+                case WeaponKind.ScutumAndGladius: return 0.26f;
                 case WeaponKind.DualSwords: return 0.22f;
                 default: return 0.24f;
             }
@@ -784,7 +829,7 @@ namespace ColosseumDuel.Gameplay.View
         /// Long enough for the swing to read, short enough that the recoil still belongs to the
         /// blow that caused it.
         /// </summary>
-        private const float SwingHoldsOffTheRecoil = 0.22f;
+        public const float SwingHoldsOffTheRecoil = 0.22f;
 
         private float _swingHoldLeft;
         private bool _hitWaiting;
@@ -953,7 +998,7 @@ namespace ColosseumDuel.Gameplay.View
 
             _animator.SetFloat(AnimatorParams.SpeedId, g.Vel.magnitude * _arena.VirtualToWorld);
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
-            _animator.SetBool(AnimatorParams.TwoHandedId, g.Weapon == WeaponKind.TwoHandedMace);
+            _animator.SetBool(AnimatorParams.TwoHandedId, GearSizes.TwoHanded(g.Weapon));
 
             SyncRunDirection(g);
         }

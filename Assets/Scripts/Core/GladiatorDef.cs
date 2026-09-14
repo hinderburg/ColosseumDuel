@@ -93,9 +93,31 @@ namespace ColosseumDuel.Core
             abilityDescription: "2 attacks per cycle, for 2 cycles",
             skilledWith: WeaponKind.SwordAndShield, buildWidth: 0.85f, buildHeight: 0.85f);
 
+        // The second three. Each walks in with a weapon of his own and an ability nobody else has;
+        // the numbers are set against the first three by the bot-against-bot table in
+        // BalanceHarness rather than by argument.
+
+        public static readonly GladiatorDef Scutarius = new GladiatorDef(
+            GladiatorId.Scutarius, "Scutarius", maxHp: 150f, damage: 8f, speed: 12f,
+            ability: AbilityKey.Bulwark, abilityName: "Bulwark",
+            abilityDescription: "no damage from the front for 2 cycles",
+            skilledWith: WeaponKind.ScutumAndGladius, buildWidth: 1.1f);
+
+        public static readonly GladiatorDef Hastarius = new GladiatorDef(
+            GladiatorId.Hastarius, "Hastarius", maxHp: 130f, damage: 10f, speed: 16f,
+            ability: AbilityKey.SecondWind, abilityName: "Second Wind",
+            abilityDescription: "heals 25% of his health",
+            skilledWith: WeaponKind.SpearAndShield, buildHeight: 1.08f);
+
+        public static readonly GladiatorDef Retiarius = new GladiatorDef(
+            GladiatorId.Retiarius, "Retiarius", maxHp: 130f, damage: 12f, speed: 18f,
+            ability: AbilityKey.Net, abilityName: "Net",
+            abilityDescription: "enemy runs at half speed for 2 cycles",
+            skilledWith: WeaponKind.Trident, buildWidth: 0.9f);
+
         public static readonly IReadOnlyList<GladiatorDef> All = new List<GladiatorDef>
         {
-            Brutius, Barbarius, Hilius
+            Brutius, Barbarius, Hilius, Scutarius, Hastarius, Retiarius
         };
 
         public static GladiatorDef Get(GladiatorId id)
@@ -105,6 +127,9 @@ namespace ColosseumDuel.Core
                 case GladiatorId.Brutius: return Brutius;
                 case GladiatorId.Barbarius: return Barbarius;
                 case GladiatorId.Hilius: return Hilius;
+                case GladiatorId.Scutarius: return Scutarius;
+                case GladiatorId.Hastarius: return Hastarius;
+                case GladiatorId.Retiarius: return Retiarius;
                 default: return Brutius;
             }
         }

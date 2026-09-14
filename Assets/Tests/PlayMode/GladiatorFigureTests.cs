@@ -349,23 +349,38 @@ namespace ColosseumDuel.Tests
             // between two frames on a loaded batch run, and the test then fails when the suite is
             // busy and passes when run on its own. One sample late in the clip proves the swing was
             // not cut, however few samples there were.
-            float playerSwing = 0f, botSwing = 0f;
+            float playerSwing = 0f, botSwing = 0f, playerClip = 0f, botClip = 0f;
             for (float t = 0f; t < 0.8f; t += Time.unscaledDeltaTime)
             {
                 playerSwing = Mathf.Max(playerSwing, SwingProgress(player));
                 botSwing = Mathf.Max(botSwing, SwingProgress(bot));
+                playerClip = Mathf.Max(playerClip, SwingLength(player));
+                botClip = Mathf.Max(botClip, SwingLength(bot));
                 yield return null;
             }
 
             // Not the whole clip: the recoil is held off for SwingHoldsOffTheRecoil and then allowed
-            // through, so the swing is meant to be cut - just not on the frame it started. Measured
-            // on this rig: about 0.23 of the clip with the hold, about 0.12 without, so the
-            // threshold sits between the two and the test can actually fail.
-            Assert.Greater(playerSwing, 0.18f,
-                $"the player's swing reached {playerSwing:0.##} of its clip - it was cut short");
-            Assert.Greater(botSwing, 0.18f,
-                $"the opponent's swing reached {botSwing:0.##} of its clip - it was cut short");
+            // through, so the swing is meant to be cut - just not on the frame it started. The hold
+            // is a fixed time, so the share of the swing it buys depends on the clip: about 0.23 of
+            // the two-handed one and 0.18 of the longer one-handed one, against about half that
+            // without the hold. Three quarters of what the hold buys sits between the two for
+            // either clip, where one fixed number only ever fitted the clip it was measured on.
+            Assert.Greater(playerSwing, SwingFloor(playerClip),
+                $"the player's swing reached {playerSwing:0.##} of its {playerClip:0.##}s clip - it was cut short");
+            Assert.Greater(botSwing, SwingFloor(botClip),
+                $"the opponent's swing reached {botSwing:0.##} of its {botClip:0.##}s clip - it was cut short");
         }
+
+        /// <summary>How long the swing this animator is playing lasts, in seconds, or zero if it is not swinging.</summary>
+        private static float SwingLength(Animator animator)
+        {
+            var info = animator.GetCurrentAnimatorStateInfo(0);
+            return IsSwing(info) ? info.length : 0f;
+        }
+
+        /// <summary>The least share of a clip this long that a swing held off from its recoil should reach.</summary>
+        private static float SwingFloor(float clipSeconds)
+            => clipSeconds > 0.01f ? 0.75f * GladiatorView.SwingHoldsOffTheRecoil / clipSeconds : 1f;
 
         /// <summary>How far through a swing this animator is, or zero if it is not swinging.</summary>
         private static float SwingProgress(Animator animator)

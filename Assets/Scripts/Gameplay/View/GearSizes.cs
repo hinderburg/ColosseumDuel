@@ -28,11 +28,39 @@ namespace ColosseumDuel.Gameplay.View
         public const float ShieldHeight = 1.2f * GameConstants.GladiatorScale;
         public const float HelmetHeight = 0.62f * GameConstants.GladiatorScale;
 
+        public const float SpearLength = 2.7f * GameConstants.GladiatorScale;
+        public const float TridentLength = 2.5f * GameConstants.GladiatorScale;
+        public const float ScutumHeight = 1.55f * GameConstants.GladiatorScale;
+        public const float RoundShieldHeight = 1.0f * GameConstants.GladiatorScale;
+
         /// <summary>What goes in the weapon hand, and how long it is.</summary>
         public static float MainHandLength(WeaponKind kind)
-            => kind == WeaponKind.TwoHandedMace ? MaceLength : SwordLength;
+        {
+            switch (kind)
+            {
+                case WeaponKind.TwoHandedMace: return MaceLength;
+                case WeaponKind.SpearAndShield: return SpearLength;
+                case WeaponKind.Trident: return TridentLength;
+                default: return SwordLength;
+            }
+        }
+
+        /// <summary>What the off hand carries, and how big: a second sword, or one of three shields.</summary>
+        public static float OffHandSize(WeaponKind kind)
+        {
+            switch (kind)
+            {
+                case WeaponKind.SwordAndShield: return ShieldHeight;
+                case WeaponKind.ScutumAndGladius: return ScutumHeight;
+                case WeaponKind.SpearAndShield: return RoundShieldHeight;
+                default: return SwordLength;
+            }
+        }
 
         public static bool UsesMace(WeaponKind kind) => kind == WeaponKind.TwoHandedMace;
+
+        /// <summary>Held in both fists, and so swung with the two-handed clips.</summary>
+        public static bool TwoHanded(WeaponKind kind) => kind == WeaponKind.TwoHandedMace || kind == WeaponKind.Trident;
 
         /// <summary>
         /// How far along its own length a weapon is pushed so the fist closes on the grip.
@@ -44,7 +72,20 @@ namespace ColosseumDuel.Gameplay.View
         /// trailing back over his shoulder.
         /// </summary>
         public static float GripAlong(WeaponKind kind)
-            => kind == WeaponKind.TwoHandedMace ? GripFromEnd : -GripFromEnd;
+        {
+            switch (kind)
+            {
+                case WeaponKind.TwoHandedMace: return GripFromEnd;
+                // Polearms are held nearer the butt than a sword is by its hilt, so the point is
+                // well out in front of him.
+                case WeaponKind.SpearAndShield:
+                case WeaponKind.Trident: return -PolearmGripFromEnd;
+                default: return -GripFromEnd;
+            }
+        }
+
+        /// <summary>How far from the middle a polearm is held, as a share of its length.</summary>
+        public const float PolearmGripFromEnd = 0.30f;
 
         /// <summary>How far from the middle the fist sits, as a share of the weapon's length.</summary>
         public const float GripFromEnd = 0.34f;

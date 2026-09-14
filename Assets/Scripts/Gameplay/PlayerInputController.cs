@@ -398,9 +398,11 @@ namespace ColosseumDuel.Gameplay
 
             if (state.P1.NeedsPick)
             {
-                if (Input.GetKeyDown(KeyCode.Alpha1)) Controller.SubmitPlayerPick(GladiatorId.Brutius);
-                if (Input.GetKeyDown(KeyCode.Alpha2)) Controller.SubmitPlayerPick(GladiatorId.Barbarius);
-                if (Input.GetKeyDown(KeyCode.Alpha3)) Controller.SubmitPlayerPick(GladiatorId.Hilius);
+                // By slot on the pick screen rather than by archetype: the squad is whichever three
+                // the player chose, so "1" is whoever is on the first card.
+                for (int slot = 0; slot < state.P1.Roster.Count && slot < 9; slot++)
+                    if (Input.GetKeyDown(KeyCode.Alpha1 + slot))
+                        Controller.SubmitPlayerPick(state.P1.Roster[slot].Def.Id);
                 return;
             }
 

@@ -99,10 +99,17 @@ namespace ColosseumDuel.Gameplay
             // the sand he fell on is the same sand, and by the third round it should look like it.
             if (Arena != null) Arena.ClearBloodStains();
 
-            Manager.StartMatch(
-                Squad.Select(GladiatorDef.Get),
-                new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius },
-                tutorial);
+            Manager.StartMatch(Squad.Select(GladiatorDef.Get), BotSquadAgainst(Squad), tutorial);
+        }
+
+        /// <summary>
+        /// The bot fields the three the player did not take. Six archetypes and two squads of three:
+        /// every match is six different men, and nobody fights his own mirror.
+        /// </summary>
+        public static List<GladiatorDef> BotSquadAgainst(IEnumerable<GladiatorId> playerSquad)
+        {
+            var taken = new HashSet<GladiatorId>(playerSquad);
+            return GladiatorDef.All.Where(d => !taken.Contains(d.Id)).Take(GameConstants.SquadSize).ToList();
         }
 
         private int _matchesStarted;

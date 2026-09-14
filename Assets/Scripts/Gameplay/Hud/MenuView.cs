@@ -17,8 +17,11 @@ namespace ColosseumDuel.Gameplay.Hud
     /// </summary>
     public sealed class MenuView : MonoBehaviour
     {
-        /// <summary>How many of each archetype the player may take. Two, so a pair is possible.</summary>
-        public const int CopiesPerArchetype = 2;
+        /// <summary>
+        /// How many of each archetype the player may take. One: with six archetypes on offer a
+        /// squad is three different men, and the bot fields the other three.
+        /// </summary>
+        public const int CopiesPerArchetype = 1;
 
         public enum Screen
         {
@@ -179,9 +182,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 TextAnchor.MiddleCenter, HudFactory.MutedTextColor);
             Centre(_rosterSubtitle.rectTransform, new Vector2(520f, 26f), 392f);
 
-            // Six cards in one column. Two of each archetype are on offer, and they are listed as
-            // six separate fighters rather than three with a counter, because that is what they
-            // are: a squad of two Brutius fields two men, not one man twice.
+            // Six cards in one column, one per archetype.
             for (int i = 0; i < Offers.Count; i++)
             {
                 int index = i;
@@ -193,7 +194,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 button.onClick.AddListener(() => ToggleOffer(index));
 
                 var icon = HudFactory.CreatePanel($"OfferIcon_{i}", button.transform,
-                    _palette != null ? _palette.ArchetypeColor(def.Id) : Color.white);
+                    _palette != null ? _palette.IconTint(def.Id) : Color.white);
                 HudFactory.UseSprite(icon, _palette != null ? _palette.IconFor(def.Id) : null);
                 icon.preserveAspect = true;
                 icon.raycastTarget = false;
@@ -342,7 +343,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 var def = GladiatorDef.Get(_controller.Squad[slot]);
                 tile.Name.text = $"{def.Name}   ·   {WeaponDef.Get(def.SkilledWith).Name}";
                 HudFactory.UseSprite(tile.Icon, _palette != null ? _palette.IconFor(def.Id) : null);
-                tile.Icon.color = _palette != null ? _palette.ArchetypeColor(def.Id) : Color.white;
+                tile.Icon.color = _palette != null ? _palette.IconTint(def.Id) : Color.white;
                 tile.Icon.enabled = tile.Icon.sprite != null;
                 HudFactory.UseSprite(tile.Skill, _palette != null ? _palette.IconFor(def.SkilledWith) : null);
                 tile.Skill.enabled = tile.Skill.sprite != null;
@@ -368,7 +369,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             int left = GameConstants.SquadSize - _draft.Count;
             _rosterSubtitle.text = left > 0
-                ? $"Two of each are available. {left} more to choose."
+                ? $"Three different fighters. {left} more to choose."
                 : "Tap one again to swap it out.";
             _confirm.interactable = left == 0;
         }

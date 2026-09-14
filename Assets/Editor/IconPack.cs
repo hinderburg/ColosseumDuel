@@ -34,13 +34,35 @@ namespace ColosseumDuel.EditorTools
             {
                 case GladiatorId.Brutius: return "Heart02_Bright";     // 200 HP, twice anyone else
                 case GladiatorId.Barbarius: return "Thunder_Bright";   // 13 damage, the hardest hitter
+                case GladiatorId.Scutarius: return "Padlock02_Bright"; // the wall nothing gets through
+                case GladiatorId.Hastarius: return "Up_Bright";        // the spear point, furthest out
+                case GladiatorId.Retiarius: return "Aim02_Bright";     // the net cast over a man
                 default: return "Skip_Bright";                         // 20 speed, and the chevrons he already wore
             }
         }
 
         /// <summary>
+        /// The glyph on the ability button. The only place the six abilities need telling apart at
+        /// a glance, so they are picked for what the ability does rather than who has it.
+        /// </summary>
+        public static string ForAbility(AbilityKey key)
+        {
+            switch (key)
+            {
+                case AbilityKey.Spirit: return "Skip_Bright";         // run half as far again
+                case AbilityKey.Fury: return "Heart01_Bright";        // take a quarter less
+                case AbilityKey.Mongoose: return "Thunder_Bright";    // strike twice
+                case AbilityKey.Bulwark: return "Padlock01_Bright";   // the front is shut
+                case AbilityKey.SecondWind: return "Potion01_Bright"; // drink and go on
+                case AbilityKey.Net: return "Network_Bright";         // the mesh itself
+                default: return null;
+            }
+        }
+
+        /// <summary>
         /// The weapon badges. A blade and a shield are in the pack as themselves; there is no mace
-        /// in it, so the hammer takes the shattering-impact glyph - which is what it does.
+        /// in it, so the hammer takes the shattering-impact glyph - which is what it does. Nothing
+        /// in it is a scutum, a spear or a trident, so those three are drawn in code instead.
         /// </summary>
         public static string ForWeapon(WeaponKind kind)
         {

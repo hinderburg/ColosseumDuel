@@ -136,6 +136,35 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         /// <summary>
+        /// True when the archetype icons are the painted portraits rather than white glyphs. A
+        /// portrait is drawn as it was painted - tinting it would wash the art in its own colour.
+        /// </summary>
+        public bool ArchetypeIconsArePortraits;
+
+        /// <summary>What an archetype icon is drawn with: white for a portrait, his colour for a glyph.</summary>
+        public Color IconTint(ColosseumDuel.Core.GladiatorId id)
+            => ArchetypeIconsArePortraits ? Color.white : ArchetypeColor(id);
+
+        /// <summary>
+        /// One glyph per ability, indexed by AbilityKey, for the ability button. White, so the
+        /// button can paint it. Null entries - a clean clone has no icon pack - leave the name alone.
+        /// </summary>
+        public Sprite[] AbilityIcons;
+
+        public Sprite AbilityIconFor(ColosseumDuel.Core.AbilityKey key)
+        {
+            int index = (int)key;
+            return AbilityIcons != null && index >= 0 && index < AbilityIcons.Length ? AbilityIcons[index] : null;
+        }
+
+        /// <summary>
+        /// Each archetype's colour, indexed by GladiatorId: the colour his portrait is painted on,
+        /// read off the sheet by the bootstrap. Filled even without the sheet, from the colours the
+        /// portraits were described as having.
+        /// </summary>
+        public Color[] ArchetypeColors;
+
+        /// <summary>
         /// Flame played beside the gladiator while the ability is charged and ready.
         /// Comes from an Asset Store pack that is not in the repository, so a clean clone will find
         /// this null - everything else has to keep working without it.
@@ -183,6 +212,10 @@ namespace ColosseumDuel.Gameplay.View
         public GameObject SwordModel;
         public GameObject MaceModel;
         public GameObject ShieldModel;
+        public GameObject SpearModel;
+        public GameObject TridentModel;
+        public GameObject ScutumModel;
+        public GameObject RoundShieldModel;
 
         /// <summary>Worn on the head, tinted with the owning side's colour.</summary>
         public GameObject HelmetModel;
@@ -232,16 +265,16 @@ namespace ColosseumDuel.Gameplay.View
                 : null;
         }
 
-        /// <summary>Body tint that identifies the archetype, regardless of which side owns it.</summary>
+        /// <summary>
+        /// Body tint that identifies the archetype, regardless of which side owns it - the colour of
+        /// his portrait's background, so the card and the fighter are visibly the same man.
+        /// </summary>
         public Color ArchetypeColor(ColosseumDuel.Core.GladiatorId id)
         {
-            switch (id)
-            {
-                case ColosseumDuel.Core.GladiatorId.Brutius: return new Color(0.85f, 0.62f, 0.30f);
-                case ColosseumDuel.Core.GladiatorId.Barbarius: return new Color(0.62f, 0.40f, 0.80f);
-                case ColosseumDuel.Core.GladiatorId.Hilius: return new Color(0.40f, 0.78f, 0.48f);
-                default: return Color.white;
-            }
+            int index = (int)id;
+            return ArchetypeColors != null && index >= 0 && index < ArchetypeColors.Length
+                ? ArchetypeColors[index]
+                : PortraitSheet.ExpectedBackground(id);
         }
 
         /// <summary>
