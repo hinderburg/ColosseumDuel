@@ -67,7 +67,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void AnAbilityLastsTheCyclesOnItsCard()
+        public void AnAbilityLastsTheRoundsOnItsCard()
         {
             foreach (var card in AbilityDef.All)
             {
@@ -75,14 +75,14 @@ namespace ColosseumDuel.Tests
                 var g = new GladiatorInstance(owner) { Ability = card.Key, Rage = GameConstants.RageMax };
                 g.ActivateAbility();
 
-                int cycles = System.Math.Max(1, card.Cycles);
-                for (int cycle = 1; cycle < cycles; cycle++)
+                int rounds = System.Math.Max(1, card.Rounds);
+                for (int round = 1; round < rounds; round++)
                 {
-                    g.BeginCycle();
-                    Assert.IsTrue(g.Has(card.Key), $"{card.Name} ended after {cycle} of its {cycles} cycles");
+                    g.BeginRound();
+                    Assert.IsTrue(g.Has(card.Key), $"{card.Name} ended after {round} of its {rounds} rounds");
                 }
-                g.BeginCycle();
-                Assert.IsFalse(g.Has(card.Key), $"{card.Name} outlasted its {cycles} cycles");
+                g.BeginRound();
+                Assert.IsFalse(g.Has(card.Key), $"{card.Name} outlasted its {rounds} rounds");
             }
         }
 
@@ -113,7 +113,7 @@ namespace ColosseumDuel.Tests
         public void Earthshaker_ThrowsTwiceAsFar_AndRootsTheManItLandsOn()
         {
             var m = Duel(GladiatorDef.Brutius, GladiatorDef.Hastarius, out var me, out var them);
-            me.Buff = new ActiveBuff { Key = AbilityKey.Earthshaker, CyclesLeft = 1 };
+            me.Buff = new ActiveBuff { Key = AbilityKey.Earthshaker, RoundsLeft = 1 };
             FaceOff(me, them, 60f);
 
             SubmitStand(m);
@@ -124,9 +124,9 @@ namespace ColosseumDuel.Tests
                 60f + GameConstants.MaceKnockback * GameConstants.EarthshakerKnockbackMult * 0.9f,
                 "he should have been thrown twice the mace's distance");
 
-            them.BeginCycle();
-            Assert.AreEqual(0f, them.DashReach(), Tol, "rooted through the next cycle as well");
-            them.BeginCycle();
+            them.BeginRound();
+            Assert.AreEqual(0f, them.DashReach(), Tol, "rooted through the next round as well");
+            them.BeginRound();
             Assert.Greater(them.DashReach(), 0f, "and free after that");
         }
 
@@ -143,7 +143,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void Frenzy_OpensWoundsTwiceAsDeep_ForACycleLonger()
+        public void Frenzy_OpensWoundsTwiceAsDeep_ForARoundLonger()
         {
             var plainTarget = new GladiatorInstance(GladiatorDef.Brutius);
             CombatResolver.DealDamage(new GladiatorInstance(GladiatorDef.Barbarius), plainTarget);
@@ -152,8 +152,8 @@ namespace ColosseumDuel.Tests
             var target = new GladiatorInstance(GladiatorDef.Brutius);
             CombatResolver.DealDamage(frenzied, target);
 
-            Assert.AreEqual(plainTarget.BleedPerCycle * GameConstants.FrenzyBleedMult, target.BleedPerCycle, Tol);
-            Assert.AreEqual(GameConstants.FrenzyBleedCycles, target.BleedCyclesLeft);
+            Assert.AreEqual(plainTarget.BleedPerRound * GameConstants.FrenzyBleedMult, target.BleedPerRound, Tol);
+            Assert.AreEqual(GameConstants.FrenzyBleedRounds, target.BleedRoundsLeft);
         }
 
         [Test]
@@ -184,7 +184,7 @@ namespace ColosseumDuel.Tests
             var wall = new GladiatorInstance(GladiatorDef.Scutarius)
             {
                 Pos = Vector2.zero, Facing = Vector2.up,
-                Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 2 },
+                Buff = new ActiveBuff { Key = AbilityKey.Bulwark, RoundsLeft = 2 },
             };
             Assert.Greater(CombatResolver.DealDamage(g, wall), 0f, "a blow from behind goes round Bulwark");
         }
@@ -211,7 +211,7 @@ namespace ColosseumDuel.Tests
         public void Mongoose_DoublesHisAttacks()
         {
             var g = Running(GladiatorDef.Hilius, AbilityKey.Mongoose);
-            Assert.AreEqual(2 * WeaponDef.Get(GladiatorDef.Hilius.SkilledWith).Attacks, g.AttacksPerCycle);
+            Assert.AreEqual(2 * WeaponDef.Get(GladiatorDef.Hilius.SkilledWith).Attacks, g.AttacksPerRound);
         }
 
         // --- Scutarius ---------------------------------------------------------------------
@@ -245,7 +245,7 @@ namespace ColosseumDuel.Tests
         public void ShieldBash_ThrowsThreeTimesAsFar_AndStopsTheRun()
         {
             var m = Duel(GladiatorDef.Scutarius, GladiatorDef.Hastarius, out var me, out var them);
-            me.Buff = new ActiveBuff { Key = AbilityKey.ShieldBash, CyclesLeft = 2 };
+            me.Buff = new ActiveBuff { Key = AbilityKey.ShieldBash, RoundsLeft = 2 };
             FaceOff(me, them, 50f);
 
             SubmitStand(m);
@@ -281,7 +281,7 @@ namespace ColosseumDuel.Tests
         public void Brace_StrikesTheManChargingIntoHisFront_AndStopsHim()
         {
             var m = Duel(GladiatorDef.Hastarius, GladiatorDef.Scutarius, out var me, out var them);
-            me.Buff = new ActiveBuff { Key = AbilityKey.Brace, CyclesLeft = 2 };
+            me.Buff = new ActiveBuff { Key = AbilityKey.Brace, RoundsLeft = 2 };
             FaceOff(me, them, 90f);
 
             float hp = them.Hp;
@@ -315,21 +315,21 @@ namespace ColosseumDuel.Tests
         // --- Retiarius ---------------------------------------------------------------------
 
         [Test]
-        public void ANet_HoldsHimStill_ForTheCycleItLandsAndTheNext()
+        public void ANet_HoldsHimStill_ForTheRoundItLandsAndTheNext()
         {
             var g = new GladiatorInstance(GladiatorDef.Brutius);
             float full = g.DashReach();
 
             g.Ensnare();
-            Assert.AreEqual(0f, g.DashReach(), Tol, "the cycle it lands");
-            g.BeginCycle();
-            Assert.AreEqual(0f, g.DashReach(), Tol, "the cycle after");
-            g.BeginCycle();
+            Assert.AreEqual(0f, g.DashReach(), Tol, "the round it lands");
+            g.BeginRound();
+            Assert.AreEqual(0f, g.DashReach(), Tol, "the round after");
+            g.BeginRound();
             Assert.AreEqual(full, g.DashReach(), Tol, "and free again after that");
 
             g.Ensnare();
-            g.ResetForNewRound();
-            Assert.AreEqual(full, g.DashReach(), Tol, "a net does not outlast the round");
+            g.ResetForNewClash();
+            Assert.AreEqual(full, g.DashReach(), Tol, "a net does not outlast the clash");
         }
 
         [Test]
@@ -352,7 +352,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void Shackles_BurnHisRage_AndKeepHisAbilityFromHimForTwoCycles()
+        public void Shackles_BurnHisRage_AndKeepHisAbilityFromHimForTwoRounds()
         {
             var m = Duel(GladiatorDef.Retiarius, GladiatorDef.Brutius, out var me, out var them);
             me.Ability = AbilityKey.Shackles;
@@ -365,11 +365,11 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(0f, them.Rage, Tol, "his rage should have burned away");
 
             them.Rage = GameConstants.RageMax;
-            them.BeginCycle();
-            Assert.IsFalse(them.CanActivateAbility, "the first cycle after");
-            them.BeginCycle();
-            Assert.IsFalse(them.CanActivateAbility, "the second cycle after");
-            them.BeginCycle();
+            them.BeginRound();
+            Assert.IsFalse(them.CanActivateAbility, "the first round after");
+            them.BeginRound();
+            Assert.IsFalse(them.CanActivateAbility, "the second round after");
+            them.BeginRound();
             Assert.IsTrue(them.CanActivateAbility, "and his again after that");
         }
 
@@ -380,10 +380,10 @@ namespace ColosseumDuel.Tests
             => new GladiatorInstance(def)
             {
                 Ability = key,
-                Buff = new ActiveBuff { Key = key, CyclesLeft = System.Math.Max(1, AbilityDef.Get(key).Cycles) },
+                Buff = new ActiveBuff { Key = key, RoundsLeft = System.Math.Max(1, AbilityDef.Get(key).Rounds) },
             };
 
-        /// <summary>One man a side, in the first planning phase of the first round.</summary>
+        /// <summary>One man a side, in the first planning phase of the first clash.</summary>
         private static GameManager Duel(GladiatorDef p1, GladiatorDef bot,
             out GladiatorInstance me, out GladiatorInstance them)
         {

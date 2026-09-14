@@ -120,7 +120,7 @@ namespace ColosseumDuel.Gameplay.View
         /// is a comparison against that schedule rather than a second copy of the ring geometry.
         ///
         /// A fixed scatter built once, not spawned as the rings light up: a hundred and fifty
-        /// meshes appearing mid-cycle is a hitch at exactly the moment the player is trying to run
+        /// meshes appearing mid-round is a hitch at exactly the moment the player is trying to run
         /// somewhere, and they cost nothing sitting under the floor.
         /// </summary>
         public void BuildSpikes()
@@ -176,7 +176,7 @@ namespace ColosseumDuel.Gameplay.View
                 // The same test the simulation uses to decide whether it is burning someone, asked
                 // at the spike's own place on the floor - so what is up is exactly what hurts.
                 bool dangerous = HazardSystem.IsInActiveHazard(
-                    ArenaShape.FromUnitCircle(DirectionOf(i) * _spikeDistance[i]), state.Cycle);
+                    ArenaShape.FromUnitCircle(DirectionOf(i) * _spikeDistance[i]), state.Round);
 
                 var position = _spikes[i].localPosition;
                 float target = dangerous ? 0f : -_spikeHeight;
@@ -395,7 +395,7 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>
         /// Pre-instantiates the blood bursts.
         ///
-        /// A pool rather than instantiate-and-destroy per hit: with Mongoose landing twice a cycle
+        /// A pool rather than instantiate-and-destroy per hit: with Mongoose landing twice a round
         /// and both sides trading blows simultaneously, spawning would allocate several particle
         /// hierarchies a second during a fight - exactly when the frame budget matters most.
         /// </summary>
@@ -436,11 +436,11 @@ namespace ColosseumDuel.Gameplay.View
         /// Pre-builds the stains the sand can hold.
         ///
         /// One quad each, all sharing a material, all disabled until something bleeds on them. They
-        /// are never taken away during a match: a round is over when somebody falls, but the sand he
-        /// fell on is the same sand, and by the third round it should look like it.
+        /// are never taken away during a match: a clash is over when somebody falls, but the sand he
+        /// fell on is the same sand, and by the third clash it should look like it.
         ///
         /// Forty-eight of them, recycled oldest-first past that. A long match trades a dozen blows a
-        /// round, so the wrap is far enough out that the arena reads as accumulating rather than as
+        /// clash, so the wrap is far enough out that the arena reads as accumulating rather than as
         /// holding a fixed number of marks.
         /// </summary>
         public void BuildBloodStains()
@@ -469,7 +469,7 @@ namespace ColosseumDuel.Gameplay.View
             }
         }
 
-        /// <summary>Wipes the sand clean. A new match, not a new round.</summary>
+        /// <summary>Wipes the sand clean. A new match, not a new clash.</summary>
         public void ClearBloodStains()
         {
             foreach (var stain in _bloodStains)
@@ -531,7 +531,7 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>
         /// Shows the rings that are dealing damage right now, and - during Planning only - the one
-        /// that will light up next cycle. The design calls for that stage to be telegraphed a cycle
+        /// that will light up next round. The design calls for that stage to be telegraphed a round
         /// ahead so the player can plan a move out of it.
         /// </summary>
         public void Sync(MatchState state)
@@ -540,7 +540,7 @@ namespace ColosseumDuel.Gameplay.View
 
             if (_hazardRings.Count == 0 || Palette == null) return;
 
-            var upcoming = HazardSystem.UpcomingStage(state.Cycle);
+            var upcoming = HazardSystem.UpcomingStage(state.Round);
             bool telegraphing = state.Phase == MatchPhase.Planning && upcoming.HasValue;
 
             for (int i = 0; i < _hazardRings.Count && i < HazardSystem.Schedule.Count; i++)
@@ -548,8 +548,8 @@ namespace ColosseumDuel.Gameplay.View
                 var stage = HazardSystem.Schedule[i];
                 var renderer = _hazardRings[i];
 
-                bool active = state.Cycle >= stage.ActivateCycle;
-                bool warned = telegraphing && stage.ActivateCycle == upcoming.Value.ActivateCycle;
+                bool active = state.Round >= stage.ActivateRound;
+                bool warned = telegraphing && stage.ActivateRound == upcoming.Value.ActivateRound;
 
                 renderer.enabled = active || warned;
                 if (!renderer.enabled) continue;

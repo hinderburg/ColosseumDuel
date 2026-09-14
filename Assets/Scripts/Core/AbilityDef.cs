@@ -19,22 +19,22 @@ namespace ColosseumDuel.Core
         public readonly string Description;
 
         /// <summary>
-        /// Cycles it lasts, the one it fires in counted. Zero for one that is spent the moment it
-        /// fires. Fired at the top of an action phase, so one cycle is that phase and no more.
+        /// Rounds it lasts, the one it fires in counted. Zero for one that is spent the moment it
+        /// fires. Fired at the top of an action phase, so one round is that phase and no more.
         /// </summary>
-        public readonly int Cycles;
+        public readonly int Rounds;
 
-        public AbilityDef(AbilityKey key, string name, string description, int cycles)
+        public AbilityDef(AbilityKey key, string name, string description, int rounds)
         {
             Key = key;
             Name = name;
             Description = description;
-            Cycles = cycles;
+            Rounds = rounds;
         }
 
-        public string DurationText => Cycles <= 0 ? "instant" : Cycles == 1 ? "1 cycle" : $"{Cycles} cycles";
+        public string DurationText => Rounds <= 0 ? "instant" : Rounds == 1 ? "1 round" : $"{Rounds} rounds";
 
-        /// <summary>What it does and for how long, on one line: "+50% speed, -30% damage (2 cycles)".</summary>
+        /// <summary>What it does and for how long, on one line: "+50% speed, -30% damage (2 rounds)".</summary>
         public string Summary => $"{Description} ({DurationText})";
 
         public static readonly IReadOnlyList<AbilityDef> All = new List<AbilityDef>
@@ -42,19 +42,19 @@ namespace ColosseumDuel.Core
             // Brutius: the tank. Nothing here makes him faster for free any more - that was the one
             // weakness he had, and a way round it made him win almost every duel.
             new AbilityDef(AbilityKey.Earthshaker, "Earthshaker",
-                "the next blow throws twice as far and roots them next cycle", 1),
+                "the next blow throws twice as far and roots them next round", 1),
             new AbilityDef(AbilityKey.Rampage, "Rampage", "+50% speed, -30% damage", 2),
             new AbilityDef(AbilityKey.StoneSkin, "Stone Skin", "-30% damage taken", 2),
 
             // Barbarius: the glass cannon.
             new AbilityDef(AbilityKey.Bloodlust, "Bloodlust", "heals 50% of the damage he deals", 2),
-            new AbilityDef(AbilityKey.Frenzy, "Frenzy", "his bleeds deal double and last 3 cycles", 2),
+            new AbilityDef(AbilityKey.Frenzy, "Frenzy", "his bleeds deal double and last 3 rounds", 2),
             new AbilityDef(AbilityKey.Berserk, "Berserk", "+50% damage, +25% damage taken", 2),
 
             // Hilius: the fast one with the light blow.
             new AbilityDef(AbilityKey.Backstab, "Backstab", "every blow lands as if from behind (+40%)", 2),
             new AbilityDef(AbilityKey.Riposte, "Riposte", "blows from the front return 50% to the striker", 2),
-            new AbilityDef(AbilityKey.Mongoose, "Mongoose", "2 attacks per cycle", 3),
+            new AbilityDef(AbilityKey.Mongoose, "Mongoose", "2 attacks per round", 3),
 
             // Scutarius: the wall.
             new AbilityDef(AbilityKey.Bulwark, "Bulwark", "no damage from the front", 2),

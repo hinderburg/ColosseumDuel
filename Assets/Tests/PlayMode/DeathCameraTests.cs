@@ -39,7 +39,7 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator TheCameraHoldsStillThroughAnOrdinaryCycle()
+        public IEnumerator TheCameraHoldsStillThroughAnOrdinaryRound()
         {
             // The fixed frame is most of what makes this arena readable - the player learns one
             // view and every distance in it. Anything that moved it during a fight would be a bug.
@@ -95,18 +95,18 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator ItClosesInOnAKnockoutAndComesBackForTheNextRound()
+        public IEnumerator ItClosesInOnAKnockoutAndComesBackForTheNextClash()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            var loser = KillNextCycle();
-            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.RoundEnd, 8f);
-            Assert.IsFalse(loser.Alive, "this test needs the round to have ended in a death");
+            var loser = KillNextRound();
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.ClashEnd, 8f);
+            Assert.IsFalse(loser.Alive, "this test needs the clash to have ended in a death");
 
-            // Given the length of the round-end pause, not a fixed number of frames: the camera
+            // Given the length of the clash-end pause, not a fixed number of frames: the camera
             // moves on unscaled time precisely so that it arrives inside it.
-            yield return RunSeconds(GameConstants.RoundEndTime * 0.6f);
+            yield return RunSeconds(GameConstants.ClashEndTime * 0.6f);
 
             float closed = Vector3.Distance(_home, _camera.position);
             Assert.Greater(closed, 0.5f, "the camera should have come in on the body");
@@ -117,7 +117,7 @@ namespace ColosseumDuel.Tests
                 "and it should have come in towards the fallen gladiator, not away from him");
 
             // And home again by the time anyone is fighting in it. Snapped rather than drifted, so
-            // a round never opens on a frame that is still moving under the player.
+            // a clash never opens on a frame that is still moving under the player.
             yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Pick
                                         || _controller.Manager.State.Phase == MatchPhase.Reveal
                                         || _controller.Manager.State.Phase == MatchPhase.MatchEnd, 8f);
@@ -126,7 +126,7 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             Assert.AreEqual(0f, Vector3.Distance(_home, _camera.position), 0.001f,
-                "the camera has to be exactly home when a round starts");
+                "the camera has to be exactly home when a clash starts");
         }
 
         [UnityTest]
@@ -135,28 +135,28 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            KillNextCycle();
-            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.RoundEnd, 8f);
+            KillNextRound();
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.ClashEnd, 8f);
             yield return null;
 
             Assert.Less(Time.timeScale, 1f, "a knockout should slow the world down");
             Assert.AreEqual(_controller.DeathTimeScale, Time.timeScale, 0.001f);
 
-            yield return RunUntil(() => _controller.Manager.State.Phase != MatchPhase.RoundEnd, 8f);
+            yield return RunUntil(() => _controller.Manager.State.Phase != MatchPhase.ClashEnd, 8f);
             yield return null;
 
             Assert.AreNotEqual(_controller.DeathTimeScale, Time.timeScale,
-                "and let it go again once the round is over");
+                "and let it go again once the clash is over");
         }
 
         /// <summary>
-        /// Sets the round up to end in the very next exchange, and returns whoever is about to fall.
+        /// Sets the clash up to end in the very next exchange, and returns whoever is about to fall.
         ///
         /// Placed within reach by hand rather than run at each other across the arena: at the
-        /// spawn distance a charge takes three or four cycles, which is most of a minute of test
+        /// spawn distance a charge takes three or four rounds, which is most of a minute of test
         /// time for a fact about the camera.
         /// </summary>
-        private GladiatorInstance KillNextCycle()
+        private GladiatorInstance KillNextRound()
         {
             var state = _controller.Manager.State;
             var winner = state.P1.Active;

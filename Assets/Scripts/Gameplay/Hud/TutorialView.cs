@@ -26,8 +26,8 @@ namespace ColosseumDuel.Gameplay.Hud
     /// </summary>
     public sealed class TutorialView : MonoBehaviour
     {
-        /// <summary>How many cycles of the first fight carry the labels.</summary>
-        public const int TutorialCycles = 2;
+        /// <summary>How many rounds of the first fight carry the labels.</summary>
+        public const int TutorialRounds = 2;
 
         /// <summary>How high above a thing on the floor its label sits, in reference pixels.</summary>
         private const float LabelLift = 34f;
@@ -52,13 +52,13 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>Parchment, matching the sand it lies on rather than fighting it.</summary>
         private static readonly Color PlateColor = new Color(0.96f, 0.93f, 0.85f, 0.94f);
 
-        /// <summary>The order of the round, so it carries the eye before the labels do.</summary>
+        /// <summary>The order of the clash, so it carries the eye before the labels do.</summary>
         private static readonly Color InstructionPlateColor = new Color(1f, 0.87f, 0.52f, 0.96f);
 
         /// <summary>What the blessing does, in as few words as will fit above it.</summary>
         public static readonly string BlessingCaption =
             $"Blessing: +{Mathf.RoundToInt((GameConstants.WeaponBuffDamageMult - 1f) * 100f)}% damage " +
-            $"for {GameConstants.WeaponBuffCycles} cycles";
+            $"for {GameConstants.WeaponBuffRounds} rounds";
 
         private ArenaView _arena;
         private Canvas _canvas;
@@ -150,10 +150,10 @@ namespace ColosseumDuel.Gameplay.Hud
 
         public void Sync(MatchState state)
         {
-            // The first two cycles of a first fight and nothing else. Two is enough to run at the
+            // The first two rounds of a first fight and nothing else. Two is enough to run at the
             // blessing and swing once with it; past that the player has done the thing the labels
             // were there to explain, and a caption on the sand is in the way rather than in aid.
-            bool teaching = state.Tutorial && state.Round == 1 && state.Cycle <= TutorialCycles
+            bool teaching = state.Tutorial && state.Clash == 1 && state.Round <= TutorialRounds
                             && state.Phase != MatchPhase.Pick && state.Phase != MatchPhase.MatchEnd;
 
             if (gameObject.activeSelf != teaching) gameObject.SetActive(teaching);
@@ -208,7 +208,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
                 // At most one shove per obstacle nearer the middle: every pass moves this label
                 // strictly outwards, past the outermost thing it currently touches, so it cannot
-                // cycle.
+                // round.
                 for (int pass = 0; pass <= i; pass++)
                 {
                     float clearEdge = float.NegativeInfinity;

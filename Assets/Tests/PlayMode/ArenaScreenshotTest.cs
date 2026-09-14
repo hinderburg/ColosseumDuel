@@ -70,9 +70,9 @@ namespace ColosseumDuel.Tests
             controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
-            // Jump the cycle counter so the frame also shows the closing danger rings, which would
-            // otherwise take seven real cycles (~35 seconds) to appear.
-            controller.Manager.State.Cycle = 8;
+            // Jump the round counter so the frame also shows the closing danger rings, which would
+            // otherwise take seven real rounds (~35 seconds) to appear.
+            controller.Manager.State.Round = 8;
 
             // The spikes come up out of the sand rather than snapping into place, so the frame has
             // to be taken a moment after the rings light up or it catches them still underground.
@@ -87,8 +87,8 @@ namespace ColosseumDuel.Tests
             player.BlessWeapon();
             controller.Manager.State.Bot.Active.Weapon = WeaponKind.TwoHandedMace;
 
-            // A few rounds' worth of blood on the sand. The stains are the one thing on the arena
-            // that is meant to build up over a whole match, so a frame taken at cycle eight of round
+            // A few clashes' worth of blood on the sand. The stains are the one thing on the arena
+            // that is meant to build up over a whole match, so a frame taken at round eight of clash
             // one shows none of what they are for.
             foreach (var spot in new[]
                      {
@@ -105,7 +105,7 @@ namespace ColosseumDuel.Tests
             yield return RunSeconds(4f);
 
             // Back to a planning phase before anything is aimed. The waits above are long enough to
-            // cross a cycle boundary, and a preview drawn during the action phase is not drawn at
+            // cross a round boundary, and a preview drawn during the action phase is not drawn at
             // all - which is how this frame came back with an empty arena and nothing to say so.
             yield return RunUntil(() => controller.Manager.State.Phase == MatchPhase.Planning, 10f);
 
@@ -599,11 +599,11 @@ namespace ColosseumDuel.Tests
             foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))
             {
                 player.Buff = default;
-                player.EnsnaredCyclesLeft = 0;
+                player.EnsnaredRoundsLeft = 0;
                 yield return null;
 
-                if (key == AbilityKey.Net) player.EnsnaredCyclesLeft = 99;
-                else player.Buff = new ActiveBuff { Key = key, CyclesLeft = 99 };
+                if (key == AbilityKey.Net) player.EnsnaredRoundsLeft = 99;
+                else player.Buff = new ActiveBuff { Key = key, RoundsLeft = 99 };
 
                 // Long enough for a looping effect to fill out, even through the slowed planning phase.
                 yield return RunSeconds(3f);

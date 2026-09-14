@@ -122,7 +122,7 @@ namespace ColosseumDuel.Tests
             _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
 
-            yield return RunUntil(() => State.Phase == MatchPhase.RoundEnd, 20f);
+            yield return RunUntil(() => State.Phase == MatchPhase.ClashEnd, 20f);
 
             Assert.AreEqual(_controller.DeathTimeScale, Time.timeScale, 0.001f);
         }

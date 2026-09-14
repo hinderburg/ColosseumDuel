@@ -537,7 +537,7 @@ namespace ColosseumDuel.Gameplay.Hud
         ///
         /// The match is thrown away rather than paused. The menu's own button says "start match",
         /// and a player who came back here and pressed it should get a match that starts - not one
-        /// resumed at whatever half-dead round he walked out of, which is what leaving the state
+        /// resumed at whatever half-dead clash he walked out of, which is what leaving the state
         /// alone would hand him. Nothing is lost that the game keeps between matches anyway.
         /// </summary>
         public void ReturnToMainMenu()

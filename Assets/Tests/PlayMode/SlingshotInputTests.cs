@@ -129,7 +129,7 @@ namespace ColosseumDuel.Tests
 
             yield return RunSeconds(GameConstants.PlanningTime + 0.2f);
 
-            Assert.IsFalse(_input.AbilityArmed, "it is a decision about one cycle, not a standing order");
+            Assert.IsFalse(_input.AbilityArmed, "it is a decision about one round, not a standing order");
         }
 
         [UnityTest]

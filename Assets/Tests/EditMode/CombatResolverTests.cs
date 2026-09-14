@@ -18,7 +18,7 @@ namespace ColosseumDuel.Tests
 
         private static GladiatorInstance With(WeaponKind kind, bool buffed = false)
         {
-            var g = new GladiatorInstance(GladiatorDef.Brutius) { Weapon = kind, WeaponBuffCyclesLeft = buffed ? GameConstants.WeaponBuffCycles : 0 };
+            var g = new GladiatorInstance(GladiatorDef.Brutius) { Weapon = kind, WeaponBuffRoundsLeft = buffed ? GameConstants.WeaponBuffRounds : 0 };
             return g;
         }
 
@@ -131,7 +131,7 @@ namespace ColosseumDuel.Tests
         public void StoneSkin_Takes30PercentOffIncomingDamage()
         {
             var stone = Bare();
-            stone.Buff = new ActiveBuff { Key = AbilityKey.StoneSkin, CyclesLeft = 2 };
+            stone.Buff = new ActiveBuff { Key = AbilityKey.StoneSkin, RoundsLeft = 2 };
             Assert.AreEqual(Base * GameConstants.StoneSkinTakenMult,
                 CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), stone), Tol);
         }
@@ -159,13 +159,13 @@ namespace ColosseumDuel.Tests
             // that already strikes twice should not have half of it quietly cancelled.
             var single = With(WeaponKind.TwoHandedMace);
             var pair = With(WeaponKind.DualSwords);
-            Assert.AreEqual(1, single.AttacksPerCycle);
-            Assert.AreEqual(2, pair.AttacksPerCycle);
+            Assert.AreEqual(1, single.AttacksPerRound);
+            Assert.AreEqual(2, pair.AttacksPerRound);
 
-            single.Buff = new ActiveBuff { Key = AbilityKey.Mongoose, CyclesLeft = 2 };
-            pair.Buff = new ActiveBuff { Key = AbilityKey.Mongoose, CyclesLeft = 2 };
-            Assert.AreEqual(2, single.AttacksPerCycle);
-            Assert.AreEqual(4, pair.AttacksPerCycle);
+            single.Buff = new ActiveBuff { Key = AbilityKey.Mongoose, RoundsLeft = 2 };
+            pair.Buff = new ActiveBuff { Key = AbilityKey.Mongoose, RoundsLeft = 2 };
+            Assert.AreEqual(2, single.AttacksPerRound);
+            Assert.AreEqual(4, pair.AttacksPerRound);
         }
 
         [Test]
@@ -195,7 +195,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void ABleedCostsAQuarterOfTheBlowThatOpenedIt_ForTwoCycles()
+        public void ABleedCostsAQuarterOfTheBlowThatOpenedIt_ForTwoRounds()
         {
             var victim = Bare();
             var swordsman = With(WeaponKind.DualSwords);
@@ -205,11 +205,11 @@ namespace ColosseumDuel.Tests
             float expected = raw * GameConstants.BleedFraction;
             float afterBlow = victim.Hp;
 
-            Assert.AreEqual(GameConstants.BleedCycles, victim.BleedCyclesLeft);
+            Assert.AreEqual(GameConstants.BleedRounds, victim.BleedRoundsLeft);
             Assert.AreEqual(expected, victim.TickBleed(), Tol);
             Assert.AreEqual(afterBlow - expected, victim.Hp, Tol);
 
-            Assert.AreEqual(expected, victim.TickBleed(), Tol, "and once more on the second cycle");
+            Assert.AreEqual(expected, victim.TickBleed(), Tol, "and once more on the second round");
             Assert.AreEqual(0f, victim.TickBleed(), Tol, "then the wound is closed");
             Assert.IsFalse(victim.IsBleeding);
         }
@@ -238,15 +238,15 @@ namespace ColosseumDuel.Tests
             var light = With(WeaponKind.DualSwords);
 
             CombatResolver.DealDamage(heavy, victim);
-            float strong = victim.BleedPerCycle;
+            float strong = victim.BleedPerRound;
 
             victim.TickBleed();
-            Assert.AreEqual(GameConstants.BleedCycles - 1, victim.BleedCyclesLeft);
+            Assert.AreEqual(GameConstants.BleedRounds - 1, victim.BleedRoundsLeft);
 
             // Keep landing and the bleed never runs out - that is what the pair of swords buys.
             CombatResolver.DealDamage(light, victim);
-            Assert.AreEqual(GameConstants.BleedCycles, victim.BleedCyclesLeft, "the count starts again");
-            Assert.AreEqual(strong, victim.BleedPerCycle, Tol,
+            Assert.AreEqual(GameConstants.BleedRounds, victim.BleedRoundsLeft, "the count starts again");
+            Assert.AreEqual(strong, victim.BleedPerRound, Tol,
                 "a light blow arriving after a heavy one must not talk the wound down");
         }
     }

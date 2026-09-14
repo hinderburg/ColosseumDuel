@@ -82,13 +82,13 @@ namespace ColosseumDuel.Core
             float final = ApplyMitigation(defender, raw);
 
             defender.TakeDamage(final);
-            attacker.DealtDamageThisCycle = true;
+            attacker.DealtDamageThisRound = true;
 
             if (attacker.WeaponDef.Bleeds)
             {
-                // Frenzy: the wounds he opens run twice as deep and a cycle longer.
+                // Frenzy: the wounds he opens run twice as deep and a round longer.
                 if (attacker.Has(AbilityKey.Frenzy))
-                    defender.ApplyBleed(raw, GameConstants.FrenzyBleedMult, GameConstants.FrenzyBleedCycles);
+                    defender.ApplyBleed(raw, GameConstants.FrenzyBleedMult, GameConstants.FrenzyBleedRounds);
                 else
                     defender.ApplyBleed(raw);
             }

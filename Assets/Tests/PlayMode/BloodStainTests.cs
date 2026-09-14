@@ -13,9 +13,9 @@ namespace ColosseumDuel.Tests
     /// <summary>
     /// The sand remembers the match.
     ///
-    /// A blow leaves a mark and the mark stays: not for a second, not for the round, but until the
-    /// match is over. A round ending is not the arena being swept - it is the same sand with one
-    /// fewer man standing on it, and by the third round it should look like it.
+    /// A blow leaves a mark and the mark stays: not for a second, not for the clash, but until the
+    /// match is over. A clash ending is not the arena being swept - it is the same sand with one
+    /// fewer man standing on it, and by the third clash it should look like it.
     /// </summary>
     public class BloodStainTests
     {
@@ -92,27 +92,27 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The round ending does not sweep the sand, and starting a new match does.
+        /// The clash ending does not sweep the sand, and starting a new match does.
         ///
         /// The first half is the point of the feature; the second is what keeps a fresh match from
         /// opening on somebody else's fight.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheMarksOutlastARoundAndNotAMatch()
+        public IEnumerator TheMarksOutlastAClashAndNotAMatch()
         {
             _arena.PlayBlood(Vector2.zero);
             _arena.PlayBlood(new Vector2(30f, 30f));
             yield return null;
             Assert.AreEqual(2, Stains());
 
-            // Down goes the player's gladiator, and the round with him.
+            // Down goes the player's gladiator, and the clash with him.
             _controller.Manager.State.P1.Active.Hp = 0f;
             _controller.Manager.State.P1.Active.Alive = false;
             yield return RunUntil(() => _controller.Manager.State.Phase != MatchPhase.Action
                                         && _controller.Manager.State.Phase != MatchPhase.Planning, 6f);
-            yield return RunSeconds(GameConstants.RoundEndTime + 0.3f);
+            yield return RunSeconds(GameConstants.ClashEndTime + 0.3f);
 
-            Assert.AreEqual(2, Stains(), "the sand was swept between rounds");
+            Assert.AreEqual(2, Stains(), "the sand was swept between clashes");
 
             _controller.RestartMatch();
             yield return null;

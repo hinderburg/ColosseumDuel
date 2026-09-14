@@ -12,11 +12,11 @@ namespace ColosseumDuel.Tests
             => new GladiatorInstance(def ?? GladiatorDef.Brutius);
 
         [Test]
-        public void QuietCycle_GainsOnlyThePassive15Percent()
+        public void QuietRound_GainsOnlyThePassive15Percent()
         {
             var g = Fresh();
-            g.BeginCycle();
-            g.ResolveCycleRage();
+            g.BeginRound();
+            g.ResolveRoundRage();
             Assert.AreEqual(0.15f, g.Rage, Tol);
         }
 
@@ -24,10 +24,10 @@ namespace ColosseumDuel.Tests
         public void DealingAndTakingDamage_StackOnTopOfThePassiveGain()
         {
             var g = Fresh();
-            g.BeginCycle();
-            g.DealtDamageThisCycle = true;
-            g.TookDamageThisCycle = true;
-            g.ResolveCycleRage();
+            g.BeginRound();
+            g.DealtDamageThisRound = true;
+            g.TookDamageThisRound = true;
+            g.ResolveRoundRage();
             Assert.AreEqual(0.40f, g.Rage, Tol, "0.15 passive + 0.15 dealt + 0.10 taken");
         }
 
@@ -37,9 +37,9 @@ namespace ColosseumDuel.Tests
             var g = Fresh();
             for (int i = 0; i < 20; i++)
             {
-                g.BeginCycle();
-                g.DealtDamageThisCycle = true;
-                g.ResolveCycleRage();
+                g.BeginRound();
+                g.DealtDamageThisRound = true;
+                g.ResolveRoundRage();
             }
             Assert.AreEqual(GameConstants.RageMax, g.Rage, Tol);
         }
@@ -55,67 +55,67 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void Activating_ResetsTheMeter_AndFreezesItForTheActivationCycleAndTheNextFullOne()
+        public void Activating_ResetsTheMeter_AndFreezesItForTheActivationRoundAndTheNextFullOne()
         {
-            // Pins the intent behind AbilityLockedCycles = AbilityLockCycles + 1, which is easy to
+            // Pins the intent behind AbilityLockedRounds = AbilityLockRounds + 1, which is easy to
             // "simplify" into an off-by-one. GDD: after use the meter does not charge during the
-            // next full cycle - and, since the ability fires mid-cycle, not during that cycle either.
+            // next full round - and, since the ability fires mid-round, not during that round either.
             var g = Fresh();
-            g.BeginCycle();
+            g.BeginRound();
             g.Rage = 1f;
             g.ActivateAbility();
             Assert.AreEqual(0f, g.Rage, Tol);
 
-            g.ResolveCycleRage(); // end of the activation cycle
-            Assert.AreEqual(0f, g.Rage, Tol, "no rage during the cycle the ability was used in");
+            g.ResolveRoundRage(); // end of the activation round
+            Assert.AreEqual(0f, g.Rage, Tol, "no rage during the round the ability was used in");
 
-            g.BeginCycle();
-            g.ResolveCycleRage(); // the next full cycle
-            Assert.AreEqual(0f, g.Rage, Tol, "no rage during the next full cycle either");
+            g.BeginRound();
+            g.ResolveRoundRage(); // the next full round
+            Assert.AreEqual(0f, g.Rage, Tol, "no rage during the next full round either");
 
-            g.BeginCycle();
-            g.ResolveCycleRage(); // the cycle after that charges normally again
+            g.BeginRound();
+            g.ResolveRoundRage(); // the round after that charges normally again
             Assert.AreEqual(0.15f, g.Rage, Tol);
         }
 
         [Test]
-        public void RampageBuff_Gives50PercentMoreSpeed_ForTwoCycles()
+        public void RampageBuff_Gives50PercentMoreSpeed_ForTwoRounds()
         {
             var g = Fresh(GladiatorDef.Brutius); // speed 10
             g.Ability = AbilityKey.Rampage;
-            g.BeginCycle();
+            g.BeginRound();
             g.Rage = 1f;
             g.ActivateAbility();
 
-            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "activation cycle");
-            g.BeginCycle();
-            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "second buffed cycle");
-            g.BeginCycle();
+            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "activation round");
+            g.BeginRound();
+            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "second buffed round");
+            g.BeginRound();
             Assert.AreEqual(10f, g.EffectiveSpeed(), Tol, "buff has expired");
         }
 
         [Test]
-        public void MongooseBuff_Gives2AttacksPerCycle_ForThreeCycles()
+        public void MongooseBuff_Gives2AttacksPerRound_ForThreeRounds()
         {
-            // Regression: AttacksRemainingThisCycle used to be reset to a hard-coded 1 in BeginCycle,
-            // which silently dropped the second attack on the buff's later cycles.
+            // Regression: AttacksRemainingThisRound used to be reset to a hard-coded 1 in BeginRound,
+            // which silently dropped the second attack on the buff's later rounds.
             var g = Fresh(GladiatorDef.Hilius);
             g.Ability = AbilityKey.Mongoose;
-            g.BeginCycle();
-            Assert.AreEqual(1, g.AttacksRemainingThisCycle);
+            g.BeginRound();
+            Assert.AreEqual(1, g.AttacksRemainingThisRound);
 
             g.Rage = 1f;
             g.ActivateAbility();
-            Assert.AreEqual(2, g.AttacksRemainingThisCycle, "activation cycle");
+            Assert.AreEqual(2, g.AttacksRemainingThisRound, "activation round");
 
-            g.BeginCycle();
-            Assert.AreEqual(2, g.AttacksRemainingThisCycle, "second buffed cycle");
+            g.BeginRound();
+            Assert.AreEqual(2, g.AttacksRemainingThisRound, "second buffed round");
 
-            g.BeginCycle();
-            Assert.AreEqual(2, g.AttacksRemainingThisCycle, "third buffed cycle");
+            g.BeginRound();
+            Assert.AreEqual(2, g.AttacksRemainingThisRound, "third buffed round");
 
-            g.BeginCycle();
-            Assert.AreEqual(1, g.AttacksRemainingThisCycle, "back to one attack once the buff expires");
+            g.BeginRound();
+            Assert.AreEqual(1, g.AttacksRemainingThisRound, "back to one attack once the buff expires");
         }
     }
 }

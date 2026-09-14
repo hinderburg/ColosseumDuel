@@ -3,11 +3,11 @@ namespace ColosseumDuel.Core
     public enum MatchPhase
     {
         Start,      // pre-match overlay
-        Pick,       // players choosing who enters the arena for this round
+        Pick,       // players choosing who enters the arena for this clash
         Reveal,     // picks revealed simultaneously
-        Planning,   // players choose Move / Defend (+ optional Ability) for the coming cycle
+        Planning,   // players choose Move / Defend (+ optional Ability) for the coming round
         Action,     // chosen actions execute
-        RoundEnd,   // one of the two active gladiators just died
+        ClashEnd,   // one of the two active gladiators just died
         MatchEnd    // one player has zero gladiators left
     }
 

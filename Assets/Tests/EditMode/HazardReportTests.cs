@@ -21,7 +21,7 @@ namespace ColosseumDuel.Tests
         private static readonly IReadOnlyList<GladiatorDef> Squad =
             new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius };
 
-        private static GameManager StartedRound(int seed = 1234)
+        private static GameManager StartedClash(int seed = 1234)
         {
             var m = new GameManager(new System.Random(seed));
             m.StartMatch(Squad, Squad);
@@ -40,17 +40,17 @@ namespace ColosseumDuel.Tests
             Assert.AreNotEqual(phase, m.State.Phase, $"stuck in {phase} for {maxSeconds}s");
         }
 
-        /// <summary>Somewhere the fire has already reached by the cycle under test.</summary>
+        /// <summary>Somewhere the fire has already reached by the round under test.</summary>
         private static Vector2 InTheSpikes()
             => new Vector2(0f, GameConstants.ArenaRadius * GameConstants.ArenaElongation * 0.92f);
 
-        /// <summary>The first cycle on which anything burns at all.</summary>
-        private static int FirstBurningCycle => GameConstants.HazardSafeCycles + 1;
+        /// <summary>The first round on which anything burns at all.</summary>
+        private static int FirstBurningRound => GameConstants.HazardSafeRounds + 1;
 
         [Test]
         public void APhaseInTheSpikesIsAnnouncedOnTheBeat_AndAddsUpToThePhasesCost()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var burnt = new List<float>();
@@ -60,10 +60,10 @@ namespace ColosseumDuel.Tests
                 burnt.Add(amount);
             };
 
-            // The cycle the outer ring bites on, and only that one: further in is still safe until
+            // The round the outer ring bites on, and only that one: further in is still safe until
             // the ring after it. Derived, because the pacing has moved twice and a written-down 7
             // stopped being the answer both times.
-            m.State.Cycle = FirstBurningCycle;
+            m.State.Round = FirstBurningRound;
             m.State.P1.Active.Pos = InTheSpikes();
             m.State.Bot.Active.Pos = Vector2.zero;   // inside the outer ring, so he is not burning
 
@@ -92,19 +92,19 @@ namespace ColosseumDuel.Tests
         /// A tally cannot survive the phase it belongs to.
         ///
         /// It is cleared when a phase begins as well as when it is announced, so a phase abandoned
-        /// partway - a round restarted, a match thrown away - cannot have its unreported damage
+        /// partway - a clash restarted, a match thrown away - cannot have its unreported damage
         /// turn up on the end of the next one.
         /// </summary>
         [Test]
         public void ATallyDoesNotCarryIntoTheNextPhase()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
-            // The cycle the outer ring bites on, and only that one: further in is still safe until
+            // The round the outer ring bites on, and only that one: further in is still safe until
             // the ring after it. Derived, because the pacing has moved twice and a written-down 7
             // stopped being the answer both times.
-            m.State.Cycle = FirstBurningCycle;
+            m.State.Round = FirstBurningRound;
             m.State.P1.Active.Pos = InTheSpikes();
             m.State.Bot.Active.Pos = Vector2.zero;
 

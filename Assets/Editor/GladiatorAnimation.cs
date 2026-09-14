@@ -178,7 +178,7 @@ namespace ColosseumDuel.EditorTools
             // so a blend out of the stance is a window in which a blow that lands swallows its own
             // swing. The stance ends exactly when the planning phase does, which is exactly when the
             // first blows of the exchange land - so at an eighth of a second that window caught the
-            // opening blow of nearly every cycle. Snapping shrinks it to nothing.
+            // opening blow of nearly every round. Snapping shrinks it to nothing.
             Snap(readyState, idleState, Bool(AnimatorParams.ReadyStance, false));
             Snap(readyState, idleState,
                  Float(AnimatorParams.Speed, AnimatorConditionMode.Greater, AnimatorParams.RunThreshold));

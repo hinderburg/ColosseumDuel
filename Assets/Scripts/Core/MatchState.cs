@@ -28,14 +28,14 @@ namespace ColosseumDuel.Core
     public sealed class MatchState
     {
         public MatchPhase Phase = MatchPhase.Start;
+        public int Clash = 0;
         public int Round = 0;
-        public int Cycle = 0;
         public float PhaseTimer = 0f;
 
         public PlayerState P1 = new PlayerState { Side = PlayerSide.P1 };
         public PlayerState Bot = new PlayerState { Side = PlayerSide.Bot };
 
-        /// <summary>The weapon blessing on the sand, laid every third cycle. See WeaponBuffPickups.</summary>
+        /// <summary>The weapon blessing on the sand, laid every third round. See WeaponBuffPickups.</summary>
         public WeaponBuffPickups Buffs;
 
         /// <summary>
@@ -60,7 +60,7 @@ namespace ColosseumDuel.Core
         /// </summary>
         public Vector2 TutorialTapPoint;
 
-        // action-phase collision/pass-by bookkeeping for the current cycle
+        // action-phase collision/pass-by bookkeeping for the current round
         public bool Collided;
         public float? CollisionEndTimer;
 

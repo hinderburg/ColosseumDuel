@@ -20,7 +20,7 @@ namespace ColosseumDuel.Tests
     {
         private const float Dt = 1f / 60f;
 
-        private static GameManager StartedRound()
+        private static GameManager StartedClash()
         {
             var m = new GameManager(new System.Random(20260909));
             m.StartMatch(
@@ -51,7 +51,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ACharge_IsPredictedWithinAFrameOrTwoOfWhenItLands()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -93,12 +93,12 @@ namespace ColosseumDuel.Tests
         /// Standing still out of reach of each other is predicted as no blow at all.
         ///
         /// The negative case matters as much as the positive one: a prediction that fires whatever
-        /// happens would have every gladiator swinging at open air every cycle.
+        /// happens would have every gladiator swinging at open air every round.
         /// </summary>
         [Test]
         public void TwoFightersWhoNeverMeet_ArePredictedNoBlow()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             m.State.P1.Active.Pos = new Vector2(-250f, 0f);
@@ -122,7 +122,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void TheLongerWeaponIsPredictedToLandFirst()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;

@@ -11,86 +11,86 @@ namespace ColosseumDuel.Tests
     {
         private static Vector2 AtRadiusFraction(float f) => new Vector2(GameConstants.ArenaRadius * f, 0f);
 
-        /// <summary>The cycle the nth ring bites on, counting from zero.</summary>
-        private static int RingCycle(int index)
-            => GameConstants.HazardSafeCycles + 1 + index * GameConstants.HazardRingInterval;
+        /// <summary>The round the nth ring bites on, counting from zero.</summary>
+        private static int RingRound(int index)
+            => GameConstants.HazardSafeRounds + 1 + index * GameConstants.HazardRingInterval;
 
         [Test]
-        public void ArenaIsCompletelySafeForTheSafeCycles()
+        public void ArenaIsCompletelySafeForTheSafeRounds()
         {
-            for (int cycle = 1; cycle <= GameConstants.HazardSafeCycles; cycle++)
+            for (int round = 1; round <= GameConstants.HazardSafeRounds; round++)
                 for (float f = 0f; f <= 1f; f += 0.1f)
-                    Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(f), cycle),
-                        $"cycle {cycle}, radius fraction {f:0.0} should still be safe");
+                    Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(f), round),
+                        $"round {round}, radius fraction {f:0.0} should still be safe");
         }
 
         /// <summary>
-        /// The rings come in from the wall, one every HazardRingInterval cycles, and each one leaves
+        /// The rings come in from the wall, one every HazardRingInterval rounds, and each one leaves
         /// the ground inside it alone until its own turn comes round.
         /// </summary>
         [Test]
         public void RingsCloseInFromTheEdgeOneEveryInterval()
         {
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.9f), RingCycle(0)));
-            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), RingCycle(0)));
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.9f), RingRound(0)));
+            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), RingRound(0)));
 
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), RingCycle(1)));
-            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), RingCycle(1)));
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.6f), RingRound(1)));
+            Assert.IsFalse(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), RingRound(1)));
 
-            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), RingCycle(2)));
+            Assert.IsTrue(HazardSystem.IsInActiveHazard(AtRadiusFraction(0.35f), RingRound(2)));
         }
 
         /// <summary>
         /// And the middle of the arena stays standable until the last of them.
         ///
         /// The gap between one ring and the next is the whole of the pacing: it used to be one
-        /// cycle, which took the arena from first ring to nowhere-to-stand in less time than two
-        /// gladiators need to cross it. Asserted as a gap rather than as a cycle number so it keeps
+        /// round, which took the arena from first ring to nowhere-to-stand in less time than two
+        /// gladiators need to cross it. Asserted as a gap rather than as a round number so it keeps
         /// meaning that when the numbers move again.
         /// </summary>
         [Test]
         public void TheMiddleIsTheLastGroundToGo()
         {
-            int last = RingCycle(3);
+            int last = RingRound(3);
 
             Assert.IsFalse(HazardSystem.IsInActiveHazard(Vector2.zero, last - 1),
-                "the middle should still be standable the cycle before the last ring");
+                "the middle should still be standable the round before the last ring");
             Assert.IsTrue(HazardSystem.IsInActiveHazard(Vector2.zero, last),
                 "by now there is nowhere left to stand");
 
-            Assert.AreEqual(GameConstants.HazardRingInterval, RingCycle(1) - RingCycle(0),
-                "the rings are meant to arrive a fixed number of cycles apart");
+            Assert.AreEqual(GameConstants.HazardRingInterval, RingRound(1) - RingRound(0),
+                "the rings are meant to arrive a fixed number of rounds apart");
         }
 
         [Test]
-        public void NextStageIsTelegraphedOneCycleAhead()
+        public void NextStageIsTelegraphedOneRoundAhead()
         {
-            int first = RingCycle(0);
+            int first = RingRound(0);
 
             var upcoming = HazardSystem.UpcomingStage(first - 1);
             Assert.IsTrue(upcoming.HasValue,
-                $"during cycle {first - 1} the UI must be able to warn about cycle {first}");
+                $"during round {first - 1} the UI must be able to warn about round {first}");
             Assert.AreEqual(1.00f, upcoming.Value.OuterFraction, 0.0001f);
 
             Assert.IsFalse(HazardSystem.UpcomingStage(first - 2).HasValue,
-                "the warning is one cycle out, not a standing notice");
+                "the warning is one round out, not a standing notice");
             Assert.IsFalse(HazardSystem.UpcomingStage(1).HasValue, "nothing to warn about that early");
         }
     }
 
     /// <summary>
-    /// The weapon blessing: laid on the sand every third cycle, between the two, and worth a third
-    /// again on every blow for the three cycles after the one it is taken in.
+    /// The weapon blessing: laid on the sand every third round, between the two, and worth a third
+    /// again on every blow for the three rounds after the one it is taken in.
     /// </summary>
     public class WeaponBuffTests
     {
         private const float Tol = 0.0001f;
 
         [Test]
-        public void ItIsLaidOnEveryThirdCycleAndNoOther()
+        public void ItIsLaidOnEveryThirdRoundAndNoOther()
         {
-            for (int cycle = 0; cycle <= 12; cycle++)
-                Assert.AreEqual(cycle > 0 && cycle % 3 == 0, WeaponBuffPickups.IsDueOn(cycle), $"cycle {cycle}");
+            for (int round = 0; round <= 12; round++)
+                Assert.AreEqual(round > 0 && round % 3 == 0, WeaponBuffPickups.IsDueOn(round), $"round {round}");
         }
 
         [Test]
@@ -140,52 +140,52 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void ItLastsThreeCyclesAfterTheOneItIsTakenIn_AndOnlyTheLastIsMarkedAsTheLast()
+        public void ItLastsThreeRoundsAfterTheOneItIsTakenIn_AndOnlyTheLastIsMarkedAsTheLast()
         {
             var g = new GladiatorInstance(GladiatorDef.Barbarius);
             g.BlessWeapon();
-            Assert.IsTrue(g.WeaponBuffed, "the cycle it is taken in");
+            Assert.IsTrue(g.WeaponBuffed, "the round it is taken in");
             Assert.IsFalse(g.WeaponBuffEnding);
 
-            for (int cycle = 1; cycle <= GameConstants.WeaponBuffCycles; cycle++)
+            for (int round = 1; round <= GameConstants.WeaponBuffRounds; round++)
             {
-                g.BeginCycle();
-                Assert.IsTrue(g.WeaponBuffed, $"{cycle} cycle(s) after it was taken");
-                Assert.AreEqual(cycle == GameConstants.WeaponBuffCycles, g.WeaponBuffEnding,
-                    $"{cycle} cycle(s) after: only the last is the last");
+                g.BeginRound();
+                Assert.IsTrue(g.WeaponBuffed, $"{round} round(s) after it was taken");
+                Assert.AreEqual(round == GameConstants.WeaponBuffRounds, g.WeaponBuffEnding,
+                    $"{round} round(s) after: only the last is the last");
             }
 
-            g.BeginCycle();
+            g.BeginRound();
             Assert.IsFalse(g.WeaponBuffed, "and gone after that");
         }
 
         [Test]
-        public void TheBlessingEndsWithTheRound()
+        public void TheBlessingEndsWithTheClash()
         {
             var g = new GladiatorInstance(GladiatorDef.Brutius);
             g.BlessWeapon();
-            g.ResetForNewRound();
+            g.ResetForNewClash();
             Assert.IsFalse(g.WeaponBuffed);
         }
 
         [Test]
-        public void InAMatchTheFirstOneIsLaidOnTheThirdCycle()
+        public void InAMatchTheFirstOneIsLaidOnTheThirdRound()
         {
             var squad = new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius };
             var m = new GameManager(new System.Random(3));
             m.StartMatch(squad, squad);
             m.SubmitPick(PlayerSide.P1, GladiatorId.Brutius);
 
-            for (int frame = 0; frame < 20000 && m.State.Cycle < 3; frame++)
+            for (int frame = 0; frame < 20000 && m.State.Round < 3; frame++)
             {
-                Assert.IsFalse(m.State.Buffs.Position.HasValue, $"a blessing lay on the sand on cycle {m.State.Cycle}");
+                Assert.IsFalse(m.State.Buffs.Position.HasValue, $"a blessing lay on the sand on round {m.State.Round}");
                 m.Tick(1f / 60f);
-                if (m.State.Phase == MatchPhase.RoundEnd || m.State.Phase == MatchPhase.MatchEnd)
-                    Assert.Ignore("the round ended before the third cycle");
+                if (m.State.Phase == MatchPhase.ClashEnd || m.State.Phase == MatchPhase.MatchEnd)
+                    Assert.Ignore("the clash ended before the third round");
             }
 
-            Assert.AreEqual(3, m.State.Cycle);
-            Assert.IsTrue(m.State.Buffs.Position.HasValue, "the third cycle should have laid one");
+            Assert.AreEqual(3, m.State.Round);
+            Assert.IsTrue(m.State.Buffs.Position.HasValue, "the third round should have laid one");
         }
     }
 }

@@ -36,7 +36,7 @@ ColosseumDuel/
       HazardSystem.cs           — стадии сужения арены
       CombatResolver.cs         — расчёт урона (столкновение / pass-by / оружие / щит / защита)
       BotAI.cs                  — решения бота
-      MatchState.cs             — контейнеры состояния (игроки, фаза, цикл, раунд)
+      MatchState.cs             — контейнеры состояния (игроки, фаза, раунд, схватка)
       GameManager.cs            — сама стейт-машина (Pick → Reveal → Planning → Action → RoundEnd/MatchEnd)
     Gameplay/
       GameController.cs         — MonoBehaviour-обвязка (создаёт GameManager, тикает его, TODO-заглушки)

@@ -7,7 +7,7 @@ namespace ColosseumDuel.Gameplay.Hud
 {
     /// <summary>
     /// The whole HUD: squad bars for both sides, the player's roster cards and action buttons, and
-    /// the overlays for picking, reveal, round end and match end.
+    /// the overlays for picking, reveal, clash end and match end.
     ///
     /// Built in code like the rest of the presentation layer, and driven entirely from MatchState
     /// in LateUpdate - it never decides anything, it only reports. LateUpdate specifically, so it
@@ -265,7 +265,7 @@ namespace ColosseumDuel.Gameplay.Hud
         /// Two buttons picking how moves are ordered, shown only on the opening pick screen.
         ///
         /// Only there because it is a decision about the whole match: offering it again between
-        /// rounds would invite a change of control halfway through a fight, when muscle memory for
+        /// clashes would invite a change of control halfway through a fight, when muscle memory for
         /// the old one is the only thing keeping the player alive.
         ///
         /// Two visible options rather than one button that toggles: a toggle only tells you the
@@ -454,12 +454,12 @@ namespace ColosseumDuel.Gameplay.Hud
 
             _defendButton.interactable = canAct;
 
-            // The generic hint stands down while the tutorial is talking: during the first round the
+            // The generic hint stands down while the tutorial is talking: during the first clash the
             // tutorial line is the hint, and two lines saying near enough the same thing a few pixels
             // apart read as clutter rather than as help.
             _hint.enabled = canAct
-                            && !(state.Tutorial && state.Round == 1
-                                 && state.Cycle <= TutorialView.TutorialCycles);
+                            && !(state.Tutorial && state.Clash == 1
+                                 && state.Round <= TutorialView.TutorialRounds);
 
             // The hint has to say what the chosen control actually is; a line about pulling back is
             // worse than no line at all for a player who picked tapping.
@@ -484,16 +484,16 @@ namespace ColosseumDuel.Gameplay.Hud
                 // No countdown here any more - it lives above the gladiator, next to the two buttons
                 // it is timing. Two clocks showing the same number is one more than anyone reads.
                 case MatchPhase.Planning:
-                    _phaseLabel.text = $"Round {state.Round} · cycle {state.Cycle} · planning";
+                    _phaseLabel.text = $"Clash {state.Clash} · round {state.Round} · planning";
                     break;
                 case MatchPhase.Action:
-                    _phaseLabel.text = $"Round {state.Round} · cycle {state.Cycle} · action";
+                    _phaseLabel.text = $"Clash {state.Clash} · round {state.Round} · action";
                     break;
                 case MatchPhase.Pick:
                     _phaseLabel.text = "Choosing a gladiator";
                     break;
                 default:
-                    _phaseLabel.text = state.Round > 0 ? $"Round {state.Round}" : "";
+                    _phaseLabel.text = state.Clash > 0 ? $"Clash {state.Clash}" : "";
                     break;
             }
         }
@@ -507,12 +507,12 @@ namespace ColosseumDuel.Gameplay.Hud
                 return;
             }
 
-            // Keyed off NeedsPick rather than Phase: from round two only the loser picks, so when the
+            // Keyed off NeedsPick rather than Phase: from clash two only the loser picks, so when the
             // player is the survivor the Pick phase is entered and left within the same frame and
             // would never be catchable by a phase check.
             bool picking = state.P1.NeedsPick;
             bool matchOver = state.Phase == MatchPhase.MatchEnd;
-            bool banner = state.Phase == MatchPhase.Reveal || state.Phase == MatchPhase.RoundEnd;
+            bool banner = state.Phase == MatchPhase.Reveal || state.Phase == MatchPhase.ClashEnd;
 
             bool visible = picking || matchOver || banner;
             if (_overlay.activeSelf != visible) _overlay.SetActive(visible);
@@ -525,8 +525,8 @@ namespace ColosseumDuel.Gameplay.Hud
 
             if (picking)
             {
-                _overlayTitle.text = state.Round == 0 ? "Colosseum Duel" : "Choose a gladiator";
-                _overlaySubtitle.text = state.Round == 0
+                _overlayTitle.text = state.Clash == 0 ? "Colosseum Duel" : "Choose a gladiator";
+                _overlaySubtitle.text = state.Clash == 0
                     ? "Who opens the fight?"
                     : "Your fighter has fallen - who steps out?";
 
@@ -575,7 +575,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
             if (state.Phase == MatchPhase.Reveal)
             {
-                _overlayTitle.text = $"Round {state.Round}";
+                _overlayTitle.text = $"Clash {state.Clash}";
                 _overlayTitle.color = HudFactory.TextColor;
                 _overlaySubtitle.text = state.P1.Active != null && state.Bot.Active != null
                     ? $"{state.P1.Active.Def.Name}   vs   {state.Bot.Active.Def.Name}"
@@ -583,9 +583,9 @@ namespace ColosseumDuel.Gameplay.Hud
                 return;
             }
 
-            // RoundEnd
+            // ClashEnd
             bool playerLost = state.P1.Active == null || !state.P1.Active.Alive;
-            _overlayTitle.text = playerLost ? "Round lost" : "Round won";
+            _overlayTitle.text = playerLost ? "Clash lost" : "Clash won";
             _overlayTitle.color = playerLost ? HudFactory.BotColor : HudFactory.HpColor;
             _overlaySubtitle.text = "";
         }

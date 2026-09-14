@@ -10,13 +10,13 @@ namespace ColosseumDuel.Gameplay.View
     /// fires, the effect on the man while it lasts, and the aura at his feet - and all three have to
     /// be recognisably the same thing.
     ///
-    /// An ability's glow is steady for as long as it lasts and blinks slowly through the last cycle,
+    /// An ability's glow is steady for as long as it lasts and blinks slowly through the last round,
     /// so "this is the last turn you have it" reads at his feet. The weapon blessing used to share the
-    /// rule; its last cycle now turns the weapon yellow instead - see GladiatorView.SyncWeaponGlow.
+    /// rule; its last round now turns the weapon yellow instead - see GladiatorView.SyncWeaponGlow.
     /// </summary>
     public static class AbilityVisuals
     {
-        /// <summary>One slow blink of a last cycle's glow, in real seconds.</summary>
+        /// <summary>One slow blink of a last round's glow, in real seconds.</summary>
         public const float BlinkPeriod = 1.2f;
 
         /// <summary>How far the blink fades: to a tenth, never quite out.</summary>
@@ -24,13 +24,13 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>
         /// How strongly something lasting glows this frame, 0 to 1: nothing when it is not there,
-        /// steady while it lasts, blinking through its last cycle. On unscaled time - planning slows
+        /// steady while it lasts, blinking through its last round. On unscaled time - planning slows
         /// the world to a fifth, and a blink at a fifth of its speed is not a blink.
         /// </summary>
-        public static float GlowStrength(bool on, bool lastCycle)
+        public static float GlowStrength(bool on, bool lastRound)
         {
             if (!on) return 0f;
-            if (!lastCycle) return 1f;
+            if (!lastRound) return 1f;
             float wave = 0.5f + 0.5f * Mathf.Cos(Time.unscaledTime * Mathf.PI * 2f / BlinkPeriod);
             return BlinkFloor + (1f - BlinkFloor) * wave;
         }

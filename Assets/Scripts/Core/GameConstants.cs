@@ -30,11 +30,11 @@ namespace ColosseumDuel.Core
         // It no longer decides how far anybody goes. That is speed alone (see SpeedScale): a longer
         // phase is the same run at half the pace, not twice the ground.
         public const float ActionTime = 2.0f;
-        public const float RevealTime = 1.0f;   // picks stay on screen this long before the round's first Planning
+        public const float RevealTime = 1.0f;   // picks stay on screen this long before the clash's first Planning
         // Pause after a death, in real seconds. Long enough that the knockout plays out at the
         // slowed rate the camera comes in on: at DeathTimeScale this is roughly half a second of
         // animation, which is what a fall takes.
-        public const float RoundEndTime = 1.4f;
+        public const float ClashEndTime = 1.4f;
 
         // --- arena geometry, in "virtual" 2D simulation units (top-down plane) ---
         // The simulation runs entirely in this 2D virtual space; only the presentation layer
@@ -87,12 +87,12 @@ namespace ColosseumDuel.Core
         // of the lot after a pass where running over an item and not getting it was too common.
         public const float PickupDistance = (GladiatorRadius + BuffRadius + 6f) * 1.15f;
 
-        // Both fighters are placed at opposite ends of the arena at the start of every round, this
+        // Both fighters are placed at opposite ends of the arena at the start of every clash, this
         // far from the centre as a fraction of the LONG semi-axis - the one they are spread along.
-        // Only HP and carried items persist for a round winner; position does not, so no round
+        // Only HP and carried items persist for a clash winner; position does not, so no clash
         // starts from an arbitrary leftover spot.
         //
-        // The cost of spreading them is measured in cycles, not in units: two fighters charging at
+        // The cost of spreading them is measured in rounds, not in units: two fighters charging at
         // full power close the gap between them at twice their own speed, and at this distance the
         // slowest pair (two Brutius, 450 a phase each) meets inside one phase at full power; the
         // bot stops short of that on purpose (see BotAI). Lower this if the wait shows.
@@ -142,11 +142,11 @@ namespace ColosseumDuel.Core
         public const int ActionSubsteps = 6; // subdivide stepAction(dt) to avoid tunneling through fast-moving gladiators
 
         // --- rage / ability system ---
-        public const float RagePerCyclePassive = 0.15f;
+        public const float RagePerRoundPassive = 0.15f;
         public const float RageBonusOnDealDamage = 0.15f;
         public const float RageBonusOnTakeDamage = 0.10f;
         public const float RageMax = 1.0f;
-        public const int AbilityLockCycles = 1; // cycles rage cannot charge after activating an ability
+        public const int AbilityLockRounds = 1; // rounds rage cannot charge after activating an ability
 
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
@@ -162,21 +162,21 @@ namespace ColosseumDuel.Core
         /// <summary>Share of his own health Second Wind gives back, at once.</summary>
         public const float SecondWindHeal = 0.35f;
 
-        /// <summary>How many cycles a net holds a man still (the one it lands in counted).</summary>
-        public const int NetCycles = 2;
+        /// <summary>How many rounds a net holds a man still (the one it lands in counted).</summary>
+        public const int NetRounds = 2;
 
-        /// <summary>How many cycles Earthshaker roots the man it lands on (this one and the next).</summary>
-        public const int StaggerCycles = 2;
+        /// <summary>How many rounds Earthshaker roots the man it lands on (this one and the next).</summary>
+        public const int StaggerRounds = 2;
 
-        /// <summary>How many whole cycles Shackles keeps the other man from his ability.</summary>
-        public const int ShacklesCycles = 2;
+        /// <summary>How many whole rounds Shackles keeps the other man from his ability.</summary>
+        public const int ShacklesRounds = 2;
 
         public const float RampageSpeedMult = 1.5f;
         public const float RampageDamageMult = 0.7f;
         public const float StoneSkinTakenMult = 0.7f;
         public const float BloodlustHeal = 0.5f;
         public const float FrenzyBleedMult = 2f;
-        public const int FrenzyBleedCycles = 3;
+        public const int FrenzyBleedRounds = 3;
         public const float BerserkDamageMult = 1.5f;
         public const float BerserkTakenMult = 1.25f;
         public const float RiposteReturn = 0.5f;
@@ -191,7 +191,7 @@ namespace ColosseumDuel.Core
         /// What a blow is worth for landing behind a gladiator, and for landing on his flank.
         ///
         /// This is what makes the way a man is facing a decision. He turns to where he is running,
-        /// so ordering a run is also ordering which of him is exposed for the rest of the cycle -
+        /// so ordering a run is also ordering which of him is exposed for the rest of the round -
         /// and charging past somebody to end up behind them is worth almost half a blow again.
         /// </summary>
         public const float BackAttackMult = 1.40f;
@@ -199,33 +199,33 @@ namespace ColosseumDuel.Core
         public const float FlankAttackMult = 1.20f;
 
         /// <summary>
-        /// How much harder a blessed weapon hits. The blessing lies on the sand every third cycle
-        /// and lasts three cycles after it is taken - it used to be a gilded weapon lying there all
+        /// How much harder a blessed weapon hits. The blessing lies on the sand every third round
+        /// and lasts three rounds after it is taken - it used to be a gilded weapon lying there all
         /// round, and it is worth the same: a better version of the same weapon, not another tier.
         /// </summary>
         public const float WeaponBuffDamageMult = 1.35f;
 
-        /// <summary>How many cycles the blessing lasts after the one it is taken in.</summary>
-        public const int WeaponBuffCycles = 3;
+        /// <summary>How many rounds the blessing lasts after the one it is taken in.</summary>
+        public const int WeaponBuffRounds = 3;
 
-        /// <summary>A blessing is laid on the sand on every cycle that is a multiple of this.</summary>
-        public const int WeaponBuffEveryCycles = 3;
+        /// <summary>A blessing is laid on the sand on every round that is a multiple of this.</summary>
+        public const int WeaponBuffEveryRounds = 3;
 
         /// <summary>How far one mace blow throws its target, in virtual units - most of a body.</summary>
         public const float MaceKnockback = GladiatorRadius * 1.6f;
 
         /// <summary>
-        /// Share of the blow that opened it which a bleed deals, each cycle, for BleedCycles.
+        /// Share of the blow that opened it which a bleed deals, each round, for BleedRounds.
         ///
         /// Taken off the raw blow rather than off what landed: a wound is a wound, and the shield
-        /// that softened the hit is not still in the way of it afterwards. Over its two cycles a
+        /// that softened the hit is not still in the way of it afterwards. Over its two rounds a
         /// bleed is therefore worth half of one more blow - enough that the twin swords' lower
         /// damage per hit is a trade rather than a straight loss.
         /// </summary>
         public const float BleedFraction = 0.25f;
 
-        /// <summary>How many cycles a bleed runs for. A fresh one starts the count again.</summary>
-        public const int BleedCycles = 2;
+        /// <summary>How many rounds a bleed runs for. A fresh one starts the count again.</summary>
+        public const int BleedRounds = 2;
 
         // --- arena hazard (shrinking rings) ---
 
@@ -242,18 +242,18 @@ namespace ColosseumDuel.Core
         public const float HazardDamagePerPhase = 65f;
 
         /// <summary>
-        /// How many full cycles the arena stays safe before the first ring bites.
+        /// How many full rounds the arena stays safe before the first ring bites.
         ///
         /// Raised from six. Six put the first ring down while two fighters were often still closing
-        /// - the approach takes cycles now that a run bends - so the arena was deciding fights that
+        /// - the approach takes rounds now that a run bends - so the arena was deciding fights that
         /// had not started yet.
         /// </summary>
-        public const int HazardSafeCycles = 8;
+        public const int HazardSafeRounds = 8;
 
         /// <summary>
-        /// Cycles between one ring closing and the next.
+        /// Rounds between one ring closing and the next.
         ///
-        /// It used to be one, which gave the whole shrink four cycles from first ring to dead
+        /// It used to be one, which gave the whole shrink four rounds from first ring to dead
         /// centre: less time than two gladiators need to cross the arena, so the ending was the
         /// arena rather than either of them. At three there is a fight between each closing.
         /// </summary>

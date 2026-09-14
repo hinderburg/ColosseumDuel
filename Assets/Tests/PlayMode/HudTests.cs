@@ -108,7 +108,7 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator PickingThroughTheHudStartsTheRoundAndHidesTheOverlay()
+        public IEnumerator PickingThroughTheHudStartsTheClashAndHidesTheOverlay()
         {
             int barbarius = _controller.Squad.IndexOf(GladiatorId.Barbarius);
             FindButton($"Pick_{barbarius}").onClick.Invoke();
@@ -176,7 +176,7 @@ namespace ColosseumDuel.Tests
             yield return RunUntil(() => State.Phase == MatchPhase.Planning, 5f);
             Assert.IsNotNull(State.P1.Active, "on auto the player's fighter should have been sent in for him");
             yield return null;
-            Assert.AreNotEqual(ActionType.None, State.P1.Active.PlannedAction, "on auto his cycle should be planned for him");
+            Assert.AreNotEqual(ActionType.None, State.P1.Active.PlannedAction, "on auto his round should be planned for him");
             Assert.IsFalse(FindButton("Defend").gameObject.activeInHierarchy,
                 "the action buttons should stand down while the bot is playing him");
 
@@ -664,14 +664,14 @@ namespace ColosseumDuel.Tests
         /// <summary>
         /// The teaching labels are for the opening of the first fight and then they go.
         ///
-        /// Two cycles is long enough to run at the blessing and swing once with it. Left up they
-        /// cover the sand the player has just learned to read - a caption is help on cycle one and
-        /// an obstruction on cycle five - so the end of it is worth a test rather than an eyeball:
-        /// it only shows itself several cycles into a match nobody replays.
+        /// Two rounds is long enough to run at the blessing and swing once with it. Left up they
+        /// cover the sand the player has just learned to read - a caption is help on round one and
+        /// an obstruction on round five - so the end of it is worth a test rather than an eyeball:
+        /// it only shows itself several rounds into a match nobody replays.
         /// </summary>
 
         [UnityTest]
-        public IEnumerator TheTutorialLabelsGoAwayAfterTwoCycles()
+        public IEnumerator TheTutorialLabelsGoAwayAfterTwoRounds()
         {
             var tutorial = Object.FindFirstObjectByType<TutorialView>(FindObjectsInactive.Include);
             Assert.IsNotNull(tutorial, "the HUD should carry a tutorial layer");
@@ -680,15 +680,15 @@ namespace ColosseumDuel.Tests
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
             Assert.IsTrue(State.Tutorial, "the first fight of a session is the taught one");
-            Assert.AreEqual(1, State.Cycle);
-            Assert.IsTrue(tutorial.gameObject.activeInHierarchy, "cycle one should be labelled");
+            Assert.AreEqual(1, State.Round);
+            Assert.IsTrue(tutorial.gameObject.activeInHierarchy, "round one should be labelled");
 
-            State.Cycle = TutorialView.TutorialCycles;
+            State.Round = TutorialView.TutorialRounds;
             yield return null;
             Assert.IsTrue(tutorial.gameObject.activeInHierarchy,
-                $"cycle {TutorialView.TutorialCycles} is the last one that carries the labels");
+                $"round {TutorialView.TutorialRounds} is the last one that carries the labels");
 
-            State.Cycle = TutorialView.TutorialCycles + 1;
+            State.Round = TutorialView.TutorialRounds + 1;
             yield return null;
             Assert.IsFalse(tutorial.gameObject.activeInHierarchy,
                 "the labels should be gone by now - they cover the arena the player is reading");

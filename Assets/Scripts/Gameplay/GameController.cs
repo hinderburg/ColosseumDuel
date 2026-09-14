@@ -23,8 +23,8 @@ namespace ColosseumDuel.Gameplay
 
         [Header("Knockout slow motion")]
         [Tooltip("How fast the world runs while a knockout plays out. Not as slow as planning: the " +
-                 "round-end pause is a fixed length in real seconds, and at a quarter speed the " +
-                 "death animation would only be a quarter played when the next round started.")]
+                 "clash-end pause is a fixed length in real seconds, and at a quarter speed the " +
+                 "death animation would only be a quarter played when the next clash started.")]
         [Range(0.05f, 1f)] public float DeathTimeScale = 0.35f;
 
         [Tooltip("Leave at 0 for a different match every run; set a value to replay a deterministic one.")]
@@ -105,8 +105,8 @@ namespace ColosseumDuel.Gameplay
             bool tutorial = _matchesStarted == 0;
             _matchesStarted++;
 
-            // A fresh match gets fresh sand. Rounds do not: a round is over when somebody falls, but
-            // the sand he fell on is the same sand, and by the third round it should look like it.
+            // A fresh match gets fresh sand. Clashes do not: a clash is over when somebody falls, but
+            // the sand he fell on is the same sand, and by the third clash it should look like it.
             if (Arena != null) Arena.ClearBloodStains();
 
             // The bot takes one of each of its men's three abilities at random, so the three it
@@ -236,7 +236,7 @@ namespace ColosseumDuel.Gameplay
         {
             float target = 1f;
             if (Manager.State.Phase == MatchPhase.Planning) target = GameConstants.PlanningTimeScale;
-            else if (Manager.State.Phase == MatchPhase.RoundEnd) target = DeathTimeScale;
+            else if (Manager.State.Phase == MatchPhase.ClashEnd) target = DeathTimeScale;
             if (!Mathf.Approximately(Time.timeScale, target)) Time.timeScale = target;
         }
 
@@ -388,7 +388,7 @@ namespace ColosseumDuel.Gameplay
                 waited += Time.unscaledDeltaTime;
             }
 
-            // The round can end while this is in flight. The blood and the number belong to a blow
+            // The clash can end while this is in flight. The blood and the number belong to a blow
             // that did land, so they still go out; nothing here reads a gladiator that may be gone.
             PlayBlowEffects(side, strikerSide, amount);
         }
@@ -401,7 +401,7 @@ namespace ColosseumDuel.Gameplay
         private void OnWeaponBlessed(PlayerSide side) => ViewFor(side).PlayAbility(BlessingBurstColor);
 
         /// <summary>
-        /// A wound opened up at the top of a cycle.
+        /// A wound opened up at the top of a round.
         ///
         /// Deliberately quieter than a blow: no recoil animation and no swing on the other side,
         /// because nobody swung. A red flicker and a small spot of blood is the whole of it.

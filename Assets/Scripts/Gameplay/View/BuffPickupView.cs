@@ -7,7 +7,7 @@ namespace ColosseumDuel.Gameplay.View
     /// reads from across the arena as the one thing on the floor worth running for.
     ///
     /// Built once and moved: there is only ever one blessing on the sand, and a view that appears
-    /// and disappears costs nothing, where one built on the cycle it is laid would be a hitch at the
+    /// and disappears costs nothing, where one built on the round it is laid would be a hitch at the
     /// moment the player is looking at it.
     /// </summary>
     public sealed class BuffPickupView : MonoBehaviour

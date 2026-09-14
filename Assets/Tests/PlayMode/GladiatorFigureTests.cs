@@ -13,7 +13,7 @@ namespace ColosseumDuel.Tests
 {
     /// <summary>
     /// Body colour identifies the archetype, helmet colour identifies the side. Both have to hold
-    /// as gladiators are swapped between rounds.
+    /// as gladiators are swapped between clashes.
     /// </summary>
     public class GladiatorFigureTests
     {
@@ -214,7 +214,7 @@ namespace ColosseumDuel.Tests
                 .Any(t => t.name == GearSizes.ShellName && t.gameObject.activeInHierarchy);
 
         [UnityTest]
-        public IEnumerator ABlessedWeaponTurnsRedAndGlows_ThenYellowForItsLastCycle()
+        public IEnumerator ABlessedWeaponTurnsRedAndGlows_ThenYellowForItsLastRound()
         {
             // Red and a glow are the whole of how the player is told his blows are worth more, and
             // yellow is how he is told this is the last turn they will be.
@@ -228,12 +228,12 @@ namespace ColosseumDuel.Tests
             var view = _controller.GetComponentsInChildren<GladiatorView>(true).First(v => v.name == "Player");
             var block = new MaterialPropertyBlock();
 
-            g.WeaponBuffCyclesLeft = 0;
+            g.WeaponBuffRoundsLeft = 0;
             yield return null;
             Assert.AreEqual(GearSizes.CarriedTint, TintOf(main, block), "the weapon he walked in with should be steel");
             Assert.AreEqual(0f, view.WeaponGlowStrength, 0.0001f, "and not glowing");
 
-            g.WeaponBuffCyclesLeft = GameConstants.WeaponBuffCycles;
+            g.WeaponBuffRoundsLeft = GameConstants.WeaponBuffRounds;
             yield return null;
             Assert.AreEqual(GearSizes.BlessedTint, TintOf(main, block), "blessed, it should turn red");
             Assert.IsTrue(main.GetComponentsInChildren<Transform>(true)
@@ -247,9 +247,9 @@ namespace ColosseumDuel.Tests
                 least = Mathf.Min(least, view.WeaponGlowStrength);
                 most = Mathf.Max(most, view.WeaponGlowStrength);
             }
-            Assert.AreEqual(1f, least, 0.001f, "the glow should hold steady while the blessing has cycles to run");
+            Assert.AreEqual(1f, least, 0.001f, "the glow should hold steady while the blessing has rounds to run");
 
-            g.WeaponBuffCyclesLeft = 1;
+            g.WeaponBuffRoundsLeft = 1;
             least = 1f;
             most = 0f;
             for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
@@ -258,9 +258,9 @@ namespace ColosseumDuel.Tests
                 least = Mathf.Min(least, view.WeaponGlowStrength);
                 most = Mathf.Max(most, view.WeaponGlowStrength);
             }
-            Assert.AreEqual(1f, least, 0.001f, "on its last cycle the glow should hold steady, not blink");
+            Assert.AreEqual(1f, least, 0.001f, "on its last round the glow should hold steady, not blink");
             Assert.AreEqual(GearSizes.BlessingEndingTint, TintOf(main, block),
-                "on its last cycle the weapon should turn yellow");
+                "on its last round the weapon should turn yellow");
 
             var glowShell = main.GetComponentsInChildren<Transform>(true)
                 .First(t => t.name == GearSizes.GlowShellName && t.gameObject.activeInHierarchy);
@@ -280,10 +280,10 @@ namespace ColosseumDuel.Tests
 
         /// <summary>
         /// While an ability lasts it glows at his feet in its own colour: steady, then blinking slowly
-        /// through its last cycle - the weapon blessing's rule. A net glows on the man it caught.
+        /// through its last round - the weapon blessing's rule. A net glows on the man it caught.
         /// </summary>
         [UnityTest]
-        public IEnumerator ALastingAbilityGlowsSteadyThenBlinksThroughItsLastCycle()
+        public IEnumerator ALastingAbilityGlowsSteadyThenBlinksThroughItsLastRound()
         {
             _controller.SubmitPlayerPick(_controller.Squad[0]);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
@@ -298,7 +298,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(0f, view.AbilityAuraStrength, 0.0001f);
             Assert.IsFalse(aura.gameObject.activeInHierarchy, "an aura with no ability running");
 
-            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 2 };
+            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, RoundsLeft = 2 };
             float least = 1f, most = 0f;
             for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
             {
@@ -307,9 +307,9 @@ namespace ColosseumDuel.Tests
                 most = Mathf.Max(most, view.AbilityAuraStrength);
             }
             Assert.IsTrue(aura.gameObject.activeInHierarchy);
-            Assert.AreEqual(1f, least, 0.001f, "it should glow steady while it has cycles to run");
+            Assert.AreEqual(1f, least, 0.001f, "it should glow steady while it has rounds to run");
 
-            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 1 };
+            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, RoundsLeft = 1 };
             least = 1f;
             most = 0f;
             for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
@@ -318,20 +318,20 @@ namespace ColosseumDuel.Tests
                 least = Mathf.Min(least, view.AbilityAuraStrength);
                 most = Mathf.Max(most, view.AbilityAuraStrength);
             }
-            Assert.Less(least, 0.4f, "on its last cycle it should fade right down as it blinks");
+            Assert.Less(least, 0.4f, "on its last round it should fade right down as it blinks");
             Assert.Greater(most, 0.9f, "and come back up again");
 
             // Second Wind is spent the moment it fires: nothing to glow for.
-            g.Buff = new ActiveBuff { Key = AbilityKey.SecondWind, CyclesLeft = 2 };
+            g.Buff = new ActiveBuff { Key = AbilityKey.SecondWind, RoundsLeft = 2 };
             yield return null;
             Assert.AreEqual(0f, view.AbilityAuraStrength, 0.0001f, "an instant heal left an aura behind");
 
             // A net glows on the man it landed on.
             g.Buff = default;
-            g.EnsnaredCyclesLeft = 2;
+            g.EnsnaredRoundsLeft = 2;
             yield return null;
             Assert.AreEqual(1f, view.NetAuraStrength, 0.0001f, "a netted man should show it");
-            g.EnsnaredCyclesLeft = 0;
+            g.EnsnaredRoundsLeft = 0;
             yield return null;
             Assert.AreEqual(0f, view.NetAuraStrength, 0.0001f);
         }
@@ -355,21 +355,21 @@ namespace ColosseumDuel.Tests
             Assert.IsNotNull(net, "there is no net effect on the man");
 
             g.Buff = default;
-            g.EnsnaredCyclesLeft = 0;
+            g.EnsnaredRoundsLeft = 0;
             yield return null;
             Assert.IsFalse(bulwark.gameObject.activeSelf, "an effect is playing with no ability running");
 
-            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 2 };
+            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, RoundsLeft = 2 };
             yield return null;
             Assert.IsTrue(bulwark.gameObject.activeSelf, "Bulwark is up and nothing on him shows it");
 
             g.Buff = default;
-            g.EnsnaredCyclesLeft = 2;
+            g.EnsnaredRoundsLeft = 2;
             yield return null;
             Assert.IsFalse(bulwark.gameObject.activeSelf, "the effect should end with the ability");
             Assert.IsTrue(net.gameObject.activeSelf, "a netted man should show the net");
 
-            g.EnsnaredCyclesLeft = 0;
+            g.EnsnaredRoundsLeft = 0;
             yield return null;
             Assert.IsFalse(net.gameObject.activeSelf);
         }
@@ -816,7 +816,7 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             // He used to vanish on the frame the blow landed, which took the death with him. The
-            // round holds for a moment afterwards, and that moment is what the animation is for.
+            // clash holds for a moment afterwards, and that moment is what the animation is for.
             Assert.IsTrue(view.gameObject.activeSelf, "the body should still be on the arena");
 
             var animator = view.GetComponentsInChildren<Animator>(true)

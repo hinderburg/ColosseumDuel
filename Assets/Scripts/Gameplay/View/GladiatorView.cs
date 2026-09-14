@@ -126,7 +126,7 @@ namespace ColosseumDuel.Gameplay.View
             }
 
             // A glow at the feet while an ability lasts, in the ability's own colour - steady, and
-            // blinking through its last cycle (see SyncAbilityAura). A second, wider one for a net
+            // blinking through its last round (see SyncAbilityAura). A second, wider one for a net
             // thrown over him, which is the other man's ability acting on this one.
             view._abilityMarker = MakeAura(palette, "AbilityRing", model.transform,
                 radius * 1.25f, radius * 1.7f, out view._abilityRenderer);
@@ -171,7 +171,7 @@ namespace ColosseumDuel.Gameplay.View
         /// Builds one figure per archetype and keeps them all, showing whichever is on the arena.
         ///
         /// All three up front rather than instantiating on each pick: a side swaps gladiator every
-        /// round, and building a skinned hierarchy mid-match would hitch exactly at the moment the
+        /// clash, and building a skinned hierarchy mid-match would hitch exactly at the moment the
         /// player is watching the reveal. Three idle skinned meshes cost nothing while disabled.
         /// </summary>
         private void BuildFigures(Transform parent, ViewPalette palette, Material helmetMaterial,
@@ -495,7 +495,7 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>
         /// How strongly the blessing glows on his weapon this frame, 0 to 1: nothing without it,
-        /// steady while it lasts, and blinking slowly through its last cycle.
+        /// steady while it lasts, and blinking slowly through its last round.
         /// </summary>
         public float WeaponGlowStrength { get; private set; }
 
@@ -539,7 +539,7 @@ namespace ColosseumDuel.Gameplay.View
                 _shownBuffEnding = g.WeaponBuffEnding;
 
                 // Steel for the weapon he walked in with, red while the blessing is on it, and yellow
-                // on the last cycle it lasts.
+                // on the last round it lasts.
                 var tint = !g.WeaponBuffed ? GearSizes.CarriedTint
                     : g.WeaponBuffEnding ? GearSizes.BlessingEndingTint
                     : GearSizes.BlessedTint;
@@ -578,8 +578,8 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>
         /// The blessing's glow round the weapon in his hands: steady for as long as it lasts, red,
-        /// and yellow through its last cycle, so the player can see at a glance this is the last turn
-        /// it will hit harder. It blinked through the last cycle once; a colour reads without having
+        /// and yellow through its last round, so the player can see at a glance this is the last turn
+        /// it will hit harder. It blinked through the last round once; a colour reads without having
         /// to be watched.
         /// </summary>
         private void SyncWeaponGlow(bool glowing, bool ending)
@@ -913,7 +913,7 @@ namespace ColosseumDuel.Gameplay.View
         /// How long after a swing starts another call to start one is ignored.
         ///
         /// Long enough to cover the wind-up the prediction bought - the longest lead is the mace's
-        /// third of a second - and short enough that two genuinely separate exchanges in one cycle
+        /// third of a second - and short enough that two genuinely separate exchanges in one round
         /// still get a swing each.
         /// </summary>
         private const float SwingRestartGuard = 0.42f;
@@ -984,9 +984,9 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Pushes one frame of simulation state onto the visuals. Safe to call with null.</summary>
         public void Sync(GladiatorInstance g)
         {
-            // A fallen gladiator stays on the sand rather than blinking out of existence. The round
+            // A fallen gladiator stays on the sand rather than blinking out of existence. The clash
             // holds for a moment after the killing blow, and that moment is the one the death
-            // animation is for; the next round replaces him with whoever is picked.
+            // animation is for; the next clash replaces him with whoever is picked.
             bool visible = g != null;
             if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
             if (!visible) return;
@@ -997,7 +997,7 @@ namespace ColosseumDuel.Gameplay.View
             if (ShownDead(g))
             {
                 // Nothing above the head is worth reading on a body: an empty HP bar and the tags
-                // for gear he is no longer carrying only clutter the end of the round.
+                // for gear he is no longer carrying only clutter the end of the clash.
                 _bars.gameObject.SetActive(false);
                 SetActive(_abilityMarker, false);
                 SetActive(_netMarker, false);
@@ -1031,17 +1031,17 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>
         /// The glow of an ability that is still working, by the weapon blessing's rule: steady while
-        /// it has cycles to run, a slow blink through the last. His own ability on the inner ring -
+        /// it has rounds to run, a slow blink through the last. His own ability on the inner ring -
         /// not Second Wind, which is spent the moment it fires - and a net over him on the outer.
         /// </summary>
         private void SyncAbilityAura(GladiatorInstance g)
         {
             bool own = g.Buff.IsActive && AbilityVisuals.AurasOnUser(g.Buff.Key);
-            AbilityAuraStrength = AbilityVisuals.GlowStrength(own, g.Buff.CyclesLeft == 1);
+            AbilityAuraStrength = AbilityVisuals.GlowStrength(own, g.Buff.RoundsLeft == 1);
             ShowAura(_abilityMarker, _abilityRenderer, own, AbilityAuraStrength,
                 AbilityVisuals.ColorFor(g.Buff.Key));
 
-            NetAuraStrength = AbilityVisuals.GlowStrength(g.IsEnsnared, g.EnsnaredCyclesLeft == 1);
+            NetAuraStrength = AbilityVisuals.GlowStrength(g.IsEnsnared, g.EnsnaredRoundsLeft == 1);
             ShowAura(_netMarker, _netRenderer, g.IsEnsnared, NetAuraStrength,
                 AbilityVisuals.ColorFor(AbilityKey.Net));
 
@@ -1207,7 +1207,7 @@ namespace ColosseumDuel.Gameplay.View
         private float _bleedFlashLeft;
         private MaterialPropertyBlock _figureProperties;
 
-        /// <summary>A wound just cost this gladiator health at the top of a cycle.</summary>
+        /// <summary>A wound just cost this gladiator health at the top of a round.</summary>
         public void PlayBleed()
         {
             _bleedFlashLeft = BleedFlashTime;

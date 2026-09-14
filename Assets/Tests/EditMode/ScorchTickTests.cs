@@ -16,7 +16,7 @@ namespace ColosseumDuel.Tests
     {
         private const float Dt = 1f / 60f;
 
-        private static GameManager StartedRound()
+        private static GameManager StartedClash()
         {
             var m = new GameManager(new System.Random(20260909));
             m.StartMatch(
@@ -48,7 +48,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void AFullPhaseInTheFireIsReportedAsATickEveryQuarterSecond()
         {
-            var m = StartedRound();
+            var m = StartedClash();
 
             var ticks = new List<float>();
             m.Scorched += (side, amount) => { if (side == PlayerSide.P1) ticks.Add(amount); };
@@ -56,10 +56,10 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             // Late enough that the outermost ring is burning, and standing in it.
-            m.State.Cycle = 9;
+            m.State.Round = 9;
             var player = m.State.P1.Active;
             player.Pos = ArenaShape.FromUnitCircle(Vector2.right) * 0.88f;
-            player.Hp = 10000f; // so a whole phase of burning cannot end the round early
+            player.Hp = 10000f; // so a whole phase of burning cannot end the clash early
 
             m.State.Bot.Active.Pos = new Vector2(0f, 0f);
 
@@ -91,7 +91,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ClearOfTheFireNothingIsReported()
         {
-            var m = StartedRound();
+            var m = StartedClash();
 
             int ticks = 0;
             m.Scorched += (_, __) => ticks++;
@@ -99,7 +99,7 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             // Rings out to 0.25 are burning; the middle is not.
-            m.State.Cycle = 9;
+            m.State.Round = 9;
             m.State.P1.Active.Pos = Vector2.zero;
             m.State.Bot.Active.Pos = new Vector2(0f, 30f);
 

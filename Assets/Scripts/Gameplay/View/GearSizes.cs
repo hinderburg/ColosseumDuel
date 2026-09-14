@@ -104,7 +104,7 @@ namespace ColosseumDuel.Gameplay.View
         public static readonly Color BlessedTint = new Color(0.95f, 0.18f, 0.14f);
 
         /// <summary>
-        /// The blessed weapon on the last cycle the blessing lasts: yellow instead of red, weapon and
+        /// The blessed weapon on the last round the blessing lasts: yellow instead of red, weapon and
         /// glow both. A colour to read at a glance that this is the last turn it hits harder - it used
         /// to blink instead, and a blink has to be watched for a second before it says anything.
         /// </summary>

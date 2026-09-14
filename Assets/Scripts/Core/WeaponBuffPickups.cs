@@ -3,8 +3,8 @@ using UnityEngine;
 namespace ColosseumDuel.Core
 {
     /// <summary>
-    /// The weapon blessing: laid on the sand every third cycle and taken up by whoever runs over it
-    /// first. A blessed weapon hits WeaponBuffDamageMult times as hard for the three cycles after
+    /// The weapon blessing: laid on the sand every third round and taken up by whoever runs over it
+    /// first. A blessed weapon hits WeaponBuffDamageMult times as hard for the three rounds after
     /// the one it was taken in - see GladiatorInstance.BlessWeapon.
     ///
     /// It replaced the gilded weapons that lay on the floor all round, and the traps with them: one
@@ -33,9 +33,9 @@ namespace ColosseumDuel.Core
         /// <summary>Where the blessing lies, or null when there is none on the sand.</summary>
         public Vector2? Position { get; private set; }
 
-        /// <summary>Whether this cycle is one a blessing is laid on.</summary>
-        public static bool IsDueOn(int cycle)
-            => cycle > 0 && cycle % GameConstants.WeaponBuffEveryCycles == 0;
+        /// <summary>Whether this round is one a blessing is laid on.</summary>
+        public static bool IsDueOn(int round)
+            => round > 0 && round % GameConstants.WeaponBuffEveryRounds == 0;
 
         public void Clear() => Position = null;
 

@@ -19,7 +19,7 @@ namespace ColosseumDuel.Tests
             GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius
         };
 
-        private static GameManager StartedRound()
+        private static GameManager StartedClash()
         {
             var m = new GameManager(new System.Random(4242));
             m.StartMatch(Squad, Squad);
@@ -34,7 +34,7 @@ namespace ColosseumDuel.Tests
             for (float t = 0f; t < seconds; t += Dt) m.Tick(Dt);
         }
 
-        private static void RunOneCycle(GameManager m)
+        private static void RunOneRound(GameManager m)
         {
             Advance(m, GameConstants.PlanningTime + GameConstants.ActionTime + 0.1f);
         }
@@ -42,7 +42,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void AHeadOnCollisionReportsOneImpact_AndOneHitOnEachSide()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             var damaged = new List<PlayerSide>();
             var impacts = new List<Vector2>();
             m.Damaged += (side, _) => damaged.Add(side);
@@ -60,7 +60,7 @@ namespace ColosseumDuel.Tests
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
 
-            RunOneCycle(m);
+            RunOneRound(m);
 
             Assert.AreEqual(1, impacts.Count, "one collision, one impact");
             Assert.AreEqual(2, damaged.Count, "a collision damages both sides simultaneously");
@@ -88,7 +88,7 @@ namespace ColosseumDuel.Tests
         {
             // A blow landed at the end of a move is not a crash, and the effects should not say it
             // was: no shockwave ring, only the two hits.
-            var m = StartedRound();
+            var m = StartedClash();
             int impacts = 0, hits = 0;
             m.Impact += _ => impacts++;
             m.Damaged += (_, __) => hits++;
@@ -110,16 +110,16 @@ namespace ColosseumDuel.Tests
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 
-            RunOneCycle(m);
+            RunOneRound(m);
 
             Assert.AreEqual(0, impacts, "nobody collided head-on");
-            Assert.AreEqual(2, hits, "but both were within reach when the cycle ended");
+            Assert.AreEqual(2, hits, "but both were within reach when the round ended");
         }
 
         [Test]
         public void AnAbilityIsReportedOnceForTheSideThatSpentIt()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             var fired = new List<PlayerSide>();
             m.AbilityFired += side => fired.Add(side);
 
@@ -127,7 +127,7 @@ namespace ColosseumDuel.Tests
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, useAbility: true);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 
-            RunOneCycle(m);
+            RunOneRound(m);
 
             Assert.AreEqual(1, fired.Count);
             Assert.AreEqual(PlayerSide.P1, fired[0]);
@@ -136,7 +136,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void AnAbilityThatCannotFireIsNotReported()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             int fired = 0;
             m.AbilityFired += _ => fired++;
 
@@ -144,7 +144,7 @@ namespace ColosseumDuel.Tests
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, useAbility: true);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 
-            RunOneCycle(m);
+            RunOneRound(m);
 
             Assert.AreEqual(0, fired, "an ability that never fired must not announce itself");
         }
@@ -152,7 +152,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void MongooseReportsTwoHitsInOneCollision()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             m.State.P1.Active = m.State.P1.Roster.Find(g => g.Def.Id == GladiatorId.Hilius);
             m.State.P1.Active.Ability = AbilityKey.Mongoose;
             m.State.P1.Active.Pos = new Vector2(-40f, 0f);
@@ -165,7 +165,7 @@ namespace ColosseumDuel.Tests
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, useAbility: true);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
 
-            RunOneCycle(m);
+            RunOneRound(m);
 
             Assert.AreEqual(2, hitsOnBot, "Mongoose lands twice, so the effect should play twice");
         }
@@ -173,7 +173,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void NobodySwingsAtTheEndOfAMoveThatFinishedOutOfReach()
         {
-            var m = StartedRound();
+            var m = StartedClash();
 
             int blows = 0;
             m.Damaged += (_, __) => blows++;
@@ -186,7 +186,7 @@ namespace ColosseumDuel.Tests
 
             m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
-            RunOneCycle(m);
+            RunOneRound(m);
 
             Assert.AreEqual(0, blows, "the end-of-move blow must need somebody inside the reach");
         }

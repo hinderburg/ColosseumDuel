@@ -253,7 +253,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(new Vector2(0f, 1f), rect.pivot);
 
             // Deep enough into the match that going back cannot be mistaken for never having left:
-            // a pick is in, the round is under way, and somebody has taken damage.
+            // a pick is in, the clash is under way, and somebody has taken damage.
             _controller.SubmitPlayerPick(GladiatorId.Barbarius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
             _controller.Manager.State.P1.Active.Hp -= 40f;

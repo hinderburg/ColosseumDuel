@@ -39,7 +39,7 @@ namespace ColosseumDuel.Tests
             Assert.AreNotEqual(phase, m.State.Phase, $"stuck in {phase} for {maxSeconds}s");
         }
 
-        private static GameManager StartedRound(int seed = 1234)
+        private static GameManager StartedClash(int seed = 1234)
         {
             var m = NewMatch(seed);
             Assert.AreEqual(MatchPhase.Pick, m.State.Phase);
@@ -63,7 +63,7 @@ namespace ColosseumDuel.Tests
         {
             // Regression: Reveal used to be entered and left within the same frame, so no UI could
             // ever draw it.
-            var m = StartedRound();
+            var m = StartedClash();
             Assert.AreEqual(MatchPhase.Reveal, m.State.Phase);
 
             m.Tick(Dt);
@@ -71,15 +71,15 @@ namespace ColosseumDuel.Tests
 
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
             Assert.AreEqual(MatchPhase.Planning, m.State.Phase);
-            Assert.AreEqual(1, m.State.Cycle);
+            Assert.AreEqual(1, m.State.Round);
         }
 
         [Test]
         public void FightersStartAtOppositeEndsOfTheArena_FacingEachOther()
         {
             // Regression: Pos was never initialised, so both fighters spawned on top of each other
-            // in the centre and every round began with an instant collision.
-            var m = StartedRound();
+            // in the centre and every clash began with an instant collision.
+            var m = StartedClash();
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
 
@@ -94,7 +94,7 @@ namespace ColosseumDuel.Tests
             Assert.Greater(Vector2.Distance(p1.Pos, bot.Pos), WeaponDef.TwoHandedMace.Reach,
                 "they must start out of even the longest weapon's range");
             Assert.LessOrEqual(ArenaShape.NormalizedDistance(p1.Pos), 0.75f,
-                "spawning past the first danger ring would start a late round already on fire");
+                "spawning past the first danger ring would start a late clash already on fire");
 
             Assert.AreEqual(1f, p1.Facing.y, Tol, "P1 looks towards the bot");
             Assert.AreEqual(-1f, bot.Facing.y, Tol, "the bot looks back");
@@ -107,7 +107,7 @@ namespace ColosseumDuel.Tests
             // the direction a man faces mean nothing. It means something now: it decides which of
             // him a blow lands on. And with nothing limiting where he can be sent, it is entirely the
             // player's to choose - he faces along his run from the first step to the last.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -155,7 +155,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ThrownBackByACollision_TheyStillFaceEachOther()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -194,7 +194,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ARunRoundAColumnGoesRoundItAndTurnsAtTheCorner()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -242,15 +242,15 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheBotMakesAFreshDecisionEveryCycle()
+        public void TheBotMakesAFreshDecisionEveryRound()
         {
-            // Regression: BeginCycle did not clear PlannedAction, and AutoFillMissingPlans only asks
+            // Regression: BeginRound did not clear PlannedAction, and AutoFillMissingPlans only asks
             // the AI when the slot is empty - so the bot replayed its first decision forever.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var powers = new List<float>();
-            for (int cycle = 0; cycle < 5 && m.State.Phase != MatchPhase.MatchEnd; cycle++)
+            for (int round = 0; round < 5 && m.State.Phase != MatchPhase.MatchEnd; round++)
             {
                 Assert.AreEqual(MatchPhase.Planning, m.State.Phase);
                 Assert.AreEqual(ActionType.None, m.State.Bot.Active.PlannedAction,
@@ -264,12 +264,12 @@ namespace ColosseumDuel.Tests
             }
 
             // BotAI rolls a fresh pull strength every time it is asked. If the plan were stale, this
-            // value would be byte-identical across every cycle. (Aim direction is deliberately not
+            // value would be byte-identical across every round. (Aim direction is deliberately not
             // checked here: the bot charges straight down the x axis at a defending, stationary
-            // player, so the same direction several cycles in a row is the correct answer.)
+            // player, so the same direction several rounds in a row is the correct answer.)
             Assert.Greater(powers.Count, 2);
             Assert.IsTrue(powers.Exists(p => !Mathf.Approximately(p, powers[0])),
-                "the bot re-rolled its pull strength every cycle, so these should not all be identical");
+                "the bot re-rolled its pull strength every round, so these should not all be identical");
         }
 
         [Test]
@@ -277,7 +277,7 @@ namespace ColosseumDuel.Tests
         {
             // Ordinary movement can end in an attack now, which is what makes closing to exactly
             // the edge of your reach a decision rather than a formality.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -303,7 +303,7 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
             Assert.IsFalse(m.State.Collided, "they never touched - this is the reach blow, not a crash");
-            Assert.Less(p1.Hp, p1Hp, "the player should have been struck at the end of the cycle");
+            Assert.Less(p1.Hp, p1Hp, "the player should have been struck at the end of the round");
             Assert.Less(bot.Hp, botHp, "and so should the bot");
         }
 
@@ -311,11 +311,11 @@ namespace ColosseumDuel.Tests
         public void ARunStraightPastSomebodyStillCosts()
         {
             // Passing through reach and stopping inside it are the same event to a man with a
-            // weapon in his hand. Resolved only at the end of the cycle, a charge clean through the
+            // weapon in his hand. Resolved only at the end of the round, a charge clean through the
             // opponent cost nothing at all - the one approach in the game that most obviously
             // should - and at full speed a fighter crosses most of a body length per substep, so
             // the crossing has to be measured over the step rather than sampled at its ends.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -355,8 +355,8 @@ namespace ColosseumDuel.Tests
         public void AMoveThatEndsOutOfRange_LandsNothing()
         {
             // The other half of the same rule, and the half that makes reach worth reading: stop
-            // one unit short and the cycle costs nothing at all.
-            var m = StartedRound();
+            // one unit short and the round costs nothing at all.
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -388,7 +388,7 @@ namespace ColosseumDuel.Tests
         {
             // The reason reach is a stat rather than a constant. A mace ending its run at its own
             // limit hits a twin-sword fighter who has no way to reach back from there.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -421,7 +421,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ADirectCollision_DamagesBothAndKnocksThemApart()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -475,11 +475,11 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void MongooseLandsTwoHitsThroughAWholeCycle()
+        public void MongooseLandsTwoHitsThroughAWholeRound()
         {
             // The existing Mongoose test drives CombatResolver directly, which proves the arithmetic
             // and nothing about the path a match actually takes: arming during planning, the ability
-            // firing at the top of the action phase after BeginCycle has already set the attack
+            // firing at the top of the action phase after BeginRound has already set the attack
             // budget, and ExchangeBlows spending it. This runs that path.
             var m = NewMatch();
             m.SubmitPick(PlayerSide.P1, GladiatorId.Hilius);
@@ -502,7 +502,7 @@ namespace ColosseumDuel.Tests
 
             Assert.IsTrue(hilius.Buff.IsActive, "the ability did not fire");
             Assert.AreEqual(AbilityKey.Mongoose, hilius.Buff.Key);
-            Assert.AreEqual(2, hilius.AttacksPerCycle);
+            Assert.AreEqual(2, hilius.AttacksPerRound);
 
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
@@ -513,43 +513,43 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void MongooseKeepsBothAttacksOnTheFollowingCycleAndDropsBackAfter()
+        public void MongooseKeepsBothAttacksOnTheFollowingRoundAndDropsBackAfter()
         {
-            // The buff runs three cycles, and the attack budget is derived after the buff is aged -
-            // so the cycle it expires on must drop back to one. Off by one either way and the ability
-            // silently lasts one cycle too few or too many.
+            // The buff runs three rounds, and the attack budget is derived after the buff is aged -
+            // so the round it expires on must drop back to one. Off by one either way and the ability
+            // silently lasts one round too few or too many.
             var hilius = new GladiatorInstance(GladiatorDef.Hilius) { Ability = AbilityKey.Mongoose };
-            hilius.BeginCycle();
+            hilius.BeginRound();
             hilius.Rage = GameConstants.RageMax;
             hilius.ActivateAbility();
 
-            Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the cycle it was used in");
+            Assert.AreEqual(2, hilius.AttacksRemainingThisRound, "the round it was used in");
 
-            hilius.BeginCycle();
-            Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the second cycle of the buff");
+            hilius.BeginRound();
+            Assert.AreEqual(2, hilius.AttacksRemainingThisRound, "the second round of the buff");
 
-            hilius.BeginCycle();
-            Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the third cycle of the buff");
+            hilius.BeginRound();
+            Assert.AreEqual(2, hilius.AttacksRemainingThisRound, "the third round of the buff");
 
-            hilius.BeginCycle();
-            Assert.AreEqual(1, hilius.AttacksRemainingThisCycle, "the buff has expired by now");
+            hilius.BeginRound();
+            Assert.AreEqual(1, hilius.AttacksRemainingThisRound, "the buff has expired by now");
         }
 
         [Test]
         public void ARestartGoesBackToThePickScreenWithEverythingCleared()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             // Leave the match thoroughly dirtied: a fighter chosen, rage banked, a buff running, the
-            // ability on cooldown, gear carried and several cycles on the clock.
+            // ability on cooldown, gear carried and several rounds on the clock.
             var p1 = m.State.P1.Active;
             p1.Rage = GameConstants.RageMax;
             p1.ActivateAbility();
             p1.Weapon = WeaponKind.TwoHandedMace;
             p1.BlessWeapon();
             p1.Hp = 5f;
-            m.State.Cycle = 9;
+            m.State.Round = 9;
 
             m.StartMatch(Squad, Squad);
 
@@ -558,8 +558,8 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(MatchPhase.Pick, m.State.Phase);
             Assert.IsNull(m.State.P1.Active, "the player should have nobody chosen yet");
             Assert.IsTrue(m.State.P1.NeedsPick, "the pick screen is keyed off this");
+            Assert.AreEqual(0, m.State.Clash);
             Assert.AreEqual(0, m.State.Round);
-            Assert.AreEqual(0, m.State.Cycle);
 
             foreach (var g in m.State.P1.Roster)
             {
@@ -573,7 +573,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheTutorialRoundPutsTheBlessingOnTheWayToTheTapPoint()
+        public void TheTutorialClashPutsTheBlessingOnTheWayToTheTapPoint()
         {
             // Whoever was picked. The layout is a fixed distance, so it has to sit inside the reach
             // of the slowest of them - and the blessing has to be between him and the point the
@@ -646,7 +646,7 @@ namespace ColosseumDuel.Tests
         {
             foreach (float length in new[] { 40f, 225f, 520f })
             {
-                var m = StartedRound();
+                var m = StartedClash();
                 AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
                 var p1 = m.State.P1.Active;
@@ -694,7 +694,7 @@ namespace ColosseumDuel.Tests
         {
             Assert.AreEqual(2f, GameConstants.ActionTime, 0.0001f, "the action phase is meant to be two seconds");
 
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             // Far apart and standing still, so nothing cuts the phase short.
@@ -721,7 +721,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ADrawnRunIsRunAsDrawn_CornerAndAll()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -756,7 +756,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ADrawnRunLongerThanHisReachIsCutWhereItRunsOut()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -791,7 +791,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ArmedRampageLengthensTheRunThatCanBeDrawn()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -840,7 +840,7 @@ namespace ColosseumDuel.Tests
 
         /// <summary>
         /// With the player's side on auto the bot plays both: it picks for him, plans every one of
-        /// his cycles, and the match goes the whole way with nothing from the player at all.
+        /// his rounds, and the match goes the whole way with nothing from the player at all.
         /// </summary>
         [Test]
         public void OnAutoTheBotPlaysThePlayersSideToTheEndOfTheMatch()
@@ -863,24 +863,24 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TurningAutoOnMidPlanningPlansThePlayersCycleThere_AndOffLeavesItToHim()
+        public void TurningAutoOnMidPlanningPlansThePlayersRoundThere_AndOffLeavesItToHim()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
             Assert.AreEqual(MatchPhase.Planning, m.State.Phase);
             Assert.AreEqual(ActionType.None, m.State.P1.Active.PlannedAction);
 
             m.P1Auto = true;
             Assert.AreNotEqual(ActionType.None, m.State.P1.Active.PlannedAction,
-                "switched on during planning, it should decide this cycle rather than wait for the next");
+                "switched on during planning, it should decide this round rather than wait for the next");
 
             m.P1Auto = false;
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
-            if (m.State.Phase != MatchPhase.Planning) Assert.Ignore("the round ended in that exchange");
+            if (m.State.Phase != MatchPhase.Planning) Assert.Ignore("the clash ended in that exchange");
             m.Tick(Dt);
             Assert.AreEqual(ActionType.None, m.State.P1.Active.PlannedAction,
-                "off again, the next cycle is the player's to plan");
+                "off again, the next round is the player's to plan");
         }
 
         [Test]
@@ -889,7 +889,7 @@ namespace ColosseumDuel.Tests
             // The knockback is applied straight to both positions, and a collision at the wall
             // pushes one of them outward. It also ends the action phase, so nothing would step him
             // again until the next one - he would stand outside the arena through all of planning.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -915,20 +915,20 @@ namespace ColosseumDuel.Tests
         [Test]
         public void MongooseTurnsOneCollisionIntoTwoHits()
         {
-            // Mongoose lets Hilius swing twice in one cycle, so an unarmed, undefended exchange
+            // Mongoose lets Hilius swing twice in one round, so an unarmed, undefended exchange
             // lands twice his base damage. Expressed against the stat rather than as a number, so a
             // balance pass on the damage table does not break a test about the ability.
             var attacker = new GladiatorInstance(GladiatorDef.Hilius) { Ability = AbilityKey.Mongoose };
-            attacker.BeginCycle();
+            attacker.BeginRound();
             attacker.Rage = 1f;
             attacker.ActivateAbility();
 
             var victim = new GladiatorInstance(GladiatorDef.Brutius);
-            victim.BeginCycle();
+            victim.BeginRound();
 
-            while (attacker.AttacksRemainingThisCycle > 0)
+            while (attacker.AttacksRemainingThisRound > 0)
             {
-                attacker.AttacksRemainingThisCycle--;
+                attacker.AttacksRemainingThisRound--;
                 CombatResolver.DealDamage(attacker, victim);
             }
 
@@ -943,12 +943,12 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void ABleedIsPaidAtTheTopOfTheCycle_BeforeAnybodyMoves()
+        public void ABleedIsPaidAtTheTopOfTheRound_BeforeAnybodyMoves()
         {
-            // Where it lands in the cycle is the whole shape of it. Settled at the end instead, a
-            // fighter it was about to kill would get one more full cycle to fight in first - and
+            // Where it lands in the round is the whole shape of it. Settled at the end instead, a
+            // fighter it was about to kill would get one more full round to fight in first - and
             // the player would watch him die from nothing after the exchange was over.
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -967,13 +967,13 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(40f * GameConstants.BleedFraction, bled, Tol,
                 "the wound should have been paid the moment the action phase opened");
             Assert.AreEqual(before - bled, p1.Hp, Tol);
-            Assert.AreEqual(GameConstants.BleedCycles - 1, p1.BleedCyclesLeft);
+            Assert.AreEqual(GameConstants.BleedRounds - 1, p1.BleedRoundsLeft);
         }
 
         [Test]
         public void ARoundWinner_StaysOnTheArenaWithTheHpTheyEndedOn()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -995,27 +995,27 @@ namespace ColosseumDuel.Tests
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
 
-            Assert.AreEqual(MatchPhase.RoundEnd, m.State.Phase);
+            Assert.AreEqual(MatchPhase.ClashEnd, m.State.Phase);
             Assert.IsFalse(bot.Alive);
             Assert.IsTrue(p1.Alive);
-            float hpAtRoundEnd = p1.Hp;
-            Assert.Less(hpAtRoundEnd, 120f, "the dying bot still landed its simultaneous return blow");
+            float hpAtClashEnd = p1.Hp;
+            Assert.Less(hpAtClashEnd, 120f, "the dying bot still landed its simultaneous return blow");
 
             // Note: the losing side is the only one that picks, so the Pick phase is entered and left
             // within the same frame here - waiting for Phase == Pick would hang. Wait for the next
-            // round's Reveal instead.
+            // clash's Reveal instead.
             RunUntil(m, s => s.Phase == MatchPhase.Reveal || s.Phase == MatchPhase.MatchEnd, 30f);
             Assert.AreEqual(MatchPhase.Reveal, m.State.Phase);
 
             Assert.AreSame(p1, m.State.P1.Active, "the winner stays on the arena");
-            Assert.AreEqual(hpAtRoundEnd, p1.Hp, Tol, "and is not healed for the new round");
-            Assert.AreEqual(2, m.State.Round);
+            Assert.AreEqual(hpAtClashEnd, p1.Hp, Tol, "and is not healed for the new clash");
+            Assert.AreEqual(2, m.State.Clash);
         }
 
         [Test]
-        public void OnlyTheLosingSidePicksAfterTheFirstRound()
+        public void OnlyTheLosingSidePicksAfterTheFirstClash()
         {
-            var m = StartedRound();
+            var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
@@ -1040,7 +1040,7 @@ namespace ColosseumDuel.Tests
 
             Assert.AreSame(p1, m.State.P1.Active, "the player never had to pick again");
             Assert.AreNotEqual(firstBotFighter, m.State.Bot.Active.Def.Id,
-                "the bot sent in a different gladiator after losing the round");
+                "the bot sent in a different gladiator after losing the clash");
         }
 
         [Test]

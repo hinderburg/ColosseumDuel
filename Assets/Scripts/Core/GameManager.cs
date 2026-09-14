@@ -42,7 +42,7 @@ namespace ColosseumDuel.Core
         public event Action<PlayerSide> AbilityFired;
 
         /// <summary>
-        /// An open wound cost a side health at the top of a cycle.
+        /// An open wound cost a side health at the top of a round.
         ///
         /// Its own event rather than Damaged, because it should not read as a blow: nobody swung,
         /// so there is no recoil to play and nobody to swing back. What it wants is a red flicker.
@@ -70,10 +70,10 @@ namespace ColosseumDuel.Core
 
         /// <summary>
         /// The bot plays the player's side as well: it sends in his fighter and plans every one of
-        /// his cycles, so two bots fight it out while he watches.
+        /// his rounds, so two bots fight it out while he watches.
         ///
         /// Switchable at any time and it takes over at once - turned on during planning it decides
-        /// that cycle rather than waiting for the next. It belongs to the manager rather than to a
+        /// that round rather than waiting for the next. It belongs to the manager rather than to a
         /// match, so it stays on across restarts until it is turned off.
         /// </summary>
         public bool P1Auto
@@ -137,11 +137,11 @@ namespace ColosseumDuel.Core
             // The obstacles first, because the blessing is laid out round them.
             State.Obstacles = ObstacleField.Standard();
             State.Buffs = new WeaponBuffPickups(_rng, State.Obstacles);
+            State.Clash = 0;
             State.Round = 0;
-            State.Cycle = 0;
             State.WinnerSide = null;
 
-            BeginRoundPick();
+            BeginClashPick();
         }
 
         /// <summary>Gives each man the ability chosen for his archetype, if it is one of his three.</summary>
@@ -165,7 +165,7 @@ namespace ColosseumDuel.Core
         // pick phase
         // ------------------------------------------------------------------
 
-        private void BeginRoundPick()
+        private void BeginClashPick()
         {
             SetPhase(MatchPhase.Pick);
             if (State.Bot.NeedsPick) AutoPick(PlayerSide.Bot);
@@ -198,7 +198,7 @@ namespace ColosseumDuel.Core
             if (!player.NeedsPick) return false;
             if (chosen == null || !chosen.Alive || !player.Roster.Contains(chosen)) return false;
 
-            chosen.ResetForNewRound();
+            chosen.ResetForNewClash();
             player.Active = chosen;
 
             if (!State.P1.NeedsPick && !State.Bot.NeedsPick)
@@ -221,15 +221,15 @@ namespace ColosseumDuel.Core
 
         private void ConfirmPicksAndReveal()
         {
-            State.Round++;
-            State.Cycle = 0;
-            PlaceFightersForRound();
+            State.Clash++;
+            State.Round = 0;
+            PlaceFightersForClash();
 
-            // A bare arena every round: a blessing left lying from the last one would hand the new
-            // round's opening to whoever was set down nearer it.
+            // A bare arena every clash: a blessing left lying from the last one would hand the new
+            // clash's opening to whoever was set down nearer it.
             State.Buffs?.Clear();
 
-            if (State.Tutorial && State.Round == 1) ArrangeTutorialRound();
+            if (State.Tutorial && State.Clash == 1) ArrangeTutorialClash();
             // Reveal is a real phase with a duration (see Tick) so the UI can show both picks
             // before planning opens - it used to be skipped in the same frame it was entered.
             SetPhase(MatchPhase.Reveal);
@@ -237,18 +237,18 @@ namespace ColosseumDuel.Core
 
         /// <summary>
         /// Puts both actives at opposite ends of the arena, facing each other. Runs at the start of
-        /// every round, for a freshly picked gladiator and a surviving one alike: the round winner
-        /// keeps HP and carried items (per the design doc) but not last round's leftover position.
+        /// every clash, for a freshly picked gladiator and a surviving one alike: the clash winner
+        /// keeps HP and carried items (per the design doc) but not last clash's leftover position.
         ///
         /// Down the long axis, and always the same way round: the player's fighter at the near end
         /// of the arena and the opponent's at the far end, matching where each side's roster sits on
         /// screen.
         ///
         /// The distance is a fraction of the long semi-axis - the one they are spread along. What
-        /// spreading them costs is measured in cycles spent closing rather than in units; see
+        /// spreading them costs is measured in rounds spent closing rather than in units; see
         /// SpawnDistanceFraction.
         /// </summary>
-        private void PlaceFightersForRound()
+        private void PlaceFightersForClash()
         {
             float d = ArenaShape.RadiusY * GameConstants.SpawnDistanceFraction;
             Place(State.P1.Active, new Vector2(0f, -d), Vector2.up);
@@ -256,13 +256,13 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Rearranges the opening round of a first match into something that can be taught from.
+        /// Rearranges the opening clash of a first match into something that can be taught from.
         ///
-        /// The lesson is one sentence - tap past a thing and you run through it - so the round has
+        /// The lesson is one sentence - tap past a thing and you run through it - so the clash has
         /// to be able to deliver that sentence whoever the player picked. Everything here exists to
         /// remove the ways it could fail to.
         /// </summary>
-        private void ArrangeTutorialRound()
+        private void ArrangeTutorialClash()
         {
             var player = State.P1.Active;
             if (player == null || State.Buffs == null) return;
@@ -272,7 +272,7 @@ namespace ColosseumDuel.Core
             float reach = GameConstants.TutorialRunLength;
             var forward = player.Facing.sqrMagnitude > 0.0001f ? player.Facing.normalized : Vector2.up;
 
-            // The blessing, laid straight away rather than on the third cycle, so the first thing the
+            // The blessing, laid straight away rather than on the third round, so the first thing the
             // player is ever told to do hands them a straight upgrade - and so the lesson is the same
             // lesson whoever they picked.
             State.Buffs.PlaceAt(player.Pos + forward * (reach * 0.55f));
@@ -292,25 +292,25 @@ namespace ColosseumDuel.Core
         }
 
         // ------------------------------------------------------------------
-        // planning / action cycle
+        // planning / action round
         // ------------------------------------------------------------------
 
-        private void StartCycle()
+        private void StartRound()
         {
-            State.Cycle++;
-            State.P1.Active?.BeginCycle();
-            State.Bot.Active?.BeginCycle();
+            State.Round++;
+            State.P1.Active?.BeginRound();
+            State.Bot.Active?.BeginRound();
 
-            // Every third cycle a blessing is laid on the sand between the two, if the last one has
+            // Every third round a blessing is laid on the sand between the two, if the last one has
             // been taken - between them rather than anywhere, so neither starts nearer to it.
-            if (State.Buffs != null && WeaponBuffPickups.IsDueOn(State.Cycle)
+            if (State.Buffs != null && WeaponBuffPickups.IsDueOn(State.Round)
                 && State.P1.Active != null && State.Bot.Active != null)
                 State.Buffs.SpawnBetween(State.P1.Active.Pos, State.Bot.Active.Pos);
             SetPhase(MatchPhase.Planning);
         }
 
         /// <summary>
-        /// Files what the gladiator will do this cycle, leaving any armed ability alone.
+        /// Files what the gladiator will do this round, leaving any armed ability alone.
         ///
         /// The two are separate on purpose. They used to arrive together, which quietly made the
         /// order of the player's button presses matter: arm then move worked, move then arm lost the
@@ -448,7 +448,7 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Arms or disarms the ability for this cycle, on its own.
+        /// Arms or disarms the ability for this round, on its own.
         ///
         /// Refuses to arm one that could not fire, so a lit button always means something will
         /// happen - arming a half-charged meter would just do nothing when the phase resolved.
@@ -491,7 +491,7 @@ namespace ColosseumDuel.Core
                 case MatchPhase.Reveal:
                     State.PhaseTimer += dt;
                     if (State.PhaseTimer >= GameConstants.RevealTime)
-                        StartCycle();
+                        StartRound();
                     break;
 
                 case MatchPhase.Planning:
@@ -524,10 +524,10 @@ namespace ColosseumDuel.Core
                         EndActionPhase();
                     break;
 
-                case MatchPhase.RoundEnd:
+                case MatchPhase.ClashEnd:
                     State.PhaseTimer += dt;
-                    if (State.PhaseTimer >= GameConstants.RoundEndTime)
-                        AfterRoundEndDelay();
+                    if (State.PhaseTimer >= GameConstants.ClashEndTime)
+                        AfterClashEndDelay();
                     break;
 
                 default:
@@ -557,8 +557,8 @@ namespace ColosseumDuel.Core
             State.CollisionEndTimer = null;
 
             // Wounds settle up before anyone moves, which is the whole shape of a bleed: it is the
-            // cost of having started the cycle already cut, and a fighter it kills does not get to
-            // spend that cycle as though he were whole.
+            // cost of having started the round already cut, and a fighter it kills does not get to
+            // spend that round as though he were whole.
             Bleed(PlayerSide.P1, State.P1.Active);
             Bleed(PlayerSide.Bot, State.Bot.Active);
 
@@ -573,7 +573,7 @@ namespace ColosseumDuel.Core
             FaceTravel();
 
             // Zeroed here rather than only when it is announced, so a phase abandoned partway - a
-            // round restarted, a match thrown away - cannot carry its tally into the next one.
+            // clash restarted, a match thrown away - cannot carry its tally into the next one.
             _scorched[0] = 0f;
             _scorched[1] = 0f;
 
@@ -664,7 +664,7 @@ namespace ColosseumDuel.Core
         ///
         /// Standing still keeps the last heading rather than falling back to anything, so a
         /// gladiator who stops is still facing where he was going - which is what decides the sector
-        /// for the rest of the cycle.
+        /// for the rest of the round.
         /// </summary>
         private void FaceTravel()
         {
@@ -883,7 +883,7 @@ namespace ColosseumDuel.Core
             RunOrDrift(g, ref g.Pos, ref g.Vel, ref g.PathIndex, dt);
 
             // hazard damage - continuous DOT while standing in an active danger ring
-            if (HazardSystem.IsInActiveHazard(g.Pos, State.Cycle))
+            if (HazardSystem.IsInActiveHazard(g.Pos, State.Round))
             {
                 float dps = GameConstants.HazardDamagePerPhase / GameConstants.ActionTime;
                 float bite = dps * dt;
@@ -911,7 +911,7 @@ namespace ColosseumDuel.Core
             BraceAgainst(a, b, PlayerSide.Bot);
             BraceAgainst(b, a, PlayerSide.P1);
 
-            // Both land every attack they still have this cycle - a weapon that swings twice lands
+            // Both land every attack they still have this round - a weapon that swings twice lands
             // twice, and Mongoose doubles whatever that was.
             ExchangeBlows(a, b);
 
@@ -966,7 +966,7 @@ namespace ColosseumDuel.Core
 
         /// <summary>
         /// A blow the moment the other one comes inside your weapon's reach - running past him, or
-        /// standing your ground while he runs past you, or simply ending the cycle next to him.
+        /// standing your ground while he runs past you, or simply ending the round next to him.
         ///
         /// Checked every substep rather than only when the phase ends. Ending in range and passing
         /// through range are the same event to a fighter with a weapon in his hand, and resolving
@@ -974,7 +974,7 @@ namespace ColosseumDuel.Core
         /// approach in the game that most obviously should.
         ///
         /// Nothing needs a "have they attacked yet" flag: an attack is spent out of
-        /// AttacksRemainingThisCycle, so a gladiator who swings on the substep he comes into range
+        /// AttacksRemainingThisRound, so a gladiator who swings on the substep he comes into range
         /// has nothing left to swing again with while he is still there. The budget is the cooldown.
         ///
         /// Each side is checked against its own weapon, so a mace user really can land a blow from a
@@ -992,15 +992,15 @@ namespace ColosseumDuel.Core
             if (a == null || b == null || !a.Alive || !b.Alive) return;
             if (distance > Mathf.Max(a.Reach, b.Reach)) return;
 
-            bool aReaches = a.AttacksRemainingThisCycle > 0 && a.CanStrikeFrom(atA, atB);
-            bool bReaches = b.AttacksRemainingThisCycle > 0 && b.CanStrikeFrom(atB, atA);
+            bool aReaches = a.AttacksRemainingThisRound > 0 && a.CanStrikeFrom(atA, atB);
+            bool bReaches = b.AttacksRemainingThisRound > 0 && b.CanStrikeFrom(atB, atA);
             if (!aReaches && !bReaches) return;
 
             ExchangeBlows(a, b, aReaches, bReaches);
         }
 
         /// <summary>
-        /// One exchange. Each side spends the attacks it has left this cycle, so a weapon that
+        /// One exchange. Each side spends the attacks it has left this round, so a weapon that
         /// swings twice lands twice and Mongoose doubles whatever that was. The first exchange is
         /// simultaneous - a lethal hit does not rob the dying fighter of their return blow - but a
         /// fighter who died there does not get to throw any follow-up attacks.
@@ -1014,14 +1014,14 @@ namespace ColosseumDuel.Core
             bool aMaySwing = true, bool bMaySwing = true)
         {
             for (int exchange = 0;
-                 (aMaySwing && a.AttacksRemainingThisCycle > 0) || (bMaySwing && b.AttacksRemainingThisCycle > 0);
+                 (aMaySwing && a.AttacksRemainingThisRound > 0) || (bMaySwing && b.AttacksRemainingThisRound > 0);
                  exchange++)
             {
-                bool aSwings = aMaySwing && a.AttacksRemainingThisCycle > 0 && (exchange == 0 || a.Alive);
-                bool bSwings = bMaySwing && b.AttacksRemainingThisCycle > 0 && (exchange == 0 || b.Alive);
+                bool aSwings = aMaySwing && a.AttacksRemainingThisRound > 0 && (exchange == 0 || a.Alive);
+                bool bSwings = bMaySwing && b.AttacksRemainingThisRound > 0 && (exchange == 0 || b.Alive);
 
-                if (aMaySwing && a.AttacksRemainingThisCycle > 0) a.AttacksRemainingThisCycle--;
-                if (bMaySwing && b.AttacksRemainingThisCycle > 0) b.AttacksRemainingThisCycle--;
+                if (aMaySwing && a.AttacksRemainingThisRound > 0) a.AttacksRemainingThisRound--;
+                if (bMaySwing && b.AttacksRemainingThisRound > 0) b.AttacksRemainingThisRound--;
 
                 // Deal first, announce second. Folding the call into Damaged?.Invoke(...) would put
                 // it inside a null-conditional, and with no subscriber the argument is never
@@ -1057,7 +1057,7 @@ namespace ColosseumDuel.Core
         /// </summary>
         private void Shove(GladiatorInstance attacker, GladiatorInstance target)
         {
-            // Earthshaker throws twice as far and roots the man it lands on through the next cycle;
+            // Earthshaker throws twice as far and roots the man it lands on through the next round;
             // Shield Bash throws three times as far and ends his run where he lands.
             if (target.Alive && attacker.Has(AbilityKey.Earthshaker)) target.Stagger();
             float distance = attacker.WeaponDef.Knockback
@@ -1106,7 +1106,7 @@ namespace ColosseumDuel.Core
         private void EndActionPhase()
         {
             // Nothing to resolve here any more. Blows land during the phase, on the substep the two
-            // come within reach of each other, so a cycle that ends with them standing together has
+            // come within reach of each other, so a round that ends with them standing together has
             // already been paid for - on the substep they arrived.
 
             FlushScorched();
@@ -1119,19 +1119,19 @@ namespace ColosseumDuel.Core
             State.P1.Active?.StopRunning();
             State.Bot.Active?.StopRunning();
 
-            State.P1.Active?.ResolveCycleRage();
-            State.Bot.Active?.ResolveCycleRage();
+            State.P1.Active?.ResolveRoundRage();
+            State.Bot.Active?.ResolveRoundRage();
 
             bool p1Died = State.P1.Active != null && !State.P1.Active.Alive;
             bool botDied = State.Bot.Active != null && !State.Bot.Active.Alive;
 
             if (p1Died || botDied)
             {
-                SetPhase(MatchPhase.RoundEnd);
+                SetPhase(MatchPhase.ClashEnd);
                 return;
             }
 
-            StartCycle();
+            StartRound();
         }
 
         /// <summary>
@@ -1185,7 +1185,7 @@ namespace ColosseumDuel.Core
             }
         }
 
-        private void AfterRoundEndDelay()
+        private void AfterClashEndDelay()
         {
             bool p1Died = State.P1.Active != null && !State.P1.Active.Alive;
             bool botDied = State.Bot.Active != null && !State.Bot.Active.Alive;
@@ -1196,7 +1196,7 @@ namespace ColosseumDuel.Core
             if (!State.P1.HasAnyAlive) { FinishMatch(PlayerSide.Bot); return; }
             if (!State.Bot.HasAnyAlive) { FinishMatch(PlayerSide.P1); return; }
 
-            BeginRoundPick();
+            BeginClashPick();
         }
 
         private void FinishMatch(PlayerSide winner)

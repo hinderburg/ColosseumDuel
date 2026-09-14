@@ -63,7 +63,7 @@ namespace ColosseumDuel.Tests
         /// It rises and goes out on its own.
         ///
         /// Both halves matter: one that never moved would be a label stuck to the arena, and one
-        /// that never went out would leave the screen covered in old numbers by the third round.
+        /// that never went out would leave the screen covered in old numbers by the third clash.
         /// </summary>
         [UnityTest]
         public IEnumerator ANumberClimbsAndThenGoesOut()
@@ -158,7 +158,7 @@ namespace ColosseumDuel.Tests
             var state = _controller.Manager.State;
 
             // Far enough into the match that the outer ring is live, and standing in it.
-            state.Cycle = GameConstants.HazardSafeCycles + 1;
+            state.Round = GameConstants.HazardSafeRounds + 1;
             state.P1.Active.Pos = new Vector2(0f, GameConstants.ArenaRadius * GameConstants.ArenaElongation * 0.92f);
 
             // The opponent goes dead centre, which the outer ring has not reached.

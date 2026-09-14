@@ -174,7 +174,7 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>
         /// Unscaled, because the world is not. Planning runs the arena at a fifth of its speed and a death
         /// slows it further, and a number that crawled through those would still be climbing when
-        /// the next cycle's blows arrived.
+        /// the next round's blows arrived.
         /// </summary>
         private void Update()
         {

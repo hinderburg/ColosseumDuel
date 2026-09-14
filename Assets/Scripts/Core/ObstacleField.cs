@@ -114,7 +114,7 @@ namespace ColosseumDuel.Core
         /// pairs either side of the middle, and one out at each side - and no crates.
         ///
         /// Symmetric both ways through the centre, so whatever the layout does for one end it does
-        /// for the other, and neither side starts a round with more cover than the man opposite. The
+        /// for the other, and neither side starts a clash with more cover than the man opposite. The
         /// middle is left open on purpose - the straight charge down it is still there to be taken,
         /// and the columns either side of it are what make taking it a choice rather than the
         /// only line there is.
@@ -128,7 +128,7 @@ namespace ColosseumDuel.Core
 
             // Laid out from the sketch drawn over a screenshot of the arena, read through the camera
             // and then evened up: a sketch on a tilted view is never quite symmetrical, and the layout
-            // has to be, or one end starts every round with more cover than the other.
+            // has to be, or one end starts every clash with more cover than the other.
             return new ObstacleField(new[]
             {
                 // A pair behind each end's gladiator, flanking where he is set down.

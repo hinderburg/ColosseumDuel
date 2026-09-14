@@ -6,8 +6,8 @@ namespace ColosseumDuel.Core
     public struct ActiveBuff
     {
         public AbilityKey Key;
-        public int CyclesLeft;
-        public bool IsActive => CyclesLeft > 0;
+        public int RoundsLeft;
+        public bool IsActive => RoundsLeft > 0;
     }
 
     /// <summary>
@@ -24,7 +24,7 @@ namespace ColosseumDuel.Core
         public Vector2 Vel;
 
         /// <summary>
-        /// Where he has been told to run to this cycle. Only meaningful while PlannedAction is Move.
+        /// Where he has been told to run to this round. Only meaningful while PlannedAction is Move.
         ///
         /// A point rather than a direction and a strength, which is what the order used to be: the
         /// arena has things standing in it now, and "that way, that hard" says nothing about how
@@ -69,29 +69,29 @@ namespace ColosseumDuel.Core
         public Vector2 Facing = Vector2.right;
 
         /// <summary>
-        /// What he is fighting with. Set from his training when the round starts, and never
+        /// What he is fighting with. Set from his training when the clash starts, and never
         /// emptied - a weapon is what a gladiator is, not
         /// a charge he spends.
         /// </summary>
         public WeaponKind Weapon = WeaponKind.None;
 
         /// <summary>
-        /// Cycles still to run on the weapon blessing taken off the sand, the one it was taken in
+        /// Rounds still to run on the weapon blessing taken off the sand, the one it was taken in
         /// counted as well. Zero when his weapon is only his weapon.
         /// </summary>
-        public int WeaponBuffCyclesLeft;
+        public int WeaponBuffRoundsLeft;
 
         /// <summary>Whether his blows carry the blessing right now.</summary>
-        public bool WeaponBuffed => WeaponBuffCyclesLeft > 0;
+        public bool WeaponBuffed => WeaponBuffRoundsLeft > 0;
 
-        /// <summary>Whether this is the last cycle the blessing lasts - the one its glow blinks on.</summary>
-        public bool WeaponBuffEnding => WeaponBuffCyclesLeft == 1;
+        /// <summary>Whether this is the last round the blessing lasts - the one its glow blinks on.</summary>
+        public bool WeaponBuffEnding => WeaponBuffRoundsLeft == 1;
 
         /// <summary>
-        /// Takes up the blessing: the rest of this cycle and the three after it. Taken again while it
+        /// Takes up the blessing: the rest of this round and the three after it. Taken again while it
         /// is still running, it starts the count over rather than stacking.
         /// </summary>
-        public void BlessWeapon() => WeaponBuffCyclesLeft = GameConstants.WeaponBuffCycles + 1;
+        public void BlessWeapon() => WeaponBuffRoundsLeft = GameConstants.WeaponBuffRounds + 1;
 
         public WeaponDef WeaponDef => WeaponDef.Get(Weapon);
 
@@ -100,40 +100,40 @@ namespace ColosseumDuel.Core
                                  || Weapon == WeaponKind.SpearAndShield;
 
         /// <summary>
-        /// Cycles still to run on a net thrown over him, the one it landed in counted. He cannot run
+        /// Rounds still to run on a net thrown over him, the one it landed in counted. He cannot run
         /// while it lasts - and since a man only turns to where he runs, he cannot turn either, so
         /// whatever he had his back to stays behind him. See EffectiveSpeed.
         /// </summary>
-        public int EnsnaredCyclesLeft;
+        public int EnsnaredRoundsLeft;
 
-        public bool IsEnsnared => EnsnaredCyclesLeft > 0;
+        public bool IsEnsnared => EnsnaredRoundsLeft > 0;
 
         /// <summary>A net lands on him. Thrown again while one is on him, it starts the count over.</summary>
-        public void Ensnare() => EnsnaredCyclesLeft = GameConstants.NetCycles;
+        public void Ensnare() => EnsnaredRoundsLeft = GameConstants.NetRounds;
 
         /// <summary>
-        /// Cycles still to run on the stagger an Earthshaker blow leaves - the one it landed in and
+        /// Rounds still to run on the stagger an Earthshaker blow leaves - the one it landed in and
         /// the next. Rooted like a net, without the net: he stands where the blow put him.
         /// </summary>
-        public int StaggeredCyclesLeft;
+        public int StaggeredRoundsLeft;
 
-        public bool IsStaggered => StaggeredCyclesLeft > 0;
+        public bool IsStaggered => StaggeredRoundsLeft > 0;
 
-        public void Stagger() => StaggeredCyclesLeft = GameConstants.StaggerCycles;
+        public void Stagger() => StaggeredRoundsLeft = GameConstants.StaggerRounds;
 
         /// <summary>Held still, by a net or a stagger: his runs are cut to nothing.</summary>
         public bool IsRooted => IsEnsnared || IsStaggered;
 
         /// <summary>
         /// Shackles land on him: his rage burns away and his ability is out of reach for the next
-        /// two whole cycles - locked the way his own use of it locks it, so rage does not build back
+        /// two whole rounds - locked the way his own use of it locks it, so rage does not build back
         /// while it lasts either.
         /// </summary>
         public void Shackle()
         {
             Rage = 0f;
             AbilityArmed = false;
-            AbilityLockedCycles = Mathf.Max(AbilityLockedCycles, GameConstants.ShacklesCycles + 1);
+            AbilityLockedRounds = Mathf.Max(AbilityLockedRounds, GameConstants.ShacklesRounds + 1);
         }
 
         /// <summary>Arms him with the weapon he trained on. Called when he enters the arena.</summary>
@@ -145,13 +145,13 @@ namespace ColosseumDuel.Core
         /// <summary>True when he is holding something he was never trained to hold.</summary>
         public bool IsUntrained => Weapon != WeaponKind.None && Weapon != Def.SkilledWith;
 
-        /// <summary>Cycles of bleeding still to come. Zero means the wound has closed.</summary>
-        public int BleedCyclesLeft;
+        /// <summary>Rounds of bleeding still to come. Zero means the wound has closed.</summary>
+        public int BleedRoundsLeft;
 
-        /// <summary>What one cycle of the current bleed costs.</summary>
-        public float BleedPerCycle;
+        /// <summary>What one round of the current bleed costs.</summary>
+        public float BleedPerRound;
 
-        public bool IsBleeding => BleedCyclesLeft > 0;
+        public bool IsBleeding => BleedRoundsLeft > 0;
 
         /// <summary>
         /// Opens a wound, or re-opens the one already there.
@@ -160,35 +160,35 @@ namespace ColosseumDuel.Core
         /// bleed never runs out. It takes the worse of the two rates rather than the newer one - a
         /// light blow arriving after a heavy one should not talk the wound down.
         /// </summary>
-        public void ApplyBleed(float rawAttackDamage, float rateMult = 1f, int cycles = GameConstants.BleedCycles)
+        public void ApplyBleed(float rawAttackDamage, float rateMult = 1f, int rounds = GameConstants.BleedRounds)
         {
-            BleedPerCycle = Mathf.Max(BleedPerCycle, rawAttackDamage * GameConstants.BleedFraction * rateMult);
-            BleedCyclesLeft = Mathf.Max(BleedCyclesLeft, cycles);
+            BleedPerRound = Mathf.Max(BleedPerRound, rawAttackDamage * GameConstants.BleedFraction * rateMult);
+            BleedRoundsLeft = Mathf.Max(BleedRoundsLeft, rounds);
         }
 
         /// <summary>
-        /// Bleeds him for one cycle and returns what it cost. Zero when there is no wound.
+        /// Bleeds him for one round and returns what it cost. Zero when there is no wound.
         ///
         /// Called at the top of the action phase, before anyone moves: a wound that only settled up
-        /// at the end of a cycle would let a dying fighter spend that cycle as though he were whole.
+        /// at the end of a round would let a dying fighter spend that round as though he were whole.
         /// </summary>
         public float TickBleed()
         {
-            if (BleedCyclesLeft <= 0) return 0f;
+            if (BleedRoundsLeft <= 0) return 0f;
 
-            BleedCyclesLeft--;
-            float amount = BleedPerCycle;
-            if (BleedCyclesLeft == 0) BleedPerCycle = 0f;
+            BleedRoundsLeft--;
+            float amount = BleedPerRound;
+            if (BleedRoundsLeft == 0) BleedPerRound = 0f;
 
             TakeDamage(amount);
             return amount;
         }
 
         public float Rage = 0f;
-        public int AbilityLockedCycles = 0;
+        public int AbilityLockedRounds = 0;
         public ActiveBuff Buff;
 
-        // per-cycle planning/action bookkeeping
+        // per-round planning/action bookkeeping
         public ActionType PlannedAction = ActionType.None;
         public Vector2 PlannedAimDirection;
         public float PlannedPower; // 0..1 pull strength for Move
@@ -200,12 +200,12 @@ namespace ColosseumDuel.Core
         /// </summary>
         public readonly List<Vector2> PlannedPath = new List<Vector2>();
         public bool AbilityArmed;   // toggle set during Planning; consumed at the start of Action
-        public bool DealtDamageThisCycle;
-        public bool TookDamageThisCycle;
+        public bool DealtDamageThisRound;
+        public bool TookDamageThisRound;
 
-        // Mongoose (Hilius) support: how many attacks this gladiator still gets this cycle.
+        // Mongoose (Hilius) support: how many attacks this gladiator still gets this round.
         // Read and decremented by GameManager when a collision or a pass-by resolves.
-        public int AttacksRemainingThisCycle = 1;
+        public int AttacksRemainingThisRound = 1;
 
         /// <summary>
         /// Blows he lands per exchange: what the weapon swings, doubled while Mongoose is up.
@@ -214,7 +214,7 @@ namespace ColosseumDuel.Core
         /// two - the ability says "twice as many attacks", and a weapon that already attacks twice
         /// should not quietly cancel half of it.
         /// </summary>
-        public int AttacksPerCycle => WeaponDef.Attacks * (Has(AbilityKey.Mongoose) ? 2 : 1);
+        public int AttacksPerRound => WeaponDef.Attacks * (Has(AbilityKey.Mongoose) ? 2 : 1);
 
         /// <summary>
         /// The ability he took into this fight - one of his archetype's three, picked on the roster
@@ -333,7 +333,7 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// How fast he will be running once this cycle starts, buff included.
+        /// How fast he will be running once this round starts, buff included.
         ///
         /// The difference from EffectiveSpeed is one phase of timing. An armed ability has not
         /// fired yet - it fires at the top of the action phase - so during planning EffectiveSpeed
@@ -361,43 +361,43 @@ namespace ColosseumDuel.Core
         public float DashReach() => EffectiveSpeed() * GameConstants.SpeedScale;
 
         /// <summary>
-        /// How far one phase of running will carry him once this cycle starts, ability included.
+        /// How far one phase of running will carry him once this round starts, ability included.
         /// The planning-time twin of DashReach, for the same reason PlannedSpeed exists.
         /// </summary>
         public float PlannedReach() => PlannedSpeed() * GameConstants.SpeedScale;
 
         public void AddRage(float amount)
         {
-            if (AbilityLockedCycles > 0) return; // locked out after a recent activation
+            if (AbilityLockedRounds > 0) return; // locked out after a recent activation
             Rage = Mathf.Min(GameConstants.RageMax, Rage + amount);
         }
 
-        public bool CanActivateAbility => AbilityLockedCycles <= 0 && Rage >= GameConstants.RageMax;
+        public bool CanActivateAbility => AbilityLockedRounds <= 0 && Rage >= GameConstants.RageMax;
 
         public void ActivateAbility()
         {
             if (!CanActivateAbility) return;
 
-            // One cycle at the least, even for an ability spent the moment it fires: the buff is
+            // One round at the least, even for an ability spent the moment it fires: the buff is
             // also what says, for that phase, which ability went off.
-            Buff = new ActiveBuff { Key = Ability, CyclesLeft = System.Math.Max(1, AbilityInfo.Cycles) };
+            Buff = new ActiveBuff { Key = Ability, RoundsLeft = System.Math.Max(1, AbilityInfo.Rounds) };
 
             // Second Wind is the one ability that is spent the moment it fires rather than lasting.
             if (Ability == AbilityKey.SecondWind)
                 Hp = Mathf.Min(Def.MaxHp, Hp + Def.MaxHp * GameConstants.SecondWindHeal);
 
-            // The ability fires at the start of Action, after BeginCycle already set the attack
-            // budget for this cycle - so Mongoose has to top it up for the cycle it was used in.
-            AttacksRemainingThisCycle = AttacksPerCycle;
+            // The ability fires at the start of Action, after BeginRound already set the attack
+            // budget for this round - so Mongoose has to top it up for the round it was used in.
+            AttacksRemainingThisRound = AttacksPerRound;
             Rage = 0f;
-            AbilityLockedCycles = GameConstants.AbilityLockCycles + 1; // +1 so it also skips the cycle it was used in
+            AbilityLockedRounds = GameConstants.AbilityLockRounds + 1; // +1 so it also skips the round it was used in
         }
 
-        /// <summary>Call once per new cycle, before planning is (re)opened.</summary>
-        public void BeginCycle()
+        /// <summary>Call once per new round, before planning is (re)opened.</summary>
+        public void BeginRound()
         {
             // The plan MUST be cleared here: GameManager.AutoFillMissingPlans only fills a slot that
-            // is still ActionType.None, so a stale plan would silently replay last cycle's move -
+            // is still ActionType.None, so a stale plan would silently replay last round's move -
             // and the bot, which is only asked for a decision when its slot is empty, would repeat
             // its very first decision for the rest of the match.
             PlannedAction = ActionType.None;
@@ -408,37 +408,37 @@ namespace ColosseumDuel.Core
             StopRunning();
 
             AbilityArmed = false;
-            DealtDamageThisCycle = false;
-            TookDamageThisCycle = false;
-            if (AbilityLockedCycles > 0) AbilityLockedCycles--;
-            if (WeaponBuffCyclesLeft > 0) WeaponBuffCyclesLeft--;
-            if (EnsnaredCyclesLeft > 0) EnsnaredCyclesLeft--;
-            if (StaggeredCyclesLeft > 0) StaggeredCyclesLeft--;
-            if (Buff.CyclesLeft > 0)
+            DealtDamageThisRound = false;
+            TookDamageThisRound = false;
+            if (AbilityLockedRounds > 0) AbilityLockedRounds--;
+            if (WeaponBuffRoundsLeft > 0) WeaponBuffRoundsLeft--;
+            if (EnsnaredRoundsLeft > 0) EnsnaredRoundsLeft--;
+            if (StaggeredRoundsLeft > 0) StaggeredRoundsLeft--;
+            if (Buff.RoundsLeft > 0)
             {
-                Buff.CyclesLeft--;
+                Buff.RoundsLeft--;
             }
-            // Derived AFTER the buff has been aged, so the second Mongoose cycle still gets 2 attacks
-            // and the cycle right after the buff expires drops back to 1.
-            AttacksRemainingThisCycle = AttacksPerCycle;
+            // Derived AFTER the buff has been aged, so the second Mongoose round still gets 2 attacks
+            // and the round right after the buff expires drops back to 1.
+            AttacksRemainingThisRound = AttacksPerRound;
         }
 
         /// <summary>Passive + reactive rage gain, applied at the end of an action phase.</summary>
-        public void ResolveCycleRage()
+        public void ResolveRoundRage()
         {
-            AddRage(GameConstants.RagePerCyclePassive);
-            if (DealtDamageThisCycle) AddRage(GameConstants.RageBonusOnDealDamage);
-            if (TookDamageThisCycle) AddRage(GameConstants.RageBonusOnTakeDamage);
+            AddRage(GameConstants.RagePerRoundPassive);
+            if (DealtDamageThisRound) AddRage(GameConstants.RageBonusOnDealDamage);
+            if (TookDamageThisRound) AddRage(GameConstants.RageBonusOnTakeDamage);
         }
 
         public void TakeDamage(float amount)
         {
             Hp = Mathf.Max(0f, Hp - amount);
-            TookDamageThisCycle = true;
+            TookDamageThisRound = true;
             if (Hp <= 0f) Alive = false;
         }
 
-        public void ResetForNewRound()
+        public void ResetForNewClash()
         {
             // Winner persists with current HP (not healed) - only a freshly-picked gladiator gets this.
             StopRunning();
@@ -446,21 +446,21 @@ namespace ColosseumDuel.Core
             PlannedPath.Clear();
             AbilityArmed = false;
             Buff = default;
-            EnsnaredCyclesLeft = 0;
-            StaggeredCyclesLeft = 0;
-            AbilityLockedCycles = 0;
+            EnsnaredRoundsLeft = 0;
+            StaggeredRoundsLeft = 0;
+            AbilityLockedRounds = 0;
 
             // His own weapon, unblessed. The blessing is the reward for crossing the arena under fire
-            // during a round; carried into the next one for free, it would make the first round the
+            // during a clash; carried into the next one for free, it would make the first clash the
             // only one worth taking that risk in.
             EquipTrainedWeapon();
-            WeaponBuffCyclesLeft = 0;
-            AttacksRemainingThisCycle = AttacksPerCycle;
+            WeaponBuffRoundsLeft = 0;
+            AttacksRemainingThisRound = AttacksPerRound;
 
-            // Wounds close between rounds. A bleed that survived would go on draining a fighter
-            // through a round he was not in when it was opened.
-            BleedCyclesLeft = 0;
-            BleedPerCycle = 0f;
+            // Wounds close between clashes. A bleed that survived would go on draining a fighter
+            // through a clash he was not in when it was opened.
+            BleedRoundsLeft = 0;
+            BleedPerRound = 0f;
         }
     }
 }

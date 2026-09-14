@@ -121,12 +121,12 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            Assert.AreEqual(1, _controller.Manager.State.Cycle, "should still be on the first cycle");
+            Assert.AreEqual(1, _controller.Manager.State.Round, "should still be on the first round");
 
             var rings = RingRenderers();
             Assert.AreEqual(HazardSystem.Schedule.Count, rings.Length, "one ring per hazard stage");
             Assert.IsTrue(rings.All(r => !r.enabled),
-                "no danger ring should be drawn during the arena's safe cycles");
+                "no danger ring should be drawn during the arena's safe rounds");
         }
 
         [UnityTest]
@@ -135,15 +135,15 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
-            // Fast-forward the cycle counter instead of playing out seven real cycles.
-            _controller.Manager.State.Cycle = 9;
+            // Fast-forward the round counter instead of playing out seven real rounds.
+            _controller.Manager.State.Round = 9;
             yield return null;
 
             var rings = RingRenderers();
             int expected = HazardSystem.ActiveStagesAt(9).Count;
             Assert.AreEqual(expected, rings.Count(r => r.enabled),
-                "every stage active on cycle 9 should be drawn");
-            Assert.Greater(expected, 0, "cycle 9 must have active hazard stages for this test to mean anything");
+                "every stage active on round 9 should be drawn");
+            Assert.Greater(expected, 0, "round 9 must have active hazard stages for this test to mean anything");
 
             foreach (var ring in rings.Where(r => r.enabled))
             {
@@ -175,8 +175,8 @@ namespace ColosseumDuel.Tests
 
             // Far enough in that the two outer stages are live, so everything past half way out is
             // dangerous and everything inside it is not. Derived, because the pacing has moved
-            // twice and a written-down cycle number stopped being the answer both times.
-            _controller.Manager.State.Cycle = GameConstants.HazardSafeCycles + 1
+            // twice and a written-down round number stopped being the answer both times.
+            _controller.Manager.State.Round = GameConstants.HazardSafeRounds + 1
                                              + GameConstants.HazardRingInterval;
             yield return RunSeconds(1.5f); // they rise rather than snap up
 

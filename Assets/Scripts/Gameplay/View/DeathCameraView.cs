@@ -13,11 +13,11 @@ namespace ColosseumDuel.Gameplay.View
     ///
     /// It keeps the pitch it always had and only closes the distance, so the shot is the same shot,
     /// nearer. Swinging the angle as well would leave the player re-reading the arena on the frame
-    /// the next round starts.
+    /// the next clash starts.
     ///
     /// The distance is computed to fit whoever actually died rather than fixed, because a double
     /// knockout can put the two bodies at opposite ends of the oval - a zoom that framed one of
-    /// them would be showing the wrong half of the most important second in the round.
+    /// them would be showing the wrong half of the most important second in the clash.
     /// </summary>
     public sealed class DeathCameraView : MonoBehaviour
     {
@@ -92,16 +92,16 @@ namespace ColosseumDuel.Gameplay.View
             var state = manager.State;
             var target = _home;
 
-            if (state.Phase == MatchPhase.RoundEnd && TryFrameTheFallen(state, out var closeUp))
+            if (state.Phase == MatchPhase.ClashEnd && TryFrameTheFallen(state, out var closeUp))
                 target = closeUp;
 
             // Unscaled, because the whole point of this moment is that the world is running slowly.
             // On scaled time the camera would crawl in at the same quarter speed as the death it is
-            // trying to show, and arrive after the round was over.
+            // trying to show, and arrive after the clash was over.
             _settled = Vector3.Lerp(_settled, target,
                 1f - Mathf.Exp(-MoveSpeed * Time.unscaledDeltaTime));
 
-            // Straight home the moment a round starts, rather than drifting there. A round that
+            // Straight home the moment a clash starts, rather than drifting there. A clash that
             // opened with the camera still sliding would have the player reading a frame that is
             // about to change under them.
             if (state.Phase == MatchPhase.Reveal || state.Phase == MatchPhase.Pick)
@@ -130,8 +130,8 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>
         /// Where the camera has to sit for every fallen gladiator to be in shot.
         ///
-        /// False when nobody is down, which happens on the frames of RoundEnd before the state has
-        /// caught up and on a round that ends some other way.
+        /// False when nobody is down, which happens on the frames of ClashEnd before the state has
+        /// caught up and on a clash that ends some other way.
         /// </summary>
         private bool TryFrameTheFallen(MatchState state, out Vector3 position)
         {

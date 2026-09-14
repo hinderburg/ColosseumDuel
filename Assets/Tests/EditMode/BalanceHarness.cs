@@ -136,7 +136,7 @@ namespace ColosseumDuel.Tests
             for (float t = 0f; t < MaxSeconds; t += Dt)
             {
                 var s = m.State;
-                if (s.Phase == MatchPhase.RoundEnd || s.Phase == MatchPhase.MatchEnd) break;
+                if (s.Phase == MatchPhase.ClashEnd || s.Phase == MatchPhase.MatchEnd) break;
                 m.Tick(Dt);
             }
 

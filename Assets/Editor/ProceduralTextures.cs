@@ -304,7 +304,7 @@ namespace ColosseumDuel.EditorTools
                         "................",
                     };
 
-                // Hilius: twice the speed of Brutius, and two attacks a cycle - a double chevron.
+                // Hilius: twice the speed of Brutius, and two attacks a round - a double chevron.
                 default:
                     return new[]
                     {
