@@ -8,9 +8,10 @@ namespace ColosseumDuel.Gameplay.View
     /// Finds the six portraits on the sheet the art arrived as, and which gladiator each of them is.
     ///
     /// Pure arithmetic on pixels, so it is tested without an image on disk; the bootstrap reads the
-    /// sheet and cuts the sprites (see PortraitSprites). Each portrait is painted on a flat field of
-    /// its own colour, and that colour is the gladiator's colour everywhere else in the game - the
-    /// body on the arena and the card in the menu - so the one sheet decides both.
+    /// sheet and cuts the sprites (see PortraitSprites). Each portrait is a framed square - a dark
+    /// border, rounded at the corners, round a field of its own colour - standing on the sheet's
+    /// plain white ground, and the colour of that field is the gladiator's colour everywhere else in
+    /// the game: his body on the arena and his card in the menu.
     ///
     /// Cells are matched to gladiators by that colour rather than by where they sit on the sheet:
     /// the layout of a sheet is whatever the artist chose, the colours are what was asked for.
@@ -21,18 +22,21 @@ namespace ColosseumDuel.Gameplay.View
 
         public struct Cell
         {
-            /// <summary>Where the portrait is, in texture pixels - origin bottom left, as Unity reads them.</summary>
+            /// <summary>What is cut out for the avatar, in texture pixels - origin bottom left.</summary>
             public RectInt Rect;
 
-            /// <summary>The flat colour the portrait is painted on.</summary>
+            /// <summary>The portrait's frame inside its cell: the dark border drawn round it.</summary>
+            public RectInt Frame;
+
+            /// <summary>The colour the portrait's field is painted in.</summary>
             public Color Background;
 
             public GladiatorId Id;
         }
 
         /// <summary>
-        /// The colour each portrait was painted on, as far as it could be read by eye: the fallback
-        /// while the sheet is not in the project, and the key its cells are matched against once it is.
+        /// The colour each portrait's field was described as, and read off the sheet as about: the
+        /// fallback while the sheet is not in the project, and the key its cells are matched against.
         /// </summary>
         public static Color ExpectedBackground(GladiatorId id)
         {
@@ -74,17 +78,12 @@ namespace ColosseumDuel.Gameplay.View
             return best;
         }
 
-        /// <summary>
-        /// Every portrait on the sheet, cut a little inside its cell so the gutter between them does
-        /// not come along, with the gladiator it belongs to.
-        /// </summary>
+        /// <summary>Every portrait on the sheet, with its frame, its colour and the gladiator it belongs to.</summary>
         public static List<Cell> Slice(Color32[] pixels, int width, int height)
         {
             var grid = Grid(width, height);
             int cellWidth = width / grid.x;
             int cellHeight = height / grid.y;
-            int insetX = Mathf.RoundToInt(cellWidth * CropInset);
-            int insetY = Mathf.RoundToInt(cellHeight * CropInset);
 
             var cells = new List<Cell>();
             for (int row = 0; row < grid.y; row++)
@@ -94,11 +93,16 @@ namespace ColosseumDuel.Gameplay.View
                 for (int column = 0; column < grid.x; column++)
                 {
                     var whole = new RectInt(column * cellWidth, y, cellWidth, cellHeight);
+                    var frame = FindFrame(pixels, width, whole);
+                    int margin = Mathf.RoundToInt(Mathf.Min(cellWidth, cellHeight) * CutMargin);
                     cells.Add(new Cell
                     {
-                        Rect = new RectInt(whole.x + insetX, whole.y + insetY,
-                            whole.width - insetX * 2, whole.height - insetY * 2),
-                        Background = SampleBackground(pixels, width, whole),
+                        // The whole cell and a little past it, not just the frame: a crest or a spear
+                        // reaching out over the frame is part of the picture, and on this sheet some
+                        // of them cross into the next cell. CutOut drops whatever is a neighbour's.
+                        Rect = Expand(whole, width, height, margin),
+                        Frame = frame,
+                        Background = SampleBackground(pixels, width, frame),
                     });
                 }
             }
@@ -107,44 +111,196 @@ namespace ColosseumDuel.Gameplay.View
             return cells;
         }
 
-        /// <summary>How much of each cell's edge is cut away with the gutter.</summary>
-        private const float CropInset = 0.02f;
+        /// <summary>How far past its own cell a portrait is cut, as a share of the cell.</summary>
+        private const float CutMargin = 0.06f;
+
+        private static RectInt Expand(RectInt r, int width, int height, int by)
+        {
+            int xMin = Mathf.Max(0, r.xMin - by), yMin = Mathf.Max(0, r.yMin - by);
+            int xMax = Mathf.Min(width, r.xMax + by), yMax = Mathf.Min(height, r.yMax + by);
+            return new RectInt(xMin, yMin, xMax - xMin, yMax - yMin);
+        }
 
         /// <summary>
-        /// The colour a portrait is painted on: the median of four patches just inside the corners
-        /// of its cell. The corners because the figure is in the middle; the median because a crest
-        /// or a shoulder can still reach one of them, and one patch out of four should not shift it.
+        /// Cuts one portrait out of its piece of the sheet: the ground made transparent, and then
+        /// everything not joined to the portrait itself cleared too - a neighbour's crest or spear
+        /// point reaching over into the margin is somebody else's. <paramref name="inside"/> is any
+        /// point on the portrait, in the crop's own pixels.
         /// </summary>
-        public static Color SampleBackground(Color32[] pixels, int width, RectInt cell)
+        public static void CutOut(Color32[] crop, int width, int height, Vector2Int inside)
         {
-            int patch = Mathf.Max(1, Mathf.RoundToInt(Mathf.Min(cell.width, cell.height) * 0.05f));
-            int insetX = Mathf.RoundToInt(cell.width * 0.08f);
-            int insetY = Mathf.RoundToInt(cell.height * 0.08f);
+            ClearOutside(crop, width, height);
+            KeepJoinedTo(crop, width, height, inside);
+        }
 
-            var r = new List<float>();
-            var g = new List<float>();
-            var b = new List<float>();
+        private static void KeepJoinedTo(Color32[] crop, int width, int height, Vector2Int seed)
+        {
+            int start = seed.y * width + seed.x;
+            if (start < 0 || start >= crop.Length || crop[start].a == 0) return;
 
-            foreach (var corner in new[]
+            var kept = new bool[crop.Length];
+            var queue = new Queue<int>();
+            kept[start] = true;
+            queue.Enqueue(start);
+
+            while (queue.Count > 0)
             {
-                new Vector2Int(cell.xMin + insetX, cell.yMin + insetY),
-                new Vector2Int(cell.xMax - insetX - patch, cell.yMin + insetY),
-                new Vector2Int(cell.xMin + insetX, cell.yMax - insetY - patch),
-                new Vector2Int(cell.xMax - insetX - patch, cell.yMax - insetY - patch),
-            })
-            {
-                for (int y = corner.y; y < corner.y + patch; y++)
-                for (int x = corner.x; x < corner.x + patch; x++)
+                int i = queue.Dequeue();
+                int x = i % width, y = i / width;
+                for (int n = 0; n < 4; n++)
                 {
-                    var p = pixels[y * width + x];
-                    r.Add(p.r / 255f);
-                    g.Add(p.g / 255f);
-                    b.Add(p.b / 255f);
+                    int nx = x + (n == 0 ? -1 : n == 1 ? 1 : 0);
+                    int ny = y + (n == 2 ? -1 : n == 3 ? 1 : 0);
+                    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+                    int j = ny * width + nx;
+                    if (kept[j] || crop[j].a == 0) continue;
+                    kept[j] = true;
+                    queue.Enqueue(j);
                 }
             }
 
-            return new Color(Median(r), Median(g), Median(b));
+            for (int i = 0; i < crop.Length; i++)
+                if (!kept[i]) crop[i].a = 0;
         }
+
+        /// <summary>
+        /// The portrait's frame inside its cell: where the dark border is met walking in from each
+        /// side. Along three lines per side, taking the middle answer, so a crest over the top of the
+        /// frame or a spear out past its edge - either of which one line can run into first - is
+        /// outvoted by the other two.
+        /// </summary>
+        public static RectInt FindFrame(Color32[] pixels, int width, RectInt cell)
+        {
+            var fractions = new[] { 0.35f, 0.5f, 0.65f };
+            var lefts = new List<int>();
+            var rights = new List<int>();
+            var bottoms = new List<int>();
+            var tops = new List<int>();
+
+            foreach (float f in fractions)
+            {
+                int y = cell.yMin + Mathf.RoundToInt(cell.height * f);
+                int x = cell.xMin + Mathf.RoundToInt(cell.width * f);
+                lefts.Add(FirstDark(pixels, width, cell.xMin, y, 1, 0, cell.width));
+                rights.Add(FirstDark(pixels, width, cell.xMax - 1, y, -1, 0, cell.width));
+                bottoms.Add(FirstDark(pixels, width, x, cell.yMin, 0, 1, cell.height));
+                tops.Add(FirstDark(pixels, width, x, cell.yMax - 1, 0, -1, cell.height));
+            }
+
+            int left = Median(lefts), right = Median(rights), bottom = Median(bottoms), top = Median(tops);
+            if (left < 0 || right < 0 || bottom < 0 || top < 0 || right <= left || top <= bottom) return cell;
+            return new RectInt(left, bottom, right - left + 1, top - bottom + 1);
+        }
+
+        /// <summary>The first dark pixel from a point in a direction, or -1 if there is none within reach.</summary>
+        private static int FirstDark(Color32[] pixels, int width, int x, int y, int dx, int dy, int reach)
+        {
+            for (int i = 0; i < reach; i++)
+            {
+                int px = x + dx * i, py = y + dy * i;
+                if (IsDark(pixels[py * width + px])) return dx != 0 ? px : py;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// The frame's ink. Opaque only: the sheet's ground may be transparent, and a transparent
+        /// pixel usually stores black - read by colour alone, the whole ground is one dark border.
+        /// </summary>
+        private static bool IsDark(Color32 p) => p.a > 127 && p.r + p.g + p.b < 3 * 70;
+
+        /// <summary>
+        /// The colour the portrait's field is painted in: the commonest strongly coloured shade in the
+        /// top third of the frame, where the field shows round the head. The commonest rather than an
+        /// average, because a crest, a helmet and whatever is painted into the field sit in the same
+        /// band, and an average of all of them is a colour none of them is.
+        /// </summary>
+        public static Color SampleBackground(Color32[] pixels, int width, RectInt frame)
+        {
+            int insetX = Mathf.Max(2, Mathf.RoundToInt(frame.width * 0.06f));
+            int insetY = Mathf.Max(2, Mathf.RoundToInt(frame.height * 0.06f));
+            int yFrom = frame.yMax - Mathf.RoundToInt(frame.height * 0.35f);
+            int yTo = frame.yMax - insetY;
+
+            var counts = new Dictionary<int, int>();
+            var sums = new Dictionary<int, Vector3>();
+            for (int y = yFrom; y < yTo; y++)
+            for (int x = frame.xMin + insetX; x < frame.xMax - insetX; x++)
+            {
+                var p = pixels[y * width + x];
+                if (p.a < 128) continue;
+                Color.RGBToHSV(p, out _, out float saturation, out float value);
+                if (saturation < 0.3f || value < 0.3f) continue;
+
+                int key = ((p.r >> 5) << 6) | ((p.g >> 5) << 3) | (p.b >> 5);
+                counts.TryGetValue(key, out int n);
+                counts[key] = n + 1;
+                sums.TryGetValue(key, out var sum);
+                sums[key] = sum + new Vector3(p.r, p.g, p.b);
+            }
+
+            if (counts.Count == 0) return Color.gray;
+
+            int best = -1, bestCount = 0;
+            foreach (var entry in counts)
+                if (entry.Value > bestCount)
+                {
+                    best = entry.Key;
+                    bestCount = entry.Value;
+                }
+
+            var mean = sums[best] / (bestCount * 255f);
+            return new Color(mean.x, mean.y, mean.z);
+        }
+
+        /// <summary>
+        /// Makes the sheet's plain ground round a cut portrait transparent: every near-white pixel that
+        /// can be reached from the edge of the cut without crossing anything else. The frame's dark
+        /// border closes the portrait off, so nothing inside it is touched, and anything reaching out
+        /// over the frame - a crest, a trident - is kept, against a transparent ground.
+        /// </summary>
+        public static void ClearOutside(Color32[] crop, int width, int height)
+        {
+            var queue = new Queue<int>();
+            var seen = new bool[crop.Length];
+
+            void Seed(int x, int y)
+            {
+                int i = y * width + x;
+                if (seen[i] || !IsGround(crop[i])) return;
+                seen[i] = true;
+                queue.Enqueue(i);
+            }
+
+            for (int x = 0; x < width; x++)
+            {
+                Seed(x, 0);
+                Seed(x, height - 1);
+            }
+            for (int y = 0; y < height; y++)
+            {
+                Seed(0, y);
+                Seed(width - 1, y);
+            }
+
+            while (queue.Count > 0)
+            {
+                int i = queue.Dequeue();
+                crop[i].a = 0;
+                int x = i % width, y = i / width;
+                if (x > 0) Seed(x - 1, y);
+                if (x < width - 1) Seed(x + 1, y);
+                if (y > 0) Seed(x, y - 1);
+                if (y < height - 1) Seed(x, y + 1);
+            }
+        }
+
+        /// <summary>
+        /// The sheet's ground: transparent, or plain white and the pale edge it softens into along the
+        /// frame. The same art has come both ways - a sheet saved flat has a white ground, one saved
+        /// with its alpha has none.
+        /// </summary>
+        private static bool IsGround(Color32 p) => p.a < 128 || (p.r > 215 && p.g > 215 && p.b > 215);
 
         /// <summary>
         /// Gives each cell the gladiator whose colour it is nearest to, nearest pairs first, so a
@@ -179,7 +335,7 @@ namespace ColosseumDuel.Gameplay.View
         private static float Distance(Color a, Color b)
             => new Vector3(a.r - b.r, a.g - b.g, a.b - b.b).sqrMagnitude;
 
-        private static float Median(List<float> values)
+        private static int Median(List<int> values)
         {
             values.Sort();
             return values[values.Count / 2];

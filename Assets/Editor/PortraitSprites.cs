@@ -56,7 +56,9 @@ namespace ColosseumDuel.EditorTools
             foreach (var cell in cells)
             {
                 string path = $"{OutputDir}/Portrait_{cell.Id}.png";
-                WriteCrop(sheet, cell.Rect, path);
+                var inside = new Vector2Int(cell.Frame.x + cell.Frame.width / 2 - cell.Rect.x,
+                                            cell.Frame.y + cell.Frame.height / 2 - cell.Rect.y);
+                WriteCrop(sheet, cell.Rect, inside, path);
                 portraits[cell.Id] = new Portrait { Sprite = ImportSprite(path), Background = cell.Background };
                 Debug.Log($"[Colosseum] Portrait for {cell.Id} cut from {cell.Rect}, painted on {cell.Background}.");
             }
@@ -67,12 +69,19 @@ namespace ColosseumDuel.EditorTools
         /// Writes one cell out as its own PNG - only when it has changed, so running the bootstrap
         /// again does not touch a file nobody edited.
         /// </summary>
-        private static void WriteCrop(Texture2D sheet, RectInt rect, string path)
+        private static void WriteCrop(Texture2D sheet, RectInt rect, Vector2Int inside, string path)
         {
             var crop = new Texture2D(rect.width, rect.height, TextureFormat.RGBA32, false);
             try
             {
-                crop.SetPixels(sheet.GetPixels(rect.x, rect.y, rect.width, rect.height));
+                // The sheet's white ground round the frame comes out transparent, so on the dark HUD
+                // the avatar is its framed portrait and not a white square with one inside it.
+                var source = sheet.GetPixels(rect.x, rect.y, rect.width, rect.height);
+                var pixels = new Color32[source.Length];
+                for (int i = 0; i < source.Length; i++) pixels[i] = source[i];
+                PortraitSheet.CutOut(pixels, rect.width, rect.height, inside);
+
+                crop.SetPixels32(pixels);
                 crop.Apply();
                 var bytes = crop.EncodeToPNG();
 

@@ -39,12 +39,12 @@ MonoBehaviour:
   Banner: {fileID: 2100000, guid: f9c48d9d4918cad4fbd22e5828581ca9, type: 2}
   RoundedPanel: {fileID: 21300000, guid: 92a6364365206be40997246122d60451, type: 3}
   ArchetypeIcons:
-  - {fileID: 623849741, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: -1756047590, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1386808307, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 1087086722, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 699413217, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
-  - {fileID: 151241378, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 21300000, guid: fb40034f2f1e8ef42aaf08c8ef983230, type: 3}
+  - {fileID: 21300000, guid: 7f8042086f32de646bc07d699bdffdd6, type: 3}
+  - {fileID: 21300000, guid: b6b0b1eec20852d48b473e9c555c724b, type: 3}
+  - {fileID: 21300000, guid: 9fd597daa0f35ed4c8c5ae25ccd92d7a, type: 3}
+  - {fileID: 21300000, guid: b51e0172f55d82144ab8df36cf32164b, type: 3}
+  - {fileID: 21300000, guid: 3341955263d4d504ea50a42be1a40f85, type: 3}
   WeaponIcons:
   - {fileID: 1744151977, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: -2081245629, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
@@ -52,7 +52,7 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 69383b1564e6840459a96cc4a2a0bce6, type: 3}
   - {fileID: 21300000, guid: c41138ee72254bf4ca8c7501a8c9ee90, type: 3}
   - {fileID: 21300000, guid: 1b8c77ec49e8a174dbc6990d9395b5b2, type: 3}
-  ArchetypeIconsArePortraits: 0
+  ArchetypeIconsArePortraits: 1
   AbilityIcons:
   - {fileID: 1386808307, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 381300419, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
@@ -61,12 +61,12 @@ MonoBehaviour:
   - {fileID: 994223573, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: -248196999, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   ArchetypeColors:
-  - {r: 0.49, g: 0.33, b: 0.76, a: 1}
-  - {r: 0.98, g: 0.52, b: 0.15, a: 1}
-  - {r: 0.78, g: 0.2, b: 0.18, a: 1}
-  - {r: 0.2, g: 0.45, b: 0.85, a: 1}
-  - {r: 0.33, g: 0.6, b: 0.43, a: 1}
-  - {r: 0.93, g: 0.72, b: 0.2, a: 1}
+  - {r: 0.4126481, g: 0.30002418, b: 0.64342517, a: 1}
+  - {r: 0.982971, g: 0.4779909, b: 0.16305146, a: 1}
+  - {r: 0.7779482, g: 0.2268337, b: 0.20406914, a: 1}
+  - {r: 0.26215222, g: 0.55283964, b: 0.90053105, a: 1}
+  - {r: 0.42134306, g: 0.67976576, b: 0.5065363, a: 1}
+  - {r: 0.93876123, g: 0.7008529, b: 0.23922439, a: 1}
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
