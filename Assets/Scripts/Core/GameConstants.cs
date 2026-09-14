@@ -146,7 +146,9 @@ namespace ColosseumDuel.Core
 
         // --- rage / ability system ---
         public const float RagePerRoundPassive = 0.15f;
-        public const float RageBonusOnDealDamage = 0.15f;
+        // Raised from 0.15 with the faster clashes: at four to six rounds a clash, a meter that
+        // filled on the third round brought the ability into the back half of the fight or later.
+        public const float RageBonusOnDealDamage = 0.20f;
         public const float RageBonusOnTakeDamage = 0.10f;
         public const float RageMax = 1.0f;
         public const int AbilityLockRounds = 1; // rounds rage cannot charge after activating an ability
@@ -209,8 +211,11 @@ namespace ColosseumDuel.Core
         /// How much harder a blessed weapon hits. The blessing lies on the sand every third round
         /// and lasts three rounds after it is taken - it used to be a gilded weapon lying there all
         /// round, and it is worth the same: a better version of the same weapon, not another tier.
+        ///
+        /// Down from 1.35 with the faster clashes: three rounds of a quarter again is most of a
+        /// clash of five, and at a third again it all but decided one.
         /// </summary>
-        public const float WeaponBuffDamageMult = 1.35f;
+        public const float WeaponBuffDamageMult = 1.25f;
 
         /// <summary>How many rounds the blessing lasts after the one it is taken in.</summary>
         public const int WeaponBuffRounds = 3;
@@ -254,8 +259,11 @@ namespace ColosseumDuel.Core
         /// Raised from six. Six put the first ring down while two fighters were often still closing
         /// - the approach takes rounds now that a run bends - so the arena was deciding fights that
         /// had not started yet.
+        ///
+        /// Down to five, so the first ring bites on the sixth round, once a clash was four to six
+        /// rounds head on: at eight the arena had stopped closing on anything.
         /// </summary>
-        public const int HazardSafeRounds = 8;
+        public const int HazardSafeRounds = 5;
 
         /// <summary>
         /// Rounds between one ring closing and the next.

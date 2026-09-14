@@ -28,7 +28,8 @@ namespace ColosseumDuel.Tests
             g.DealtDamageThisRound = true;
             g.TookDamageThisRound = true;
             g.ResolveRoundRage();
-            Assert.AreEqual(0.40f, g.Rage, Tol, "0.15 passive + 0.15 dealt + 0.10 taken");
+            Assert.AreEqual(GameConstants.RagePerRoundPassive + GameConstants.RageBonusOnDealDamage
+                            + GameConstants.RageBonusOnTakeDamage, g.Rage, Tol, "passive + dealt + taken");
         }
 
         [Test]
