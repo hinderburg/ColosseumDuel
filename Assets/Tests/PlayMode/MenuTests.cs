@@ -273,6 +273,51 @@ namespace ColosseumDuel.Tests
                 Assert.AreEqual(g.Def.MaxHp, g.Hp, $"{g.Def.Name} should have come back whole");
         }
 
+        /// <summary>
+        /// A finished match offers the way back to the main menu, and straight to the roster to change
+        /// the squad - both onto a fresh match rather than the finished one sitting behind the menu.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AFinishedMatchOffersTheMainMenuAndTheRoster()
+        {
+            _menu.StartMatch();
+            yield return null;
+
+            EndTheMatch();
+            yield return null;
+
+            var toMenu = FindButton("EndToMainMenu");
+            var toRoster = FindButton("EndToRoster");
+            Assert.IsNotNull(toMenu, "the end of a match has no way back to the menu");
+            Assert.IsNotNull(toRoster, "the end of a match has no way to change the gladiators");
+            Assert.IsTrue(toMenu.gameObject.activeInHierarchy, "the way back to the menu is not showing");
+            Assert.IsTrue(toRoster.gameObject.activeInHierarchy, "the way to the roster is not showing");
+
+            toMenu.onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(MenuView.Screen.Main, _menu.Current);
+            Assert.AreEqual(MatchPhase.Pick, _controller.Manager.State.Phase,
+                "behind the menu should be a fresh match, not the one that just ended");
+
+            _menu.StartMatch();
+            yield return null;
+            EndTheMatch();
+            yield return null;
+
+            FindButton("EndToRoster").onClick.Invoke();
+            yield return null;
+            Assert.AreEqual(MenuView.Screen.Roster, _menu.Current, "it should open straight on the roster");
+            Assert.AreEqual(MatchPhase.Pick, _controller.Manager.State.Phase);
+        }
+
+        /// <summary>Puts the match straight at its end, the bot the winner, as if the last man had fallen.</summary>
+        private void EndTheMatch()
+        {
+            var state = _controller.Manager.State;
+            state.WinnerSide = PlayerSide.Bot;
+            state.Phase = MatchPhase.MatchEnd;
+        }
+
         private static IEnumerator RunSeconds(float seconds)
         {
             float t = 0f;

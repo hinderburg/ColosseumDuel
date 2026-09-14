@@ -48,6 +48,10 @@ namespace ColosseumDuel.Gameplay.Hud
         private Image _autoBackground;
 
         private static readonly Color AutoOffColor = new Color(0.16f, 0.16f, 0.20f, 0.95f);
+
+        /// <summary>The two ways out of a finished match besides another one: the menu, and the roster.</summary>
+        private Button _endToMenuButton;
+        private Button _endToRosterButton;
         private GameObject _botCorner;
         private Button _menuButton;
 
@@ -354,7 +358,31 @@ namespace ColosseumDuel.Gameplay.Hud
             _restartButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, 60f);
             _restartButton.onClick.AddListener(() => Controller?.RestartMatch());
 
+            // And under it, the way back to the main menu and the way straight to the roster to
+            // change the squad. Both go through ReturnToMainMenu, which throws the finished match
+            // away - so whatever the player comes back to is a fresh one, not the end screen.
+            _endToMenuButton = EndButton(panel.transform, "EndToMainMenu", "Main menu", -22f);
+            _endToMenuButton.onClick.AddListener(() => _menu?.ReturnToMainMenu());
+
+            _endToRosterButton = EndButton(panel.transform, "EndToRoster", "Change gladiators", -96f);
+            _endToRosterButton.onClick.AddListener(() =>
+            {
+                if (_menu == null) return;
+                _menu.ReturnToMainMenu();
+                _menu.OpenRosterScreen();
+            });
+
             _overlay.SetActive(false);
+        }
+
+        private static Button EndButton(Transform parent, string name, string caption, float y)
+        {
+            var button = HudFactory.CreateButton(name, parent, caption, 20);
+            var rect = button.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(240f, 58f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            return button;
         }
 
         // ------------------------------------------------------------------
@@ -489,6 +517,8 @@ namespace ColosseumDuel.Gameplay.Hud
 
             SetActive(_pickRow.gameObject, picking);
             SetActive(_restartButton.gameObject, matchOver);
+            SetActive(_endToMenuButton.gameObject, matchOver);
+            SetActive(_endToRosterButton.gameObject, matchOver);
 
             if (picking)
             {
