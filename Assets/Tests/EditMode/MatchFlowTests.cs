@@ -834,6 +834,51 @@ namespace ColosseumDuel.Tests
             Assert.Greater(moves, 10, "the bot hardly moved, so this proves nothing");
         }
 
+        /// <summary>
+        /// With the player's side on auto the bot plays both: it picks for him, plans every one of
+        /// his cycles, and the match goes the whole way with nothing from the player at all.
+        /// </summary>
+        [Test]
+        public void OnAutoTheBotPlaysThePlayersSideToTheEndOfTheMatch()
+        {
+            var m = NewMatch(77);
+            m.P1Auto = true;
+
+            bool movedOnHisOwn = false;
+            for (float t = 0f; t < 900f && m.State.Phase != MatchPhase.MatchEnd; t += Dt)
+            {
+                var p1 = m.State.P1.Active;
+                if (m.State.Phase == MatchPhase.Action && p1 != null && p1.PlannedAction == ActionType.Move)
+                    movedOnHisOwn = true;
+                m.Tick(Dt);
+            }
+
+            Assert.AreEqual(MatchPhase.MatchEnd, m.State.Phase, "an auto match never finished");
+            Assert.IsTrue(movedOnHisOwn,
+                "the player's side only ever stood - the timeout's Defend, not the bot playing him");
+        }
+
+        [Test]
+        public void TurningAutoOnMidPlanningPlansThePlayersCycleThere_AndOffLeavesItToHim()
+        {
+            var m = StartedRound();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+            Assert.AreEqual(MatchPhase.Planning, m.State.Phase);
+            Assert.AreEqual(ActionType.None, m.State.P1.Active.PlannedAction);
+
+            m.P1Auto = true;
+            Assert.AreNotEqual(ActionType.None, m.State.P1.Active.PlannedAction,
+                "switched on during planning, it should decide this cycle rather than wait for the next");
+
+            m.P1Auto = false;
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+            if (m.State.Phase != MatchPhase.Planning) Assert.Ignore("the round ended in that exchange");
+            m.Tick(Dt);
+            Assert.AreEqual(ActionType.None, m.State.P1.Active.PlannedAction,
+                "off again, the next cycle is the player's to plan");
+        }
+
         [Test]
         public void ACollisionAgainstTheWallDoesNotThrowAnyoneThroughIt()
         {

@@ -68,6 +68,46 @@ namespace ColosseumDuel.Core
             _rng = rng ?? new System.Random();
         }
 
+        /// <summary>
+        /// The bot plays the player's side as well: it sends in his fighter and plans every one of
+        /// his cycles, so two bots fight it out while he watches.
+        ///
+        /// Switchable at any time and it takes over at once - turned on during planning it decides
+        /// that cycle rather than waiting for the next. It belongs to the manager rather than to a
+        /// match, so it stays on across restarts until it is turned off.
+        /// </summary>
+        public bool P1Auto
+        {
+            get => _p1Auto;
+            set
+            {
+                _p1Auto = value;
+                if (value) AutoPlayP1();
+            }
+        }
+
+        private bool _p1Auto;
+
+        /// <summary>Whatever the player's side is waiting on, decided the way the bot decides its own.</summary>
+        private void AutoPlayP1()
+        {
+            if (!_p1Auto) return;
+
+            if (State.Phase == MatchPhase.Pick && State.P1.NeedsPick)
+            {
+                AutoPick(PlayerSide.P1);
+                return;
+            }
+
+            var me = State.P1.Active;
+            if (State.Phase == MatchPhase.Planning && me != null && me.Alive && me.PlannedAction == ActionType.None)
+            {
+                var decision = BotAI.Decide(me, State.Bot.Active, State.Buffs, _rng);
+                SubmitPlanningAction(PlayerSide.P1, decision.Action, decision.AimDirection, decision.Power,
+                    decision.UseAbility);
+            }
+        }
+
         // ------------------------------------------------------------------
         // match lifecycle
         // ------------------------------------------------------------------
@@ -112,7 +152,7 @@ namespace ColosseumDuel.Core
         private void BeginRoundPick()
         {
             SetPhase(MatchPhase.Pick);
-            if (State.Bot.NeedsPick) BotAutoPick();
+            if (State.Bot.NeedsPick) AutoPick(PlayerSide.Bot);
         }
 
         public bool SubmitPick(PlayerSide side, GladiatorId id)
@@ -151,15 +191,16 @@ namespace ColosseumDuel.Core
             return true;
         }
 
-        private void BotAutoPick()
+        /// <summary>The bot's pick, for either side: the bot's own, or the player's on auto.</summary>
+        private void AutoPick(PlayerSide side)
         {
-            var alive = State.Bot.Roster.Where(g => g.Alive).ToList();
+            var alive = State.Get(side).Roster.Where(g => g.Alive).ToList();
             if (alive.Count == 0) return;
             // simple heuristic: whichever gladiator currently has the highest HP fraction
             // By instance, not by archetype: with two of the same in a squad, picking by id would
             // send in whichever came first in the list rather than the one it actually chose.
             var pick = alive.OrderByDescending(g => g.Hp / g.Def.MaxHp).First();
-            SubmitPick(PlayerSide.Bot, pick);
+            SubmitPick(side, pick);
         }
 
         private void ConfirmPicksAndReveal()
@@ -425,6 +466,10 @@ namespace ColosseumDuel.Core
         /// internally handles phase timers and (during Action) substepped physics.</summary>
         public void Tick(float dt)
         {
+            // Before the phase is advanced, so the pick screen - which Tick otherwise leaves to
+            // explicit calls - is answered too.
+            AutoPlayP1();
+
             switch (State.Phase)
             {
                 case MatchPhase.Reveal:

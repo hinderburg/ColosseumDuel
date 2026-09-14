@@ -144,6 +144,54 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(defend.interactable, "the action phase is not the time to change your mind");
         }
 
+        /// <summary>
+        /// The Auto switch sits just right of the player's own squad icons and hands his side to the
+        /// bot: it picks and plans for him with nothing pressed, and a second press gives it back.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheAutoSwitchBesideTheSquadHandsThePlayersSideToTheBot()
+        {
+            yield return null;
+            var toggle = FindButton("AutoToggle");
+            Assert.IsNotNull(toggle, "there is no Auto switch");
+            Assert.IsFalse(_controller.AutoPlay, "a match should start with the player playing");
+
+            // Right of the rightmost of his own icons, and level with them.
+            var icons = Enumerable.Range(0, GameConstants.SquadSize)
+                .Select(i => Find($"P1_{i}").GetComponent<RectTransform>()).ToList();
+            var toggleRect = toggle.GetComponent<RectTransform>();
+            float iconsRight = icons.Max(r => WorldRect(r).xMax);
+            Assert.Greater(WorldRect(toggleRect).xMin, iconsRight, "the switch is not to the right of the icons");
+            Assert.Less(WorldRect(toggleRect).xMin - iconsRight, 60f, "the switch is nowhere near the icons");
+            var iconRect = WorldRect(icons[0]);
+            Assert.IsTrue(WorldRect(toggleRect).yMax > iconRect.yMin && WorldRect(toggleRect).yMin < iconRect.yMax,
+                "the switch is not level with the icons");
+
+            toggle.onClick.Invoke();
+            yield return null;
+            Assert.IsTrue(_controller.AutoPlay);
+            StringAssert.Contains("Auto", toggle.GetComponentInChildren<Text>().text);
+
+            // Nobody touches anything: the pick goes in and the first plan with it.
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, 5f);
+            Assert.IsNotNull(State.P1.Active, "on auto the player's fighter should have been sent in for him");
+            yield return null;
+            Assert.AreNotEqual(ActionType.None, State.P1.Active.PlannedAction, "on auto his cycle should be planned for him");
+            Assert.IsFalse(FindButton("Defend").gameObject.activeInHierarchy,
+                "the action buttons should stand down while the bot is playing him");
+
+            toggle.onClick.Invoke();
+            yield return null;
+            Assert.IsFalse(_controller.AutoPlay, "a second press should give the side back");
+        }
+
+        private static Rect WorldRect(RectTransform rect)
+        {
+            var corners = new Vector3[4];
+            rect.GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
         [Test]
         public void EveryArchetypeHasItsOwnIcon()
         {

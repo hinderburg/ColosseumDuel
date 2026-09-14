@@ -32,6 +32,16 @@ namespace ColosseumDuel.Gameplay
 
         public GameManager Manager { get; private set; }
 
+        /// <summary>
+        /// The bot plays the player's side too - the Auto switch beside his squad. Kept on the
+        /// manager, which lives for the session, so it stays on across restarts.
+        /// </summary>
+        public bool AutoPlay
+        {
+            get => Manager != null && Manager.P1Auto;
+            set { if (Manager != null) Manager.P1Auto = value; }
+        }
+
         /// <summary>Kept for input code: the virtual->world scale lives on ArenaView.</summary>
         public float VirtualToWorld => Arena != null ? Arena.VirtualToWorld : 1f;
 

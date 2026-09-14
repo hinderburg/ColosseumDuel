@@ -303,7 +303,9 @@ namespace ColosseumDuel.Gameplay
 
             HandleKeyboardShortcuts();
 
-            if (Controller.Manager.State.Phase != MatchPhase.Planning)
+            // On auto the bot is playing his side, so the sand takes no orders from him - stood down
+            // exactly as it is outside planning.
+            if (Controller.Manager.State.Phase != MatchPhase.Planning || Controller.AutoPlay)
             {
                 if (IsDragging) CancelDrag();
                 _tapping = false;

@@ -42,6 +42,12 @@ namespace ColosseumDuel.Gameplay.Hud
         private Button _restartButton;
         private MenuView _menu;
         private GameObject _playerCorner;
+
+        /// <summary>The Auto switch, just right of the player's squad: the bot plays his side too.</summary>
+        private Button _autoToggle;
+        private Image _autoBackground;
+
+        private static readonly Color AutoOffColor = new Color(0.16f, 0.16f, 0.20f, 0.95f);
         private GameObject _botCorner;
         private Button _menuButton;
 
@@ -128,6 +134,23 @@ namespace ColosseumDuel.Gameplay.Hud
             // it and read as part of the menu.
             _playerCorner = playerCorner.gameObject;
             _botCorner = botCorner.gameObject;
+
+            // Auto, just right of his own squad and level with it: the switch that hands his side to
+            // the bot sits beside the men it takes over.
+            _autoToggle = HudFactory.CreateButton("AutoToggle", root, "Auto", 16);
+            var autoRect = (RectTransform)_autoToggle.transform;
+            autoRect.anchorMin = Vector2.zero;
+            autoRect.anchorMax = Vector2.zero;
+            autoRect.pivot = new Vector2(0f, 0.5f);
+            autoRect.sizeDelta = new Vector2(64f, 38f);
+            autoRect.anchoredPosition = new Vector2(
+                playerCorner.anchoredPosition.x + playerCorner.sizeDelta.x + 4f,
+                playerCorner.anchoredPosition.y + playerCorner.sizeDelta.y * 0.5f);
+            _autoBackground = (Image)_autoToggle.targetGraphic;
+            _autoToggle.onClick.AddListener(() =>
+            {
+                if (Controller != null) Controller.AutoPlay = !Controller.AutoPlay;
+            });
 
             // The way out, in the one corner the HUD leaves empty: the opponent's squad is top
             // right and the player's is bottom left, so top left is the only place a button can sit
@@ -360,7 +383,13 @@ namespace ColosseumDuel.Gameplay.Hud
             SetActive(_playerCorner, !menuUp);
             SetActive(_botCorner, !menuUp);
             SetActive(_menuButton.gameObject, !menuUp);
-            _actionButtons.SetHidden(menuUp);
+            SetActive(_autoToggle.gameObject, !menuUp);
+
+            // Lit in the player's colour while the bot plays him, and the buttons that would only
+            // be ignored stand down with the rest of his input.
+            bool auto = Controller != null && Controller.AutoPlay;
+            _autoBackground.color = auto ? HudFactory.PlayerColor : AutoOffColor;
+            _actionButtons.SetHidden(menuUp || auto);
             if (menuUp) _hint.enabled = false;
         }
 
