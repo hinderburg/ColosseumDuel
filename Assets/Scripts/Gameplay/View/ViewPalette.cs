@@ -192,6 +192,12 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public GameObject BlessingFx;
 
+        /// <summary>Played once on a gladiator eating the apple: a rising green burst. Epic Toon FX, like the rest.</summary>
+        public GameObject AppleFx;
+
+        /// <summary>Played once on a gladiator taking up the horn: a rising orange-gold burst.</summary>
+        public GameObject HornFx;
+
         public GameObject AbilityFxFor(ColosseumDuel.Core.AbilityKey key)
         {
             int index = (int)key;

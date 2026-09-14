@@ -634,6 +634,17 @@ namespace ColosseumDuel.Tests
             FrameOnPair(camera, controller.Arena, player.Pos, 90f, 110f);
             yield return Capture(SuffixPath("-fx-Blessing"));
 
+            // And the three things that lie on the sand, side by side: whether each reads as what it
+            // is, in its own colour and edged in black, is a question for the eye.
+            var state = controller.Manager.State;
+            var at = player.Pos + new Vector2(0f, 80f);
+            state.Buffs.PlaceAt(at);
+            state.Apple.PlaceAt(at + new Vector2(-70f, 0f));
+            state.Horn.PlaceAt(at + new Vector2(70f, 0f));
+            yield return new WaitForSeconds(0.2f);
+            FrameOnPair(camera, controller.Arena, at, 90f, 110f);
+            yield return Capture(SuffixPath("-pickups"));
+
             if (cameraDriver != null) cameraDriver.enabled = true;
         }
 

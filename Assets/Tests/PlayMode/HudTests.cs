@@ -346,6 +346,42 @@ namespace ColosseumDuel.Tests
             return (corners[0] + corners[2]) * 0.5f;
         }
 
+        /// <summary>
+        /// Taking up the horn brings the ability button up over the player's man for a moment, out of
+        /// turn and not to be pressed, its ring filling to the rage he has now - and the guard and
+        /// the clock stay down, because nothing is being decided.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheHornShowsTheRageItGaveOnTheAbilityButton_OutOfTurn()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, 5f);
+
+            var g = State.P1.Active;
+            g.Rage = 0.1f;
+            State.Horn.PlaceAt(g.Pos);
+
+            // The opponent held where he is, so the phase is not cut short by the two of them meeting.
+            State.Bot.Active.EnsnaredRoundsLeft = 2;
+            Assert.IsTrue(_controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false));
+            yield return RunUntil(() => g.Rage > 0.3f, 6f);
+            Assert.AreEqual(MatchPhase.Action, State.Phase, "standing on it, he should take the horn up as the phase starts");
+
+            yield return RunSeconds(0.7f);
+            var buttons = Object.FindFirstObjectByType<ActionButtonsView>(FindObjectsInactive.Include);
+            Assert.AreEqual(MatchPhase.Action, State.Phase);
+            Assert.IsTrue(buttons.ShowingRageGain, "the horn's gain is not being shown");
+            Assert.IsTrue(buttons.gameObject.activeInHierarchy, "the ability button should be up out of turn");
+            Assert.IsFalse(buttons.Ability.interactable, "and not be something to press");
+            Assert.AreEqual((0.1f + GameConstants.HornRage) / GameConstants.RageMax, buttons.RageGaugeFill, 0.02f,
+                "its ring should have filled to the rage he has now");
+            Assert.IsFalse(Find("Defend").activeInHierarchy, "the guard should stay down - nothing is being decided");
+
+            yield return RunSeconds(1.2f);
+            if (State.Phase == MatchPhase.Action)
+                Assert.IsFalse(buttons.gameObject.activeInHierarchy, "and it should go again");
+        }
+
         /// <summary>Every one of the eighteen abilities has an icon, and no two share one.</summary>
         [Test]
         public void EveryAbilityHasItsOwnIcon()

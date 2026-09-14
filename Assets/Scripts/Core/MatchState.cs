@@ -35,8 +35,29 @@ namespace ColosseumDuel.Core
         public PlayerState P1 = new PlayerState { Side = PlayerSide.P1 };
         public PlayerState Bot = new PlayerState { Side = PlayerSide.Bot };
 
-        /// <summary>The weapon blessing on the sand, laid every third round. See WeaponBuffPickups.</summary>
-        public WeaponBuffPickups Buffs;
+        /// <summary>The weapon blessing on the sand, laid every third round. See ArenaPickup.</summary>
+        public ArenaPickup Buffs;
+
+        /// <summary>The apple on the sand: a third of his health back to whoever runs over it.</summary>
+        public ArenaPickup Apple;
+
+        /// <summary>The horn on the sand: rage onto the meter of whoever runs over it.</summary>
+        public ArenaPickup Horn;
+
+        /// <summary>All three things that can lie on the sand, the blessing first. Any not set up is left out.</summary>
+        public System.Collections.Generic.IEnumerable<ArenaPickup> Pickups
+        {
+            get
+            {
+                if (Buffs != null) yield return Buffs;
+                if (Apple != null) yield return Apple;
+                if (Horn != null) yield return Horn;
+            }
+        }
+
+        /// <summary>The one of the three that is this kind.</summary>
+        public ArenaPickup Pickup(PickupKind kind)
+            => kind == PickupKind.Apple ? Apple : kind == PickupKind.Horn ? Horn : Buffs;
 
         /// <summary>
         /// What stands on the sand. Set here rather than only when a match starts, so the views can

@@ -30,6 +30,9 @@ namespace ColosseumDuel.Gameplay.Hud
 
             /// <summary>A phase spent in the spikes.</summary>
             Spikes,
+
+            /// <summary>Health given back - the apple. The one number that is not damage, so the one in green.</summary>
+            Heal,
         }
 
         /// <summary>How many can be in the air at once. Past this the oldest is taken back.</summary>
@@ -57,6 +60,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private static readonly Color BlowColor = new Color(0.95f, 0.20f, 0.16f);
         private static readonly Color BleedColor = new Color(0.66f, 0.09f, 0.16f);
         private static readonly Color SpikesColor = new Color(0.98f, 0.42f, 0.14f);
+        private static readonly Color HealColor = new Color(0.36f, 0.86f, 0.30f);
 
         private sealed class Number
         {
@@ -122,7 +126,7 @@ namespace ColosseumDuel.Gameplay.Hud
             slot.From = local;
             slot.Life = RiseSeconds;
             slot.Left = RiseSeconds;
-            slot.Label.text = Mathf.Max(1, Mathf.RoundToInt(amount)).ToString();
+            slot.Label.text = (source == Source.Heal ? "+" : "") + Mathf.Max(1, Mathf.RoundToInt(amount));
             slot.Label.color = ColorOf(source);
             slot.Label.fontSize = source == Source.Blow ? 30 : 22;
             slot.Label.rectTransform.anchoredPosition = local;
@@ -167,6 +171,7 @@ namespace ColosseumDuel.Gameplay.Hud
             {
                 case Source.Bleed: return BleedColor;
                 case Source.Spikes: return SpikesColor;
+                case Source.Heal: return HealColor;
                 default: return BlowColor;
             }
         }

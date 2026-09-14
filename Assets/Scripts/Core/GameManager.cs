@@ -32,8 +32,11 @@ namespace ColosseumDuel.Core
         /// </summary>
         public event Action<PlayerSide, float> Damaged;
 
-        /// <summary>A gladiator took up the weapon blessing off the sand.</summary>
-        public event Action<PlayerSide> WeaponBlessed;
+        /// <summary>
+        /// A gladiator took something up off the sand: which it was, and what it gave him - the health
+        /// the apple put back, the rage the horn put on, nothing for the blessing.
+        /// </summary>
+        public event Action<PlayerSide, PickupKind, float> PickedUp;
 
         /// <summary>A head-on collision resolved, at this point in virtual space.</summary>
         public event Action<Vector2> Impact;
@@ -102,7 +105,7 @@ namespace ColosseumDuel.Core
             var me = State.P1.Active;
             if (State.Phase == MatchPhase.Planning && me != null && me.Alive && me.PlannedAction == ActionType.None)
             {
-                var decision = BotAI.Decide(me, State.Bot.Active, State.Buffs, _rng);
+                var decision = BotAI.Decide(me, State.Bot.Active, State.Pickups, _rng);
                 SubmitPlanningAction(PlayerSide.P1, decision.Action, decision.AimDirection, decision.Power,
                     decision.UseAbility);
             }
@@ -136,7 +139,9 @@ namespace ColosseumDuel.Core
 
             // The obstacles first, because the blessing is laid out round them.
             State.Obstacles = ObstacleField.Standard();
-            State.Buffs = new WeaponBuffPickups(_rng, State.Obstacles);
+            State.Buffs = new ArenaPickup(_rng, State.Obstacles, PickupKind.Blessing);
+            State.Apple = new ArenaPickup(_rng, State.Obstacles, PickupKind.Apple);
+            State.Horn = new ArenaPickup(_rng, State.Obstacles, PickupKind.Horn);
             State.Clash = 0;
             State.Round = 0;
             State.WinnerSide = null;
@@ -225,9 +230,9 @@ namespace ColosseumDuel.Core
             State.Round = 0;
             PlaceFightersForClash();
 
-            // A bare arena every clash: a blessing left lying from the last one would hand the new
+            // A bare arena every clash: anything left lying from the last one would hand the new
             // clash's opening to whoever was set down nearer it.
-            State.Buffs?.Clear();
+            foreach (var pickup in State.Pickups) pickup.Clear();
 
             if (State.Tutorial && State.Clash == 1) ArrangeTutorialClash();
             // Reveal is a real phase with a duration (see Tick) so the UI can show both picks
@@ -301,11 +306,23 @@ namespace ColosseumDuel.Core
             State.P1.Active?.BeginRound();
             State.Bot.Active?.BeginRound();
 
-            // Every third round a blessing is laid on the sand between the two, if the last one has
-            // been taken - between them rather than anywhere, so neither starts nearer to it.
-            if (State.Buffs != null && WeaponBuffPickups.IsDueOn(State.Round)
-                && State.P1.Active != null && State.Bot.Active != null)
-                State.Buffs.SpawnBetween(State.P1.Active.Pos, State.Bot.Active.Pos);
+            // Every third round each of the three things on the sand is laid, if the last of its kind
+            // has been taken - each on its own roll, beside a column, and never where another lies.
+            // See ArenaPickup.SpawnByColumn for where, and why by the columns.
+            if (ArenaPickup.IsDueOn(State.Round) && State.P1.Active != null && State.Bot.Active != null)
+            {
+                float chance = GameConstants.PickupChance;
+                foreach (var pickup in State.Pickups)
+                {
+                    // Rolled only when it could come out either way, so a certain chance draws nothing
+                    // from the match's random numbers and leaves every other roll where it was.
+                    if (chance < 1f && _rng.NextDouble() >= chance) continue;
+
+                    var taken = State.Pickups.Where(p => p != pickup && p.Position.HasValue)
+                        .Select(p => p.Position.Value).ToList();
+                    pickup.SpawnByColumn(State.P1.Active.Pos, State.Bot.Active.Pos, taken, State.Round);
+                }
+            }
             SetPhase(MatchPhase.Planning);
         }
 
@@ -540,7 +557,7 @@ namespace ColosseumDuel.Core
             var bot = State.Bot.Active;
             if (bot != null && bot.Alive && bot.PlannedAction == ActionType.None)
             {
-                var decision = BotAI.Decide(bot, State.P1.Active, State.Buffs, _rng);
+                var decision = BotAI.Decide(bot, State.P1.Active, State.Pickups, _rng);
                 SubmitPlanningAction(PlayerSide.Bot, decision.Action, decision.AimDirection, decision.Power, decision.UseAbility);
             }
             // If the human player didn't submit a move in time, default to Defend - but only the
@@ -896,9 +913,10 @@ namespace ColosseumDuel.Core
                 _scorched[(int)SideOf(g)] += bite;
             }
 
-            // The blessing, if he has run over it.
-            if (State.Buffs != null && State.Buffs.TryPickup(g))
-                WeaponBlessed?.Invoke(SideOf(g));
+            // Whatever he has run over: the blessing, the apple, the horn.
+            foreach (var pickup in State.Pickups)
+                if (pickup.TryPickup(g, out float amount))
+                    PickedUp?.Invoke(SideOf(g), pickup.Kind, amount);
         }
 
         private void ResolveCollision(GladiatorInstance a, GladiatorInstance b)

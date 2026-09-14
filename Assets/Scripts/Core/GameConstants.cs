@@ -223,6 +223,22 @@ namespace ColosseumDuel.Core
         /// <summary>A blessing is laid on the sand on every round that is a multiple of this.</summary>
         public const int WeaponBuffEveryRounds = 3;
 
+        /// <summary>
+        /// Chance, on a round they are due, that each thing on the sand is laid - the blessing, the
+        /// apple and the horn each rolled for on its own, so any of them can come alone or all three
+        /// together. Certain, as the blessing always has been; the knob is here for when it should not be.
+        /// </summary>
+        public const float PickupChance = 1f;
+
+        /// <summary>Share of his own health the apple gives back. A first guess, to be tried in play.</summary>
+        public const float AppleHealFraction = 1f / 3f;
+
+        /// <summary>
+        /// How much of the rage meter the horn fills: a third and a little over, so a man most of the
+        /// way there can have his ability a round early.
+        /// </summary>
+        public const float HornRage = 0.35f;
+
         /// <summary>How far one mace blow throws its target, in virtual units - most of a body.</summary>
         public const float MaceKnockback = GladiatorRadius * 1.6f;
 

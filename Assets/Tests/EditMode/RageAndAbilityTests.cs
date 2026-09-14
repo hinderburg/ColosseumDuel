@@ -82,17 +82,18 @@ namespace ColosseumDuel.Tests
         [Test]
         public void RampageBuff_Gives50PercentMoreSpeed_ForTwoRounds()
         {
-            var g = Fresh(GladiatorDef.Brutius); // speed 10
+            var g = Fresh(GladiatorDef.Brutius);
+            float speed = GladiatorDef.Brutius.Speed;
             g.Ability = AbilityKey.Rampage;
             g.BeginRound();
             g.Rage = 1f;
             g.ActivateAbility();
 
-            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "activation round");
+            Assert.AreEqual(speed * GameConstants.RampageSpeedMult, g.EffectiveSpeed(), Tol, "activation round");
             g.BeginRound();
-            Assert.AreEqual(15f, g.EffectiveSpeed(), Tol, "second buffed round");
+            Assert.AreEqual(speed * GameConstants.RampageSpeedMult, g.EffectiveSpeed(), Tol, "second buffed round");
             g.BeginRound();
-            Assert.AreEqual(10f, g.EffectiveSpeed(), Tol, "buff has expired");
+            Assert.AreEqual(speed, g.EffectiveSpeed(), Tol, "buff has expired");
         }
 
         [Test]

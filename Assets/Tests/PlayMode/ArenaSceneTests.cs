@@ -115,6 +115,61 @@ namespace ColosseumDuel.Tests
             Assert.Less(color.r + color.g + color.b, 0.3f, "the outline should be black");
         }
 
+        /// <summary>
+        /// The apple and the horn each have a figure of their own, drawn where they lie, edged in
+        /// black, over a ring in their own colour - green and orange, as the blessing is red.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheAppleAndTheHornAreDrawnWhereTheyLie_EachInItsOwnColourAndEdgedInBlack()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return null;
+
+            var state = _controller.Manager.State;
+            var appleSpot = new Vector2(-150f, 40f);
+            var hornSpot = new Vector2(150f, 40f);
+            state.Apple.PlaceAt(appleSpot);
+            state.Horn.PlaceAt(hornSpot);
+            yield return null;
+
+            foreach (var (name, spot, tint) in new[]
+                     {
+                         ("Apple", appleSpot, GearSizes.AppleTint),
+                         ("Horn", hornSpot, GearSizes.HornTint),
+                     })
+            {
+                var view = FindView(name);
+                Assert.IsNotNull(view, $"the {name} has no view");
+                Assert.IsTrue(view.gameObject.activeInHierarchy, $"the {name} on the sand should be drawn");
+                Assert.Less(Vector3.Distance(view.position, _controller.Arena.ToWorld(spot)), 0.001f,
+                    $"and drawn where the simulation says the {name} lies");
+
+                var parts = view.GetComponentsInChildren<Transform>(true);
+                Assert.IsNotNull(parts.FirstOrDefault(t => t.name == name + "Model"), $"the {name} has no figure of its own");
+
+                var outline = parts.FirstOrDefault(t => t.name == GearSizes.OutlineShellName);
+                Assert.IsNotNull(outline, $"the {name} is not edged");
+                Assert.IsTrue(outline.gameObject.activeInHierarchy, $"the {name}'s edge is not drawn");
+                var block = new MaterialPropertyBlock();
+                outline.GetComponentInChildren<Renderer>(true).GetPropertyBlock(block);
+                var ink = block.GetColor(Shader.PropertyToID("_BaseColor"));
+                Assert.Less(ink.r + ink.g + ink.b, 0.3f, $"the {name}'s edge should be black");
+
+                var ring = parts.FirstOrDefault(t => t.name == "Ring");
+                if (ring == null) continue;
+                ring.GetComponent<Renderer>().GetPropertyBlock(block);
+                var glow = block.GetColor(Shader.PropertyToID("_BaseColor"));
+                Assert.AreEqual(tint.r, glow.r, 0.01f, $"the {name}'s ring should be in its own colour");
+                Assert.AreEqual(tint.g, glow.g, 0.01f, $"the {name}'s ring should be in its own colour");
+            }
+
+            state.Apple.Clear();
+            state.Horn.Clear();
+            yield return null;
+            Assert.IsFalse(FindView("Apple").gameObject.activeInHierarchy, "an apple eaten should not still be drawn");
+            Assert.IsFalse(FindView("Horn").gameObject.activeInHierarchy, "a horn taken should not still be drawn");
+        }
+
         [UnityTest]
         public IEnumerator HazardRingsStayHiddenWhileTheArenaIsSafe()
         {

@@ -680,7 +680,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void EachArchetypeRunsThreeTimesItsOldDash()
         {
-            Assert.AreEqual(450f, new GladiatorInstance(GladiatorDef.Brutius).DashReach(), 0.01f, "Brutius, speed 10");
+            Assert.AreEqual(585f, new GladiatorInstance(GladiatorDef.Brutius).DashReach(), 0.01f, "Brutius, speed 13");
             Assert.AreEqual(675f, new GladiatorInstance(GladiatorDef.Barbarius).DashReach(), 0.01f, "Barbarius, speed 15");
             Assert.AreEqual(900f, new GladiatorInstance(GladiatorDef.Hilius).DashReach(), 0.01f, "Hilius, speed 20");
         }
@@ -763,8 +763,8 @@ namespace ColosseumDuel.Tests
             p1.Pos = new Vector2(0f, -100f);
             m.State.Bot.Active.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.85f);
 
-            // Up and down the open middle, two hundred a stroke: eight hundred drawn against the
-            // four hundred and fifty Brutius can run, which runs out fifty units into the third.
+            // Up and down the open middle, two hundred a stroke: eight hundred drawn against what
+            // Brutius can run, which runs out somewhere up the third stroke.
             var strokes = new[]
             {
                 new Vector2(0f, 100f), new Vector2(0f, -100f), new Vector2(0f, 100f), new Vector2(0f, -100f)
@@ -772,7 +772,8 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(m.SubmitPlanningPath(PlayerSide.P1, strokes));
 
             float reach = p1.DashReach();
-            var stop = new Vector2(0f, -50f);
+            Assert.That(reach, Is.InRange(400f, 600f), "this test's strokes are laid out for a reach inside the third");
+            var stop = new Vector2(0f, -100f + (reach - 400f));
             Assert.AreEqual(reach, ObstacleField.Length(p1.PlannedPath), 0.5f, "filed longer than he can run");
             Assert.Less(Vector2.Distance(p1.PlannedTarget, stop), 0.5f, "cut somewhere other than where it ran out");
 
@@ -798,9 +799,11 @@ namespace ColosseumDuel.Tests
             p1.Ability = AbilityKey.Rampage;
             p1.Pos = new Vector2(0f, -100f);
 
+            // Longer than the run Rampage gives him, so the length filed is the reach and not the drawing.
             var strokes = new[]
             {
-                new Vector2(0f, 100f), new Vector2(0f, -100f), new Vector2(0f, 100f), new Vector2(0f, -100f)
+                new Vector2(0f, 100f), new Vector2(0f, -100f), new Vector2(0f, 100f), new Vector2(0f, -100f),
+                new Vector2(0f, 100f), new Vector2(0f, -100f)
             };
 
             p1.Rage = GameConstants.RageMax;
@@ -821,7 +824,7 @@ namespace ColosseumDuel.Tests
         {
             var me = new GladiatorInstance(GladiatorDef.Hilius) { Pos = Vector2.zero };
             var opp = new GladiatorInstance(GladiatorDef.Brutius) { Pos = new Vector2(0f, 120f) };
-            var buffs = new WeaponBuffPickups(new System.Random(1), ObstacleField.Empty);
+            var buffs = new ArenaPickup(new System.Random(1), ObstacleField.Empty);
 
             int moves = 0;
             for (int seed = 0; seed < 20; seed++)

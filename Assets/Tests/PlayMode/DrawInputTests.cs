@@ -143,6 +143,8 @@ namespace ColosseumDuel.Tests
 
             _input.DrawTo(new Vector2(0f, 100f));
             _input.DrawTo(new Vector2(0f, -100f));
+            _input.DrawTo(new Vector2(0f, 100f));
+            _input.DrawTo(new Vector2(0f, -100f));
             Assert.AreEqual(plain * 1.5f, ObstacleField.Length(Player.PlannedPath), 0.5f,
                 "Rampage should let the run go half as far again");
             _input.EndDraw();

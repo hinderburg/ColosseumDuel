@@ -56,7 +56,8 @@ namespace ColosseumDuel.Gameplay
 
         /// <summary>The one thing that moves the camera; it takes the shake as well.</summary>
         private DeathCameraView _deathCamera;
-        private BuffPickupView _blessingView;
+        /// <summary>The blessing, the apple and the horn lying on the sand - one view each.</summary>
+        private readonly List<PickupView> _pickupViews = new List<PickupView>();
 
         private void Start()
         {
@@ -80,7 +81,7 @@ namespace ColosseumDuel.Gameplay
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
             Manager.Damaged += OnDamaged;
-            Manager.WeaponBlessed += OnWeaponBlessed;
+            Manager.PickedUp += OnPickedUp;
             Manager.Bled += OnBled;
             Manager.Scorched += OnScorched;
             Manager.AbilityFired += OnAbilityFired;
@@ -207,7 +208,8 @@ namespace ColosseumDuel.Gameplay
             ControlZone = gameObject.AddComponent<ControlZoneView>();
             ControlZone.Bind(Arena);
 
-            _blessingView = BuffPickupView.Create("WeaponBlessing", viewRoot, Arena);
+            foreach (PickupKind kind in Enum.GetValues(typeof(PickupKind)))
+                _pickupViews.Add(PickupView.Create(kind, viewRoot, Arena));
         }
 
 
@@ -269,7 +271,7 @@ namespace ColosseumDuel.Gameplay
 
             Arena.Sync(state);
 
-            if (_blessingView != null) _blessingView.Sync(state.Buffs?.Position);
+            foreach (var view in _pickupViews) view.Sync(state.Pickup(view.Kind)?.Position);
         }
 
         private void OnPhaseChanged(MatchState state)
@@ -420,6 +422,61 @@ namespace ColosseumDuel.Gameplay
 
         /// <summary>Colour of the ring that goes out from a gladiator taking up the blessing.</summary>
         private static readonly Color BlessingBurstColor = new Color(1f, 0.24f, 0.16f);
+
+        /// <summary>Something was taken up off the sand. Each is announced on the man in its own colour.</summary>
+        private void OnPickedUp(PlayerSide side, PickupKind kind, float amount)
+        {
+            switch (kind)
+            {
+                case PickupKind.Apple: OnAppleEaten(side, amount); break;
+                case PickupKind.Horn: OnHornBlown(side, amount); break;
+                default: OnWeaponBlessed(side); break;
+            }
+        }
+
+        /// <summary>
+        /// The apple: a green ring and a green burst on him, the health it gave back going up off him
+        /// in green, and its name over him - spent the moment it is eaten, so it fades where it is.
+        /// </summary>
+        private void OnAppleEaten(PlayerSide side, float healed)
+        {
+            var view = ViewFor(side);
+            view.PlayAbility(GearSizes.AppleTint);
+            view.PlayPickup(PickupKind.Apple);
+            ShowDamage(side, healed, DamageNumbersView.Source.Heal);
+
+            var g = Manager.State.Get(side).Active;
+            if (g != null && Callouts != null)
+                Callouts.ShowPickup(g.Pos, side, "Apple", $"+{Mathf.RoundToInt(healed)} health");
+        }
+
+        /// <summary>
+        /// The horn: an orange ring and burst on him, its name over him, and - for the player's own
+        /// man - his ability button up for a moment, out of turn, with the rage it gave filling its
+        /// ring. The opponent's meter is the bar over his head, which shows it anyway.
+        /// </summary>
+        private void OnHornBlown(PlayerSide side, float gained)
+        {
+            var view = ViewFor(side);
+            view.PlayAbility(GearSizes.HornTint);
+            view.PlayPickup(PickupKind.Horn);
+
+            var g = Manager.State.Get(side).Active;
+            if (g == null) return;
+            if (Callouts != null)
+                Callouts.ShowPickup(g.Pos, side, "Horn",
+                    $"+{Mathf.RoundToInt(gained / GameConstants.RageMax * 100f)}% rage");
+            if (side == PlayerSide.P1 && ActionButtons != null)
+                ActionButtons.ShowRageGain(g.Rage - gained, g.Rage);
+        }
+
+        /// <summary>Found on demand, like the callouts - and inactive outside planning, so looked for with the inactive.</summary>
+        private ActionButtonsView ActionButtons
+            => _actionButtons != null
+                ? _actionButtons
+                : (_actionButtons = FindFirstObjectByType<ActionButtonsView>(FindObjectsInactive.Include));
+
+        private ActionButtonsView _actionButtons;
 
         /// <summary>
         /// A gladiator took up the blessing off the sand: a red ring goes out from him and its effect

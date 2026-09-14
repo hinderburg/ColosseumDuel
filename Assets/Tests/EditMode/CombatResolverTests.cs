@@ -41,8 +41,8 @@ namespace ColosseumDuel.Tests
             // Damage raised about two and a half times and the shields softened, so a clash run
             // head on is four to six rounds rather than five to twenty (see HeadOnHarness).
             Assert.AreEqual(150f, GladiatorDef.Brutius.MaxHp, Tol);
-            Assert.AreEqual(20f, GladiatorDef.Brutius.Damage, Tol);
-            Assert.AreEqual(10f, GladiatorDef.Brutius.Speed, Tol);
+            Assert.AreEqual(21f, GladiatorDef.Brutius.Damage, Tol);
+            Assert.AreEqual(13f, GladiatorDef.Brutius.Speed, Tol);
 
             Assert.AreEqual(125f, GladiatorDef.Barbarius.MaxHp, Tol);
             Assert.AreEqual(23f, GladiatorDef.Barbarius.Damage, Tol);
@@ -56,7 +56,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(25f, GladiatorDef.Scutarius.Damage, Tol);
 
             Assert.AreEqual(125f, GladiatorDef.Hastarius.MaxHp, Tol);
-            Assert.AreEqual(29f, GladiatorDef.Hastarius.Damage, Tol);
+            Assert.AreEqual(27f, GladiatorDef.Hastarius.Damage, Tol);
 
             Assert.AreEqual(135f, GladiatorDef.Retiarius.MaxHp, Tol);
             Assert.AreEqual(22f, GladiatorDef.Retiarius.Damage, Tol);

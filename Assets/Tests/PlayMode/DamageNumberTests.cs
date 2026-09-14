@@ -102,7 +102,12 @@ namespace ColosseumDuel.Tests
                 seen.Add(label.color);
             }
 
-            Assert.AreEqual(3, seen.Count);
+            Assert.AreEqual(System.Enum.GetValues(typeof(DamageNumbersView.Source)).Length, seen.Count);
+
+            // And health given back says so: it goes up with a plus, where every other number is a loss.
+            _numbers.Show(Vector2.zero, 12f, DamageNumbersView.Source.Heal);
+            yield return null;
+            StringAssert.StartsWith("+", Showing().Last().text, "health given back should read as a gain");
         }
 
         /// <summary>

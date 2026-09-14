@@ -44,6 +44,10 @@ namespace ColosseumDuel.EditorTools
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
         private const string BlessingFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Nova/Fire/NovaFireRed.prefab";
+        private const string AppleFxPath =
+            "Assets/Epic Toon FX/Prefabs/Combat/Magic/Buff/MagicBuffGreen.prefab";
+        private const string HornFxPath =
+            "Assets/Epic Toon FX/Prefabs/Combat/Magic/Buff/MagicBuffYellow.prefab";
 
         /// <summary>
         /// What each ability plays on the man while it lasts. Looping effects for the ones that last,
@@ -591,6 +595,12 @@ namespace ColosseumDuel.EditorTools
             if (palette.BlessingFx == null)
                 Debug.LogWarning($"[Colosseum] Effect prefab not found at {BlessingFxPath} - taking up the " +
                                  "blessing will play without one. Import Epic Toon FX to get it.");
+
+            palette.AppleFx = AssetDatabase.LoadAssetAtPath<GameObject>(AppleFxPath);
+            palette.HornFx = AssetDatabase.LoadAssetAtPath<GameObject>(HornFxPath);
+            if (palette.AppleFx == null || palette.HornFx == null)
+                Debug.LogWarning("[Colosseum] Effect prefabs for the apple or the horn not found - taking them " +
+                                 "up will play without one. Import Epic Toon FX to get them.");
 
             palette.Torch = AssetDatabase.LoadAssetAtPath<GameObject>(TorchPrefabPath);
             if (palette.Torch == null)

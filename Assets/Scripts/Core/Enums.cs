@@ -11,6 +11,14 @@ namespace ColosseumDuel.Core
         MatchEnd    // one player has zero gladiators left
     }
 
+    /// <summary>What lies on the sand to be run over. See ArenaPickup.</summary>
+    public enum PickupKind
+    {
+        Blessing,   // the weapon blessing: harder blows for three rounds
+        Apple,      // a third of his health back
+        Horn        // rage onto the meter
+    }
+
     public enum ActionType
     {
         None,

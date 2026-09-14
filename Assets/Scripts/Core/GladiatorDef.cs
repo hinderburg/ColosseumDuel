@@ -77,7 +77,7 @@ namespace ColosseumDuel.Core
         // anyone hands him anything.
 
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Brutius", maxHp: 150f, damage: 20f, speed: 10f,
+            GladiatorId.Brutius, "Brutius", maxHp: 150f, damage: 21f, speed: 13f,
             abilities: new[] { AbilityKey.Earthshaker, AbilityKey.Rampage, AbilityKey.StoneSkin },
             skilledWith: WeaponKind.TwoHandedMace, buildWidth: 1.2f);
 
@@ -101,7 +101,7 @@ namespace ColosseumDuel.Core
             skilledWith: WeaponKind.ScutumAndGladius, buildWidth: 1.1f);
 
         public static readonly GladiatorDef Hastarius = new GladiatorDef(
-            GladiatorId.Hastarius, "Hastarius", maxHp: 125f, damage: 29f, speed: 16f,
+            GladiatorId.Hastarius, "Hastarius", maxHp: 125f, damage: 27f, speed: 16f,
             abilities: new[] { AbilityKey.Lunge, AbilityKey.Brace, AbilityKey.SecondWind },
             skilledWith: WeaponKind.SpearAndShield, buildHeight: 1.08f);
 

@@ -110,6 +110,12 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public static readonly Color BlessingEndingTint = new Color(1.00f, 0.84f, 0.18f);
 
+        /// <summary>The apple lying on the sand, and what eating it plays: green.</summary>
+        public static readonly Color AppleTint = new Color(0.36f, 0.82f, 0.22f);
+
+        /// <summary>The horn lying on the sand, and what taking it up plays: orange.</summary>
+        public static readonly Color HornTint = new Color(1.00f, 0.52f, 0.10f);
+
         /// <summary>
         /// How much bigger the red shell around an untrained weapon is drawn than the weapon.
         ///

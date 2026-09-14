@@ -225,16 +225,25 @@ namespace ColosseumDuel.Gameplay.Hud
         public void Sync(GladiatorInstance gladiator, MatchPhase phase, Camera camera,
                          bool abilityArmed, bool defendArmed, float secondsLeft)
         {
-            bool visible = phase == MatchPhase.Planning && gladiator != null && gladiator.Alive
-                           && camera != null && _arena != null;
+            bool present = gladiator != null && gladiator.Alive && camera != null && _arena != null;
+            bool planning = phase == MatchPhase.Planning && present;
+            bool gain = !planning && present && ShowingRageGain;
+            bool visible = planning || gain;
 
             if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
-            if (_readyFire != null && !visible && _readyFire.activeSelf) _readyFire.SetActive(false);
+            if (_readyFire != null && !planning && _readyFire.activeSelf) _readyFire.SetActive(false);
             if (!visible) return;
+
+            if (gain)
+            {
+                SyncRageGain(gladiator, camera);
+                return;
+            }
+            ShowPlanningControls(true);
 
             // The buttons hang off a point above his head, so they do not sit on the model; the
             // countdown is round his feet, so it frames him rather than floating over him.
-            float headHeight = _arena.ScaleLength(GameConstants.GladiatorRadius) * 2.4f;
+            float headHeight = HeadHeight;
             if (!TryCanvasPoint(_arena.ToWorld(gladiator.Pos, headHeight), camera, out var head)) return;
             if (!TryCanvasPoint(_arena.ToWorld(gladiator.Pos), camera, out var feet)) return;
 
@@ -251,25 +260,14 @@ namespace ColosseumDuel.Gameplay.Hud
             timerColor.a = TimerAlpha;
             _timer.color = timerColor;
 
-            // The ability differs per gladiator, so name it rather than saying "special" - the
-            // names are short enough to fit and tell the player what the button will actually do.
-            _abilityLabel.text = gladiator.AbilityInfo.Name;
-
-            // With a glyph the name drops below it; without one - no icon pack - it keeps the middle.
-            HudFactory.UseSprite(_abilityIcon, _palette != null ? _palette.AbilityIconFor(gladiator.Ability) : null);
-            _abilityIcon.color = _palette != null && _palette.AbilityIconsArePictures ? Color.white : HudFactory.RageColor;
-            bool hasIcon = _abilityIcon.sprite != null;
-            if (_abilityIcon.enabled != hasIcon) _abilityIcon.enabled = hasIcon;
-            _abilityLabel.alignment = hasIcon ? TextAnchor.LowerCenter : TextAnchor.MiddleCenter;
-            _abilityLabel.rectTransform.offsetMin = new Vector2(4f, hasIcon ? 12f : 0f);
-            _abilityLabel.rectTransform.offsetMax = new Vector2(-4f, 0f);
-            _abilityLabel.fontSize = hasIcon ? 12 : 15;
+            SyncAbilityFace(gladiator);
 
             _rageGauge.fillAmount = Mathf.Clamp01(gladiator.Rage / GameConstants.RageMax);
 
             bool ready = gladiator.CanActivateAbility;
             Ability.interactable = ready;
             _abilityGroup.alpha = ready ? 1f : NotReadyAlpha;
+            _abilityGroup.blocksRaycasts = true;
             _defendGroup.alpha = 1f;
 
             // A slow pulse while ready, so a charged ability catches the eye during planning.
@@ -303,6 +301,91 @@ namespace ColosseumDuel.Gameplay.Hud
                                                     + new Vector3(_arena.ScaleLength(GameConstants.GladiatorRadius) * 1.6f, 0f, 0f);
                 }
             }
+        }
+
+        /// <summary>Where above his head the buttons hang from, in world units.</summary>
+        private float HeadHeight => _arena.ScaleLength(GameConstants.GladiatorRadius) * 2.4f;
+
+        /// <summary>
+        /// The ability's name and glyph on its button. The ability differs per gladiator, so it is
+        /// named rather than called "special"; with a glyph the name drops below it, and without one -
+        /// no icon pack - it keeps the middle.
+        /// </summary>
+        private void SyncAbilityFace(GladiatorInstance gladiator)
+        {
+            _abilityLabel.text = gladiator.AbilityInfo.Name;
+
+            HudFactory.UseSprite(_abilityIcon, _palette != null ? _palette.AbilityIconFor(gladiator.Ability) : null);
+            _abilityIcon.color = _palette != null && _palette.AbilityIconsArePictures ? Color.white : HudFactory.RageColor;
+            bool hasIcon = _abilityIcon.sprite != null;
+            if (_abilityIcon.enabled != hasIcon) _abilityIcon.enabled = hasIcon;
+            _abilityLabel.alignment = hasIcon ? TextAnchor.LowerCenter : TextAnchor.MiddleCenter;
+            _abilityLabel.rectTransform.offsetMin = new Vector2(4f, hasIcon ? 12f : 0f);
+            _abilityLabel.rectTransform.offsetMax = new Vector2(-4f, 0f);
+            _abilityLabel.fontSize = hasIcon ? 12 : 15;
+        }
+
+        // ------------------------------------------------------------------
+        // the horn: a look at the rage meter out of turn
+        // ------------------------------------------------------------------
+
+        private const float GainFillSeconds = 0.5f;
+        private const float GainHoldSeconds = 1.0f;
+        private const float GainFadeSeconds = 0.3f;
+        private const float GainSeconds = GainFillSeconds + GainHoldSeconds + GainFadeSeconds;
+
+        private float _gainStarted = -1f;
+        private float _gainFrom;
+        private float _gainTo;
+
+        /// <summary>
+        /// The horn has just put rage on his meter: the ability button comes up over him for a moment,
+        /// out of turn, with its ring filling from what he had to what he has now - so the gain is
+        /// seen to happen rather than found at the next planning phase. Only to be looked at: it
+        /// cannot be pressed, and the rest of the controls stay down.
+        /// </summary>
+        public void ShowRageGain(float from, float to)
+        {
+            _gainFrom = Mathf.Clamp01(from / GameConstants.RageMax);
+            _gainTo = Mathf.Clamp01(to / GameConstants.RageMax);
+            _gainStarted = Time.unscaledTime;
+        }
+
+        /// <summary>Whether that look at the rage meter is up. For tests, and for Sync.</summary>
+        public bool ShowingRageGain => _gainStarted >= 0f && Time.unscaledTime - _gainStarted < GainSeconds;
+
+        /// <summary>How full the meter is drawn right now. For tests.</summary>
+        public float RageGaugeFill => _rageGauge != null ? _rageGauge.fillAmount : 0f;
+
+        private void ShowPlanningControls(bool on)
+        {
+            if (_defendRect.gameObject.activeSelf != on) _defendRect.gameObject.SetActive(on);
+            if (_timerRect.gameObject.activeSelf != on) _timerRect.gameObject.SetActive(on);
+            if (_timerTrack.gameObject.activeSelf != on) _timerTrack.gameObject.SetActive(on);
+        }
+
+        private void SyncRageGain(GladiatorInstance gladiator, Camera camera)
+        {
+            ShowPlanningControls(false);
+            if (!TryCanvasPoint(_arena.ToWorld(gladiator.Pos, HeadHeight), camera, out var head)) return;
+            _abilityRect.anchoredPosition = head + AbilityOffset;
+
+            SyncAbilityFace(gladiator);
+
+            float t = Time.unscaledTime - _gainStarted;
+            _rageGauge.fillAmount = Mathf.Lerp(_gainFrom, _gainTo, Mathf.SmoothStep(0f, 1f, t / GainFillSeconds));
+
+            float alpha = Mathf.Clamp01(1f - (t - GainFillSeconds - GainHoldSeconds) / GainFadeSeconds);
+            Ability.interactable = false;
+            _abilityGroup.alpha = alpha;
+            _abilityGroup.blocksRaycasts = false;
+            _abilityBackground.color = Idle;
+
+            // A glow while it fills, in the horn's own orange-gold, so what changed is the ring.
+            var glow = HudFactory.RageColor;
+            glow.a = 0.6f * alpha;
+            _abilityGlow.color = glow;
+            _abilityGlow.enabled = true;
         }
 
         /// <summary>

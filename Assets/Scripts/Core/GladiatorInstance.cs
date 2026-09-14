@@ -93,6 +93,26 @@ namespace ColosseumDuel.Core
         /// </summary>
         public void BlessWeapon() => WeaponBuffRoundsLeft = GameConstants.WeaponBuffRounds + 1;
 
+        /// <summary>The apple: health back, up to his own and no further. Returns what it actually gave.</summary>
+        public float Heal(float amount)
+        {
+            float before = Hp;
+            Hp = Mathf.Min(Def.MaxHp, Hp + Mathf.Max(0f, amount));
+            return Hp - before;
+        }
+
+        /// <summary>
+        /// The horn: rage straight onto the meter, up to full - past the lock an ability leaves behind
+        /// it, which is about rage coming back from the fight, and the horn is not the fight. Returns
+        /// what it actually put on.
+        /// </summary>
+        public float BlowHorn()
+        {
+            float before = Rage;
+            Rage = Mathf.Min(GameConstants.RageMax, Rage + GameConstants.HornRage);
+            return Rage - before;
+        }
+
         public WeaponDef WeaponDef => WeaponDef.Get(Weapon);
 
         /// <summary>Whether he is behind a shield. A property of the weapon now, not a slot.</summary>

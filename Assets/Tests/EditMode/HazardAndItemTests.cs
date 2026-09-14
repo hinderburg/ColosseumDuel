@@ -90,7 +90,7 @@ namespace ColosseumDuel.Tests
         public void ItIsLaidOnEveryThirdRoundAndNoOther()
         {
             for (int round = 0; round <= 12; round++)
-                Assert.AreEqual(round > 0 && round % 3 == 0, WeaponBuffPickups.IsDueOn(round), $"round {round}");
+                Assert.AreEqual(round > 0 && round % 3 == 0, ArenaPickup.IsDueOn(round), $"round {round}");
         }
 
         [Test]
@@ -102,7 +102,7 @@ namespace ColosseumDuel.Tests
 
             for (int seed = 0; seed < 30; seed++)
             {
-                var buffs = new WeaponBuffPickups(new System.Random(seed), field);
+                var buffs = new ArenaPickup(new System.Random(seed), field);
                 Assert.IsTrue(buffs.SpawnBetween(a, b));
 
                 var p = buffs.Position.Value;
@@ -115,7 +115,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void ASecondIsNotLaidWhileOneIsStillLyingThere()
         {
-            var buffs = new WeaponBuffPickups(new System.Random(1), ObstacleField.Empty);
+            var buffs = new ArenaPickup(new System.Random(1), ObstacleField.Empty);
             buffs.SpawnBetween(new Vector2(0f, -200f), new Vector2(0f, 200f));
             var first = buffs.Position;
 
@@ -126,7 +126,7 @@ namespace ColosseumDuel.Tests
         [Test]
         public void RunningOverItBlessesTheWeaponAndTakesItOffTheSand()
         {
-            var buffs = new WeaponBuffPickups(new System.Random(1), ObstacleField.Empty);
+            var buffs = new ArenaPickup(new System.Random(1), ObstacleField.Empty);
             buffs.PlaceAt(new Vector2(50f, 50f));
             var g = new GladiatorInstance(GladiatorDef.Brutius) { Pos = Vector2.zero };
 

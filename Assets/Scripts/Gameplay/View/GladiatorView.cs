@@ -59,19 +59,24 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>The net's effect, on him when a net has been thrown over him.</summary>
         private GameObject _netFx;
 
-        /// <summary>The blessing's effect, played once on him as he takes it up.</summary>
+        /// <summary>The effects played once on him as he takes something up: the blessing, the apple, the horn.</summary>
         private GameObject _blessingFx;
+        private GameObject _appleFx;
+        private GameObject _hornFx;
+
+        public void PlayBlessing() => PlayPickup(PickupKind.Blessing);
 
         /// <summary>
-        /// He has just taken up the blessing: its effect plays on him once. Restarted by switching it
-        /// off and on, which replays a one-shot from the top - taken up again while the last one is
-        /// still playing, it starts over rather than being missed.
+        /// He has just taken something up off the sand: its effect plays on him once. Restarted by
+        /// switching it off and on, which replays a one-shot from the top - taken up again while the
+        /// last one is still playing, it starts over rather than being missed.
         /// </summary>
-        public void PlayBlessing()
+        public void PlayPickup(PickupKind kind)
         {
-            if (_blessingFx == null) return;
-            _blessingFx.SetActive(false);
-            _blessingFx.SetActive(true);
+            var fx = kind == PickupKind.Apple ? _appleFx : kind == PickupKind.Horn ? _hornFx : _blessingFx;
+            if (fx == null) return;
+            fx.SetActive(false);
+            fx.SetActive(true);
         }
 
         /// <summary>
@@ -1159,6 +1164,8 @@ namespace ColosseumDuel.Gameplay.View
                 if (fx != null && fx.activeSelf) fx.SetActive(false);
             if (_netFx != null && _netFx.activeSelf) _netFx.SetActive(false);
             if (_blessingFx != null && _blessingFx.activeSelf) _blessingFx.SetActive(false);
+            if (_appleFx != null && _appleFx.activeSelf) _appleFx.SetActive(false);
+            if (_hornFx != null && _hornFx.activeSelf) _hornFx.SetActive(false);
         }
 
         /// <summary>
@@ -1171,6 +1178,8 @@ namespace ColosseumDuel.Gameplay.View
         {
             if (palette == null) return;
             if (palette.BlessingFx != null) _blessingFx = MakeFx(palette.BlessingFx, "BlessingFx", 1f, 0f);
+            if (palette.AppleFx != null) _appleFx = MakeFx(palette.AppleFx, "AppleFx", 1f, 0f);
+            if (palette.HornFx != null) _hornFx = MakeFx(palette.HornFx, "HornFx", 1f, 0f);
             if (palette.AbilityFx == null) return;
 
             foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))

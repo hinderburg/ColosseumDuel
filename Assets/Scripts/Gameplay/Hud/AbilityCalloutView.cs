@@ -263,6 +263,14 @@ namespace ColosseumDuel.Gameplay.Hud
 
         public const string BlessingName = "Blessing";
 
+        /// <summary>
+        /// Something taken up off the sand that is spent the moment it is taken - the apple, the horn:
+        /// its name over the man who took it, in his side's colour, and what it gave under it. It
+        /// fades where it is; there is nothing still working for the strip to keep.
+        /// </summary>
+        public void ShowPickup(Vector2 virtualPos, PlayerSide side, string name, string description)
+            => Put(virtualPos, side, name, description, description, null, null);
+
         private void Put(Vector2 virtualPos, PlayerSide side, string name, string description,
             string dockDescription, Dock target, Func<int> roundsLeft)
         {
