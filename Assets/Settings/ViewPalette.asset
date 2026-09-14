@@ -103,6 +103,7 @@ MonoBehaviour:
   BlessingFx: {fileID: 184608, guid: 9edc33f62cf3ae849badc4cc12fe5f8a, type: 3}
   AppleFx: {fileID: 187180, guid: 1ed56f4c486ff6141a344e5e5714e1b9, type: 3}
   HornFx: {fileID: 147642, guid: 685c97d007af49549b239b56b6d2000a, type: 3}
+  BlessingSound: {fileID: 8300000, guid: 101106cd810615041bb13f121e59a2d7, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}

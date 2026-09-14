@@ -44,6 +44,7 @@ namespace ColosseumDuel.EditorTools
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
         private const string BlessingFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Nova/Fire/NovaFireRed.prefab";
+        private const string BlessingSoundPath = "Assets/Epic Toon FX/Sound/etfx_shoot_magic.wav";
         private const string AppleFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Magic/Buff/MagicBuffGreen.prefab";
         private const string HornFxPath =
@@ -595,6 +596,11 @@ namespace ColosseumDuel.EditorTools
             if (palette.BlessingFx == null)
                 Debug.LogWarning($"[Colosseum] Effect prefab not found at {BlessingFxPath} - taking up the " +
                                  "blessing will play without one. Import Epic Toon FX to get it.");
+
+            palette.BlessingSound = AssetDatabase.LoadAssetAtPath<AudioClip>(BlessingSoundPath);
+            if (palette.BlessingSound == null)
+                Debug.LogWarning($"[Colosseum] Sound not found at {BlessingSoundPath} - taking up the blessing " +
+                                 "will sound like its effect's own fireball. Import Epic Toon FX to get it.");
 
             palette.AppleFx = AssetDatabase.LoadAssetAtPath<GameObject>(AppleFxPath);
             palette.HornFx = AssetDatabase.LoadAssetAtPath<GameObject>(HornFxPath);

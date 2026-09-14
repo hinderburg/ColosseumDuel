@@ -976,6 +976,27 @@ namespace ColosseumDuel.Tests
                 "the swing left over from the last clash went off in the new one");
         }
 
+        /// <summary>
+        /// Taking up the blessing sounds like a magic shot - the pack's etfx_shoot_magic - and not like
+        /// the fireball its effect came with.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBlessingSoundsLikeAMagicShot()
+        {
+            var palette = _controller.Arena.Palette;
+            if (palette.BlessingFx == null || palette.BlessingSound == null)
+                Assert.Ignore("No Epic Toon FX here - there is no effect or sound to check.");
+            yield return null;
+
+            var fx = FindIn("Player", "BlessingFx");
+            Assert.IsNotNull(fx, "the player's gladiator has no blessing effect");
+            var sources = fx.GetComponentsInChildren<AudioSource>(true);
+            Assert.IsNotEmpty(sources, "the blessing's effect has nothing to play a sound with");
+            foreach (var source in sources)
+                Assert.AreEqual("etfx_shoot_magic", source.clip != null ? source.clip.name : null,
+                    "the blessing should sound like a magic shot");
+        }
+
         private GladiatorView View(string name)
             => _controller.GetComponentsInChildren<GladiatorView>(true).First(v => v.name == name);
 

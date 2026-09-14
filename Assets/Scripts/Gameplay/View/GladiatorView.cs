@@ -1178,6 +1178,13 @@ namespace ColosseumDuel.Gameplay.View
         {
             if (palette == null) return;
             if (palette.BlessingFx != null) _blessingFx = MakeFx(palette.BlessingFx, "BlessingFx", 1f, 0f);
+
+            // The effect's own sound is a fireball going off; the blessing is a magic shot. Swapped on
+            // this copy rather than on the pack's prefab, which is not ours to change and is not in
+            // the repository anyway.
+            if (_blessingFx != null && palette.BlessingSound != null)
+                foreach (var source in _blessingFx.GetComponentsInChildren<AudioSource>(true))
+                    source.clip = palette.BlessingSound;
             if (palette.AppleFx != null) _appleFx = MakeFx(palette.AppleFx, "AppleFx", 1f, 0f);
             if (palette.HornFx != null) _hornFx = MakeFx(palette.HornFx, "HornFx", 1f, 0f);
             if (palette.AbilityFx == null) return;

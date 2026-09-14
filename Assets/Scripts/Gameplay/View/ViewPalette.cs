@@ -198,6 +198,12 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Played once on a gladiator taking up the horn: a rising orange-gold burst.</summary>
         public GameObject HornFx;
 
+        /// <summary>
+        /// What taking up the blessing sounds like. The blessing's effect comes with a fireball's bang
+        /// of its own; this plays in its place. From Epic Toon FX, like the effect.
+        /// </summary>
+        public AudioClip BlessingSound;
+
         public GameObject AbilityFxFor(ColosseumDuel.Core.AbilityKey key)
         {
             int index = (int)key;
