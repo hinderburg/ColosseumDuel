@@ -26,7 +26,6 @@ namespace ColosseumDuel.Gameplay.Hud
         private readonly List<Text> _pickAbilityLabels = new List<Text>();
         private readonly List<Image> _pickIcons = new List<Image>();
 
-        private Text _phaseLabel;
         private Text _hint;
         private Button _defendButton;
         private Button _abilityButton;
@@ -169,16 +168,10 @@ namespace ColosseumDuel.Gameplay.Hud
             menuRect.anchoredPosition = new Vector2(10f, -10f);
             _menuButton.onClick.AddListener(() => _menu?.ReturnToMainMenu());
 
-            // Below the opponent's corner, not beside it: at this width a phase line long enough to
-            // be useful runs straight into the squad tiles.
-            _phaseLabel = HudFactory.CreateLabel("PhaseLabel", root, "", 20, TextAnchor.UpperLeft);
-            _phaseLabel.rectTransform.anchorMin = new Vector2(0f, 1f);
-            _phaseLabel.rectTransform.anchorMax = new Vector2(1f, 1f);
-            _phaseLabel.rectTransform.pivot = new Vector2(0.5f, 1f);
-            _phaseLabel.rectTransform.offsetMin = new Vector2(14f, 0f);
-            _phaseLabel.rectTransform.offsetMax = new Vector2(-14f, 0f);
-            _phaseLabel.rectTransform.sizeDelta = new Vector2(_phaseLabel.rectTransform.sizeDelta.x, 26f);
-            _phaseLabel.rectTransform.anchoredPosition = new Vector2(0f, -(RosterEntryView.Height + 26f));
+            // No phase line under the opponent's corner any more ("Clash 1 · round 8 · planning"):
+            // taken out on request. The phase shows in the arena itself - the blue tint and the
+            // slowed world while planning - and the space is the opponent's strip of lasting
+            // effects now (see AbilityCalloutView).
         }
 
         /// <summary>
@@ -406,12 +399,10 @@ namespace ColosseumDuel.Gameplay.Hud
 
             SyncRoster(state);
             SyncActions(state);
-            SyncPhaseLabel(state);
             SyncPlanningVignette(state);
             _tutorial.Sync(state);
             SyncOverlay(menuUp ? null : state);
 
-            SetActive(_phaseLabel.gameObject, !menuUp);
             SetActive(_playerCorner, !menuUp);
             SetActive(_botCorner, !menuUp);
             SetActive(_menuButton.gameObject, !menuUp);
@@ -474,27 +465,6 @@ namespace ColosseumDuel.Gameplay.Hud
                 case ControlScheme.Tap: return "Tap the arena and your gladiator runs there";
                 case ControlScheme.Drag: return "Pull back from your gladiator and release to dash";
                 default: return "Swipe anywhere to pull back - he runs the other way, as far as you pull";
-            }
-        }
-
-        private void SyncPhaseLabel(MatchState state)
-        {
-            switch (state.Phase)
-            {
-                // No countdown here any more - it lives above the gladiator, next to the two buttons
-                // it is timing. Two clocks showing the same number is one more than anyone reads.
-                case MatchPhase.Planning:
-                    _phaseLabel.text = $"Clash {state.Clash} · round {state.Round} · planning";
-                    break;
-                case MatchPhase.Action:
-                    _phaseLabel.text = $"Clash {state.Clash} · round {state.Round} · action";
-                    break;
-                case MatchPhase.Pick:
-                    _phaseLabel.text = "Choosing a gladiator";
-                    break;
-                default:
-                    _phaseLabel.text = state.Clash > 0 ? $"Clash {state.Clash}" : "";
-                    break;
             }
         }
 
