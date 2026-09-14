@@ -408,10 +408,22 @@ namespace ColosseumDuel.Gameplay
 
         private DamageNumbersView _damageNumbers;
 
+        /// <summary>
+        /// An ability went off: a ring in its colour from the man who used it, and its name going up
+        /// over him - large, with what it does underneath.
+        /// </summary>
         private void OnAbilityFired(PlayerSide side)
         {
-            ViewFor(side).PlayAbility(AbilityBurstColor);
+            var g = Manager.State.Get(side).Active;
+            ViewFor(side).PlayAbility(g != null ? AbilityVisuals.ColorFor(g.Def.Ability) : AbilityBurstColor);
+            if (g == null) return;
+
+            // Found on demand, like the damage numbers: the HUD builds it in its own Start.
+            if (_callouts == null) _callouts = FindFirstObjectByType<AbilityCalloutView>();
+            if (_callouts != null) _callouts.Show(g.Pos, g.Def);
         }
+
+        private AbilityCalloutView _callouts;
 
         private GladiatorView ViewFor(PlayerSide side)
             => side == PlayerSide.P1 ? _playerView : _botView;

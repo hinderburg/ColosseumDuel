@@ -270,6 +270,64 @@ namespace ColosseumDuel.Tests
             return block.GetColor(Shader.PropertyToID("_BaseColor"));
         }
 
+        /// <summary>
+        /// While an ability lasts it glows at his feet in its own colour: steady, then blinking slowly
+        /// through its last cycle - the weapon blessing's rule. A net glows on the man it caught.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ALastingAbilityGlowsSteadyThenBlinksThroughItsLastCycle()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var g = _controller.Manager.State.P1.Active;
+            var view = _controller.GetComponentsInChildren<GladiatorView>(true).First(v => v.name == "Player");
+            var aura = FindIn("Player", "AbilityRing");
+            Assert.IsNotNull(aura, "there is no aura at his feet");
+
+            g.Buff = default;
+            yield return null;
+            Assert.AreEqual(0f, view.AbilityAuraStrength, 0.0001f);
+            Assert.IsFalse(aura.gameObject.activeInHierarchy, "an aura with no ability running");
+
+            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 2 };
+            float least = 1f, most = 0f;
+            for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
+            {
+                yield return null;
+                least = Mathf.Min(least, view.AbilityAuraStrength);
+                most = Mathf.Max(most, view.AbilityAuraStrength);
+            }
+            Assert.IsTrue(aura.gameObject.activeInHierarchy);
+            Assert.AreEqual(1f, least, 0.001f, "it should glow steady while it has cycles to run");
+
+            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 1 };
+            least = 1f;
+            most = 0f;
+            for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
+            {
+                yield return null;
+                least = Mathf.Min(least, view.AbilityAuraStrength);
+                most = Mathf.Max(most, view.AbilityAuraStrength);
+            }
+            Assert.Less(least, 0.4f, "on its last cycle it should fade right down as it blinks");
+            Assert.Greater(most, 0.9f, "and come back up again");
+
+            // Second Wind is spent the moment it fires: nothing to glow for.
+            g.Buff = new ActiveBuff { Key = AbilityKey.SecondWind, CyclesLeft = 2 };
+            yield return null;
+            Assert.AreEqual(0f, view.AbilityAuraStrength, 0.0001f, "an instant heal left an aura behind");
+
+            // A net glows on the man it landed on.
+            g.Buff = default;
+            g.EnsnaredCyclesLeft = 2;
+            yield return null;
+            Assert.AreEqual(1f, view.NetAuraStrength, 0.0001f, "a netted man should show it");
+            g.EnsnaredCyclesLeft = 0;
+            yield return null;
+            Assert.AreEqual(0f, view.NetAuraStrength, 0.0001f);
+        }
+
         [UnityTest]
         public IEnumerator TheFigureRunsWhenTheGladiatorDoes()
         {

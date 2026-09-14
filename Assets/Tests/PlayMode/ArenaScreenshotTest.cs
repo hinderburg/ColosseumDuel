@@ -528,6 +528,12 @@ namespace ColosseumDuel.Tests
             yield return null;
 
             var controller = Object.FindFirstObjectByType<GameController>();
+
+            // Past the main menu, which the scene opens on and which would otherwise sit in front of
+            // everything this frame is for.
+            Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.MenuView>().StartMatch();
+            yield return null;
+
             controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.1f);
 
@@ -541,11 +547,18 @@ namespace ColosseumDuel.Tests
             controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
 
             // Late enough in the expansion that the ring has cleared the gladiator's own body -
-            // early on it is smaller than he is and hides behind him.
+            // early on it is smaller than he is and hides behind him. The ability's name is up over
+            // him by now too.
             yield return RunSeconds(GameConstants.PlanningTime + 0.16f);
 
             yield return Capture(SuffixPath("-burst"));
+
+            // And once the name has gone, the aura it leaves at his feet for as long as it lasts.
+            yield return RunSeconds(AbilityCalloutViewSeconds + 0.2f);
+            yield return Capture(SuffixPath("-aura"));
         }
+
+        private const float AbilityCalloutViewSeconds = ColosseumDuel.Gameplay.Hud.AbilityCalloutView.Seconds;
 
         private static IEnumerator Capture(string outputPath)
         {

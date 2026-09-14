@@ -192,6 +192,43 @@ namespace ColosseumDuel.Tests
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
+        /// <summary>
+        /// An ability firing puts its name up over the man who used it, large, with what it does in
+        /// smaller type underneath - and takes it down again once it has been read.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AnAbilityFiringPutsItsNameUpLargeWithWhatItDoesUnderneath()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, 5f);
+
+            var g = State.P1.Active;
+            g.Rage = GameConstants.RageMax;
+            Assert.IsTrue(_controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, true));
+            yield return RunUntil(() => State.Phase == MatchPhase.Action, 6f);
+            yield return null;
+
+            var callouts = Object.FindFirstObjectByType<AbilityCalloutView>(FindObjectsInactive.Include);
+            Assert.IsNotNull(callouts, "the HUD has no ability callouts");
+            var shown = callouts.GetComponentsInChildren<Transform>(true)
+                .Where(t => t.name.StartsWith("Callout_") && t.gameObject.activeSelf)
+                .Select(t => t.GetComponentsInChildren<Text>(true))
+                .FirstOrDefault(labels => labels.Any(l => l.name == "Name" && l.text == g.Def.AbilityName));
+            Assert.IsNotNull(shown, $"{g.Def.AbilityName} went off and nothing said so");
+
+            var name = shown.First(l => l.name == "Name");
+            var description = shown.First(l => l.name == "Description");
+            StringAssert.AreEqualIgnoringCase(g.Def.AbilityDescription, description.text);
+            Assert.Greater(name.fontSize, description.fontSize, "the name should be the big line");
+
+            var onScreen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(g.Pos));
+            Assert.Less(Mathf.Abs(name.transform.position.x - onScreen.x), 60f, "the name is not over the man who used it");
+            Assert.Greater(name.transform.position.y, onScreen.y, "the name should go up over him, not under him");
+
+            yield return RunSeconds(AbilityCalloutView.Seconds + 0.3f);
+            Assert.IsFalse(name.transform.parent.gameObject.activeSelf, "the callout never went away");
+        }
+
         [Test]
         public void EveryArchetypeHasItsOwnIcon()
         {

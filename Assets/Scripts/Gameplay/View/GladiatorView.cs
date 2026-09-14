@@ -38,6 +38,19 @@ namespace ColosseumDuel.Gameplay.View
         private Transform _weaponMarker;
         private Transform _shieldMarker;
         private Transform _abilityMarker;
+        private Renderer _abilityRenderer;
+        private Transform _netMarker;
+        private Renderer _netRenderer;
+        private MaterialPropertyBlock _auraProperties;
+
+        /// <summary>How strongly his own ability glows at his feet this frame, 0 to 1.</summary>
+        public float AbilityAuraStrength { get; private set; }
+
+        /// <summary>How strongly a net thrown over him glows this frame, 0 to 1.</summary>
+        public float NetAuraStrength { get; private set; }
+
+        /// <summary>How solid an aura is at full strength: a glow on the sand, not paint.</summary>
+        private const float AuraAlpha = 0.75f;
         private ViewPalette _palette;
         private GameObject[] _figures;
         private Renderer[] _figureRenderers;
@@ -79,16 +92,13 @@ namespace ColosseumDuel.Gameplay.View
                     new Vector3(-radius * 1.3f, bodyHeight * 0.75f, 0f), radius * 0.55f).transform;
             }
 
-            // A ring at the feet while an ability buff is running.
-            var ability = new GameObject("AbilityRing");
-            ability.transform.SetParent(model.transform, false);
-            ability.transform.localPosition = new Vector3(0f, 0.04f, 0f);
-            ability.AddComponent<MeshFilter>().sharedMesh =
-                ViewPrimitives.CreateAnnulus(radius * 1.25f, radius * 1.7f, 48);
-            var abilityRenderer = ability.AddComponent<MeshRenderer>();
-            abilityRenderer.sharedMaterial = palette.BarRage;
-            abilityRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            view._abilityMarker = ability.transform;
+            // A glow at the feet while an ability lasts, in the ability's own colour - steady, and
+            // blinking through its last cycle (see SyncAbilityAura). A second, wider one for a net
+            // thrown over him, which is the other man's ability acting on this one.
+            view._abilityMarker = MakeAura(palette, "AbilityRing", model.transform,
+                radius * 1.25f, radius * 1.7f, out view._abilityRenderer);
+            view._netMarker = MakeAura(palette, "NetRing", model.transform,
+                radius * 1.8f, radius * 2.2f, out view._netRenderer);
 
             // --- bars, standing upright above the head and turned to face the camera ---
             // They used to lie flat on the ground, which only reads under a straight top-down view;
@@ -534,12 +544,7 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         private void SyncWeaponGlow(bool glowing, bool ending)
         {
-            float strength = 0f;
-            if (glowing)
-            {
-                float wave = 0.5f + 0.5f * Mathf.Cos(Time.unscaledTime * Mathf.PI * 2f / GlowBlinkPeriod);
-                strength = ending ? GlowBlinkFloor + (1f - GlowBlinkFloor) * wave : 1f;
-            }
+            float strength = AbilityVisuals.GlowStrength(glowing, ending);
             WeaponGlowStrength = strength;
 
             foreach (var shell in _glowShells)
@@ -552,12 +557,6 @@ namespace ColosseumDuel.Gameplay.View
             _glowProperties.SetColor(BaseColorId, color);
             foreach (var renderer in _glowRenderers) renderer.SetPropertyBlock(_glowProperties);
         }
-
-        /// <summary>One slow blink of the last cycle's glow, in real seconds.</summary>
-        private const float GlowBlinkPeriod = 1.2f;
-
-        /// <summary>How far the blink fades: to a tenth, never quite out.</summary>
-        private const float GlowBlinkFloor = 0.1f;
 
         /// <summary>
         /// Rolls the carried weapon about its own blade so the flat of it faces the sky.
@@ -955,6 +954,8 @@ namespace ColosseumDuel.Gameplay.View
                 // Nothing above the head is worth reading on a body: an empty HP bar and the tags
                 // for gear he is no longer carrying only clutter the end of the round.
                 _bars.gameObject.SetActive(false);
+                SetActive(_abilityMarker, false);
+                SetActive(_netMarker, false);
                 return;
             }
 
@@ -978,8 +979,57 @@ namespace ColosseumDuel.Gameplay.View
 
             SetActive(_weaponMarker, g.Weapon != WeaponKind.None);
             SetActive(_shieldMarker, g.HasShield);
-            SetActive(_abilityMarker, g.Buff.IsActive);
+            SyncAbilityAura(g);
             SyncCarriedGear(g);
+        }
+
+        /// <summary>
+        /// The glow of an ability that is still working, by the weapon blessing's rule: steady while
+        /// it has cycles to run, a slow blink through the last. His own ability on the inner ring -
+        /// not Second Wind, which is spent the moment it fires - and a net over him on the outer.
+        /// </summary>
+        private void SyncAbilityAura(GladiatorInstance g)
+        {
+            bool own = g.Buff.IsActive && AbilityVisuals.AurasOnUser(g.Buff.Key);
+            AbilityAuraStrength = AbilityVisuals.GlowStrength(own, g.Buff.CyclesLeft == 1);
+            ShowAura(_abilityMarker, _abilityRenderer, own, AbilityAuraStrength,
+                AbilityVisuals.ColorFor(g.Buff.Key));
+
+            NetAuraStrength = AbilityVisuals.GlowStrength(g.IsEnsnared, g.EnsnaredCyclesLeft == 1);
+            ShowAura(_netMarker, _netRenderer, g.IsEnsnared, NetAuraStrength,
+                AbilityVisuals.ColorFor(AbilityKey.Net));
+        }
+
+        private void ShowAura(Transform ring, Renderer renderer, bool on, float strength, Color color)
+        {
+            if (ring == null) return;
+            if (ring.gameObject.activeSelf != on) ring.gameObject.SetActive(on);
+            if (!on || renderer == null) return;
+
+            if (_auraProperties == null) _auraProperties = new MaterialPropertyBlock();
+            color.a = AuraAlpha * strength;
+            _auraProperties.SetColor(BaseColorId, color);
+            renderer.SetPropertyBlock(_auraProperties);
+        }
+
+        /// <summary>
+        /// One ring at the feet, on the transparent glow material so its colour and fade are set per
+        /// frame. Built hidden.
+        /// </summary>
+        private static Transform MakeAura(ViewPalette palette, string name, Transform parent,
+            float inner, float outer, out Renderer renderer)
+        {
+            var ring = new GameObject(name);
+            ring.transform.SetParent(parent, false);
+            ring.transform.localPosition = new Vector3(0f, 0.04f, 0f);
+            ring.AddComponent<MeshFilter>().sharedMesh = ViewPrimitives.CreateAnnulus(inner, outer, 48);
+            var meshRenderer = ring.AddComponent<MeshRenderer>();
+            meshRenderer.sharedMaterial = palette.WeaponGlow != null ? palette.WeaponGlow : palette.BarRage;
+            meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            meshRenderer.receiveShadows = false;
+            ring.SetActive(false);
+            renderer = meshRenderer;
+            return ring.transform;
         }
 
         /// <summary>

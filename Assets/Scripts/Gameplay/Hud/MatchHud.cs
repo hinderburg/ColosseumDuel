@@ -88,6 +88,7 @@ namespace ColosseumDuel.Gameplay.Hud
             // Over the arena and under the menu: the numbers belong to the fight, not to the
             // screens in front of it.
             DamageNumbersView.Create(root, Controller != null ? Controller.Arena : null);
+            AbilityCalloutView.Create(root, Controller != null ? Controller.Arena : null);
 
             // Last, so it draws over everything else in the canvas: it is a screen in front of the
             // match rather than a panel inside it.
