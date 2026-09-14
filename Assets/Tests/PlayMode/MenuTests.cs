@@ -318,6 +318,96 @@ namespace ColosseumDuel.Tests
             state.Phase = MatchPhase.MatchEnd;
         }
 
+        /// <summary>
+        /// Tapping a man's card opens his three abilities; choosing one there goes with him into the
+        /// fight, and the card shows it from then on.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TappingACardOpensHisAbilities_AndTheOneChosenGoesIntoTheFight()
+        {
+            FindButton("ChooseGladiators").onClick.Invoke();
+            yield return null;
+
+            int hilius = OffersOf(GladiatorId.Hilius).First();
+            FindButton($"OfferCard_{hilius}").onClick.Invoke();
+            yield return null;
+
+            Assert.IsTrue(_menu.AbilityWindowOpen, "tapping the card should open his abilities");
+            Assert.IsTrue(Find("AbilityWindow").activeInHierarchy);
+            StringAssert.Contains("Hilius", Find("AbilityGladiatorName").GetComponent<Text>().text);
+            for (int k = 0; k < 3; k++)
+                Assert.AreEqual(AbilityDef.Get(GladiatorDef.Hilius.Abilities[k]).Name,
+                    Find($"AbilityName_{k}").GetComponent<Text>().text, $"ability card {k}");
+
+            FindButton("AbilitySelect_2").onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(AbilityKey.Mongoose, _controller.AbilityFor(GladiatorId.Hilius));
+            Assert.IsTrue(Find("AbilityOutline_2").GetComponent<Image>().enabled, "the chosen card should be outlined");
+            Assert.IsFalse(Find("AbilityOutline_0").GetComponent<Image>().enabled, "and only the chosen one");
+            StringAssert.Contains("Mongoose", Find("AbilityDetailName").GetComponent<Text>().text);
+
+            FindButton("AbilityClose").onClick.Invoke();
+            yield return null;
+            Assert.IsFalse(_menu.AbilityWindowOpen);
+            Assert.AreEqual("Mongoose", Find($"OfferAbility_{hilius}").GetComponent<Text>().text,
+                "the card should show the ability he now takes in");
+
+            // Into the fight with it.
+            if (!_controller.Squad.Contains(GladiatorId.Hilius))
+            {
+                FindButton("TeamRemove_2").onClick.Invoke();
+                yield return null;
+                FindButton($"Offer_{hilius}").onClick.Invoke();
+                yield return null;
+            }
+            FindButton("ConfirmSquad").onClick.Invoke();
+            yield return null;
+
+            var man = _controller.Manager.State.P1.Roster.First(g => g.Def.Id == GladiatorId.Hilius);
+            Assert.AreEqual(AbilityKey.Mongoose, man.Ability, "he should fight with the ability chosen for him");
+        }
+
+        /// <summary>
+        /// The team along the bottom is the three chosen, in order, each with the ability he takes in;
+        /// its cross takes one out, and the fight cannot start a man short.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheTeamStripShowsTheThreeChosen_AndItsCrossTakesOneOut()
+        {
+            FindButton("ChooseGladiators").onClick.Invoke();
+            yield return null;
+
+            for (int slot = 0; slot < GameConstants.SquadSize; slot++)
+            {
+                var def = GladiatorDef.Get(_controller.Squad[slot]);
+                Assert.AreEqual(def.Name, Find($"TeamName_{slot}").GetComponent<Text>().text, $"team slot {slot}");
+                Assert.IsTrue(Find($"TeamRemove_{slot}").activeInHierarchy);
+            }
+            Assert.IsTrue(FindButton("ConfirmSquad").interactable);
+
+            FindButton("TeamRemove_0").onClick.Invoke();
+            yield return null;
+
+            Assert.IsFalse(FindButton("ConfirmSquad").interactable, "the fight cannot start a man short");
+            Assert.IsTrue(Find("TeamEmpty_2").GetComponent<Text>().enabled, "the last place should now be empty");
+            Assert.AreEqual(GladiatorDef.Get(_controller.Squad[1]).Name, Find("TeamName_0").GetComponent<Text>().text,
+                "the others move up rather than leaving a hole in the middle");
+        }
+
+        [UnityTest]
+        public IEnumerator StartFightStartsTheFight()
+        {
+            FindButton("ChooseGladiators").onClick.Invoke();
+            yield return null;
+
+            FindButton("ConfirmSquad").onClick.Invoke();
+            yield return null;
+
+            Assert.AreEqual(MenuView.Screen.Closed, _menu.Current, "Start Fight should go straight into the fight");
+            Assert.IsTrue(Find("Overlay").activeInHierarchy, "the pick screen should be up");
+        }
+
         private static IEnumerator RunSeconds(float seconds)
         {
             float t = 0f;
@@ -332,7 +422,7 @@ namespace ColosseumDuel.Tests
         {
             for (int i = 0; i < GladiatorDef.All.Count * MenuView.CopiesPerArchetype; i++)
             {
-                var label = Find($"Offer_{i}").GetComponentInChildren<Text>();
+                var label = Find($"OfferName_{i}").GetComponent<Text>();
                 if (label.text.StartsWith(GladiatorDef.Get(id).Name)) yield return i;
             }
         }

@@ -56,6 +56,13 @@ namespace ColosseumDuel.Tests
             yield return null;
             yield return Capture(SuffixPath("-roster"));
 
+            // And one man's abilities, over it - the window a tap on his card opens.
+            menu.OpenAbilityWindow(0);
+            yield return null;
+            yield return Capture(SuffixPath("-abilities"));
+            menu.CloseAbilityWindow();
+            yield return null;
+
             menu.StartMatch();
             yield return null;
             yield return Capture(SuffixPath("-pick"));

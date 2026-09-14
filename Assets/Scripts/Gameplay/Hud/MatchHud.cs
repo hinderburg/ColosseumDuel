@@ -338,8 +338,11 @@ namespace ColosseumDuel.Gameplay.Hud
                 // The ability on its own line, in its own colour: what it does is the whole basis of
                 // the choice, and it was previously reduced to a bare name at the end of the stats -
                 // "Mongoose" tells a first-time player nothing at all.
-                var ability = HudFactory.CreateLabel($"Ability_{slot}", button.transform, "", 14,
+                // Wrapped, and a size down: the line now says how long the ability lasts as well,
+                // and on one line at the old size it ran off the edge of the card.
+                var ability = HudFactory.CreateLabel($"Ability_{slot}", button.transform, "", 12,
                     TextAnchor.LowerLeft, HudFactory.RageColor);
+                ability.horizontalOverflow = HorizontalWrapMode.Wrap;
                 ability.rectTransform.anchorMin = Vector2.zero;
                 ability.rectTransform.anchorMax = Vector2.one;
                 ability.rectTransform.offsetMin = new Vector2(84f, 10f);
