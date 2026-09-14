@@ -95,8 +95,11 @@ namespace ColosseumDuel.Gameplay.Hud
             outline.effectDistance = new Vector2(width, -width);
         }
 
-        /// <summary>Puts one ability's name up over the point he is standing on.</summary>
-        public void Show(Vector2 virtualPos, GladiatorDef def)
+        /// <summary>
+        /// Puts one ability's name up over the point he is standing on, in his side's colour - blue
+        /// for the player's men, red for the opponent's - so whose ability it was reads before the name.
+        /// </summary>
+        public void Show(Vector2 virtualPos, GladiatorDef def, PlayerSide side)
         {
             if (_arena == null || def == null) return;
             var camera = _arena.ArenaCamera;
@@ -111,7 +114,7 @@ namespace ColosseumDuel.Gameplay.Hud
             slot.From = local;
             slot.Left = Seconds;
             slot.Name.text = def.AbilityName;
-            slot.Name.color = AbilityVisuals.ColorFor(def.Ability);
+            slot.Name.color = side == PlayerSide.P1 ? HudFactory.PlayerColor : HudFactory.BotColor;
             slot.Description.text = Capitalised(def.AbilityDescription);
             slot.Description.color = HudFactory.TextColor;
             slot.Root.anchoredPosition = local;

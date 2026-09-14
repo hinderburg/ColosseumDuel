@@ -68,6 +68,13 @@ MonoBehaviour:
   - {r: 0.42134306, g: 0.67976576, b: 0.5065363, a: 1}
   - {r: 0.93876123, g: 0.7008529, b: 0.23922439, a: 1}
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
+  AbilityFx:
+  - {fileID: 108178, guid: e053c479a3add9649af9d847a748547d, type: 3}
+  - {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
+  - {fileID: 181232, guid: b9cf594d1d8302e4a884738a176ead3a, type: 3}
+  - {fileID: 110446, guid: f6322404d6e3b914aa01ac044fb9415e, type: 3}
+  - {fileID: 187180, guid: 1ed56f4c486ff6141a344e5e5714e1b9, type: 3}
+  - {fileID: 134560, guid: 4f491700992cb06488116943d3b5c9b8, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}

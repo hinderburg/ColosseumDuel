@@ -328,6 +328,44 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(0f, view.NetAuraStrength, 0.0001f);
         }
 
+        /// <summary>
+        /// While an ability lasts its effect plays on the man - a shield round Bulwark, and so on - and
+        /// a net plays on the man it caught. Off again when it ends.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ALastingAbilityPlaysItsEffectOnTheMan_AndANetOnTheManItCaught()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+            if (_controller.Arena.Palette.AbilityFxFor(AbilityKey.Bulwark) == null)
+                Assert.Ignore("No effect prefabs - Epic Toon FX is not imported here.");
+
+            var g = _controller.Manager.State.P1.Active;
+            var bulwark = FindIn("Player", "AbilityFx_Bulwark");
+            var net = FindIn("Player", "NetFx");
+            Assert.IsNotNull(bulwark, "there is no Bulwark effect on the man");
+            Assert.IsNotNull(net, "there is no net effect on the man");
+
+            g.Buff = default;
+            g.EnsnaredCyclesLeft = 0;
+            yield return null;
+            Assert.IsFalse(bulwark.gameObject.activeSelf, "an effect is playing with no ability running");
+
+            g.Buff = new ActiveBuff { Key = AbilityKey.Bulwark, CyclesLeft = 2 };
+            yield return null;
+            Assert.IsTrue(bulwark.gameObject.activeSelf, "Bulwark is up and nothing on him shows it");
+
+            g.Buff = default;
+            g.EnsnaredCyclesLeft = 2;
+            yield return null;
+            Assert.IsFalse(bulwark.gameObject.activeSelf, "the effect should end with the ability");
+            Assert.IsTrue(net.gameObject.activeSelf, "a netted man should show the net");
+
+            g.EnsnaredCyclesLeft = 0;
+            yield return null;
+            Assert.IsFalse(net.gameObject.activeSelf);
+        }
+
         [UnityTest]
         public IEnumerator TheFigureRunsWhenTheGladiatorDoes()
         {

@@ -171,6 +171,19 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public GameObject AbilityReadyFire;
 
+        /// <summary>
+        /// The effect each ability plays on the man while it lasts, indexed by AbilityKey - Net's is
+        /// played on the man it caught rather than the one who threw it. Epic Toon FX, so null in a
+        /// clean clone, where the glow at his feet is left to say it alone.
+        /// </summary>
+        public GameObject[] AbilityFx;
+
+        public GameObject AbilityFxFor(ColosseumDuel.Core.AbilityKey key)
+        {
+            int index = (int)key;
+            return AbilityFx != null && index >= 0 && index < AbilityFx.Length ? AbilityFx[index] : null;
+        }
+
         /// <summary>Flame set along the arena wall. Same caveat: absent in a clean clone.</summary>
         public GameObject Torch;
 

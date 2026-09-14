@@ -420,7 +420,7 @@ namespace ColosseumDuel.Gameplay
 
             // Found on demand, like the damage numbers: the HUD builds it in its own Start.
             if (_callouts == null) _callouts = FindFirstObjectByType<AbilityCalloutView>();
-            if (_callouts != null) _callouts.Show(g.Pos, g.Def);
+            if (_callouts != null) _callouts.Show(g.Pos, g.Def, side);
         }
 
         private AbilityCalloutView _callouts;

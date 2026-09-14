@@ -51,6 +51,33 @@ namespace ColosseumDuel.Gameplay.View
 
         /// <summary>How solid an aura is at full strength: a glow on the sand, not paint.</summary>
         private const float AuraAlpha = 0.75f;
+
+        /// <summary>The effect of each ability he can be under, indexed by AbilityKey; null where there is none.</summary>
+        private readonly GameObject[] _abilityFx =
+            new GameObject[System.Enum.GetValues(typeof(AbilityKey)).Length];
+
+        /// <summary>The net's effect, on him when a net has been thrown over him.</summary>
+        private GameObject _netFx;
+
+        /// <summary>
+        /// How much bigger than authored an ability's effect is drawn. The pack builds them round a
+        /// figure of a unit or two; these men stand four and a half. The flame is a torch's, sized for
+        /// a sconce, and hidden under his body at the common size - so it is drawn larger than the rest.
+        /// The sphere round Bulwark is drawn large enough to hold the whole man. Set by eye against
+        /// EachAbilityEffectRendersAFrame.
+        /// </summary>
+        private static float AbilityFxScale(AbilityKey key)
+            => key == AbilityKey.Fury || key == AbilityKey.Bulwark ? 3.5f : 2f;
+
+        /// <summary>
+        /// How far up him an effect sits, in world units. The auras and the net are on the ground and
+        /// stay at his feet; the sphere is round him, and at his feet it was a glow under his boots.
+        /// </summary>
+        private static float AbilityFxHeight(AbilityKey key)
+            => key == AbilityKey.Bulwark ? FigureHeight * 0.5f : 0f;
+
+        /// <summary>How tall a figure stands in the world: the prefabs' height, grown with the man.</summary>
+        private const float FigureHeight = 3.75f * GameConstants.GladiatorScale;
         private ViewPalette _palette;
         private GameObject[] _figures;
         private Renderer[] _figureRenderers;
@@ -99,6 +126,7 @@ namespace ColosseumDuel.Gameplay.View
                 radius * 1.25f, radius * 1.7f, out view._abilityRenderer);
             view._netMarker = MakeAura(palette, "NetRing", model.transform,
                 radius * 1.8f, radius * 2.2f, out view._netRenderer);
+            view.BuildAbilityFx(palette);
 
             // --- bars, standing upright above the head and turned to face the camera ---
             // They used to lie flat on the ground, which only reads under a straight top-down view;
@@ -956,6 +984,7 @@ namespace ColosseumDuel.Gameplay.View
                 _bars.gameObject.SetActive(false);
                 SetActive(_abilityMarker, false);
                 SetActive(_netMarker, false);
+                HideAbilityFx();
                 return;
             }
 
@@ -998,6 +1027,63 @@ namespace ColosseumDuel.Gameplay.View
             NetAuraStrength = AbilityVisuals.GlowStrength(g.IsEnsnared, g.EnsnaredCyclesLeft == 1);
             ShowAura(_netMarker, _netRenderer, g.IsEnsnared, NetAuraStrength,
                 AbilityVisuals.ColorFor(AbilityKey.Net));
+
+            // And the effect playing on him while it lasts. Switched on when the ability goes up, so a
+            // one-shot - Second Wind's - plays once as it fires and a looping one runs until it ends.
+            for (int i = 0; i < _abilityFx.Length; i++)
+            {
+                var fx = _abilityFx[i];
+                if (fx == null) continue;
+                bool on = g.Buff.IsActive && (int)g.Buff.Key == i;
+                if (fx.activeSelf != on) fx.SetActive(on);
+            }
+            if (_netFx != null && _netFx.activeSelf != g.IsEnsnared) _netFx.SetActive(g.IsEnsnared);
+        }
+
+        private void HideAbilityFx()
+        {
+            foreach (var fx in _abilityFx)
+                if (fx != null && fx.activeSelf) fx.SetActive(false);
+            if (_netFx != null && _netFx.activeSelf) _netFx.SetActive(false);
+        }
+
+        /// <summary>
+        /// One effect per ability that plays on the man who used it, and the net's on whoever it
+        /// caught. Built once and switched on and off: an effect instantiated when the ability fires
+        /// would hitch at exactly the moment the player is watching. Hung off the root rather than
+        /// the model, so a shield or an aura stays upright while he turns.
+        /// </summary>
+        private void BuildAbilityFx(ViewPalette palette)
+        {
+            if (palette == null || palette.AbilityFx == null) return;
+
+            foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))
+            {
+                if (key == AbilityKey.Net) continue;
+                var prefab = palette.AbilityFxFor(key);
+                if (prefab != null)
+                    _abilityFx[(int)key] = MakeFx(prefab, $"AbilityFx_{key}", AbilityFxScale(key), AbilityFxHeight(key));
+            }
+
+            var net = palette.AbilityFxFor(AbilityKey.Net);
+            if (net != null) _netFx = MakeFx(net, "NetFx", AbilityFxScale(AbilityKey.Net), AbilityFxHeight(AbilityKey.Net));
+        }
+
+        private GameObject MakeFx(GameObject prefab, string name, float scale, float height)
+        {
+            var fx = Instantiate(prefab, transform);
+            fx.name = name;
+            fx.transform.localPosition = new Vector3(0f, height, 0f);
+            fx.transform.localScale = prefab.transform.localScale * scale;
+            foreach (var system in fx.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                // Grown with the man: in the pack's default scaling mode a scaled transform moves the
+                // emitter's shape and leaves every particle its authored size.
+                var main = system.main;
+                main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            }
+            fx.SetActive(false);
+            return fx;
         }
 
         private void ShowAura(Transform ring, Renderer renderer, bool on, float strength, Color color)

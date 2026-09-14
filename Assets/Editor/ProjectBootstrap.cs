@@ -43,6 +43,30 @@ namespace ColosseumDuel.EditorTools
         private const string BloodPrefabPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red/BloodExplosion.prefab";
 
+        /// <summary>
+        /// What each ability plays on the man while it lasts. Looping effects for the ones that last,
+        /// picked for what they do: a soft cold aura for the speed, the red flame for the rage, a
+        /// crackling gold aura for the second strike, a shield for the wall and a field on the ground
+        /// for the net. Second Wind is spent at once, so its is the one-shot rising buff.
+        /// </summary>
+        private static string AbilityFxPath(AbilityKey key)
+        {
+            const string magic = "Assets/Epic Toon FX/Prefabs/Combat/Magic";
+            switch (key)
+            {
+                // The soft aura was tried first and all but vanished on the sand at this size.
+                case AbilityKey.Spirit: return magic + "/Aura/MagicAuraBlue.prefab";
+                case AbilityKey.Fury: return TorchPrefabPath;
+                case AbilityKey.Mongoose: return magic + "/Aura/MagicAuraYellow.prefab";
+                // A glowing sphere round him. The magic shield's particles are a quarter of a unit
+                // across and did not show at all, and the soft shield bubble was a faint rim on the sand.
+                case AbilityKey.Bulwark: return magic + "/Sphere/MagicSphereBlue.prefab";
+                case AbilityKey.SecondWind: return magic + "/Buff/MagicBuffGreen.prefab";
+                case AbilityKey.Net: return magic + "/Field/MagicFieldWhite.prefab";
+                default: return null;
+            }
+        }
+
 
         // Modular stone kit (LoafbrrAssets/ModularArena), used to dress the arena.
         private const string ArenaKitDir = "Assets/LoafbrrAssets/ModularArena/Prefabs";
@@ -528,6 +552,17 @@ namespace ColosseumDuel.EditorTools
             if (palette.AbilityReadyFire == null)
                 Debug.LogWarning($"[Colosseum] Effect prefab not found at {AbilityFirePrefabPath} - " +
                                  "the ability-ready flame will be skipped. Import Epic Toon FX to get it.");
+
+            var fxKeys = (AbilityKey[])Enum.GetValues(typeof(AbilityKey));
+            palette.AbilityFx = new GameObject[fxKeys.Length];
+            foreach (var key in fxKeys)
+            {
+                string fxPath = AbilityFxPath(key);
+                palette.AbilityFx[(int)key] = fxPath != null ? AssetDatabase.LoadAssetAtPath<GameObject>(fxPath) : null;
+                if (palette.AbilityFx[(int)key] == null)
+                    Debug.LogWarning($"[Colosseum] Effect prefab for {key} not found at {fxPath} - it will play " +
+                                     "without one. Import Epic Toon FX to get it.");
+            }
 
             palette.Torch = AssetDatabase.LoadAssetAtPath<GameObject>(TorchPrefabPath);
             if (palette.Torch == null)

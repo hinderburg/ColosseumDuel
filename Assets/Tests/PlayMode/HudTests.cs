@@ -221,6 +221,11 @@ namespace ColosseumDuel.Tests
             StringAssert.AreEqualIgnoringCase(g.Def.AbilityDescription, description.text);
             Assert.Greater(name.fontSize, description.fontSize, "the name should be the big line");
 
+            // The player's own man: the name goes up in the player's blue, not the ability's colour.
+            Assert.AreEqual(HudFactory.PlayerColor.r, name.color.r, 0.01f, "the player's ability should be named in blue");
+            Assert.AreEqual(HudFactory.PlayerColor.g, name.color.g, 0.01f, "the player's ability should be named in blue");
+            Assert.AreEqual(HudFactory.PlayerColor.b, name.color.b, 0.01f, "the player's ability should be named in blue");
+
             var onScreen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(g.Pos));
             Assert.Less(Mathf.Abs(name.transform.position.x - onScreen.x), 60f, "the name is not over the man who used it");
             Assert.Greater(name.transform.position.y, onScreen.y, "the name should go up over him, not under him");

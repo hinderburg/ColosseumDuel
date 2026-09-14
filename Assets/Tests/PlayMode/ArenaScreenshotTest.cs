@@ -560,6 +560,53 @@ namespace ColosseumDuel.Tests
 
         private const float AbilityCalloutViewSeconds = ColosseumDuel.Gameplay.Hud.AbilityCalloutView.Seconds;
 
+        /// <summary>
+        /// Each ability's effect, close up on the man it plays on - a net's on the man it caught. Its
+        /// size, whether it sits on him and whether it reads at all are the whole question, and no
+        /// assertion answers any of them. The HUD is left out of the frame, so the frame is the effect.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EachAbilityEffectRendersAFrame()
+        {
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+                Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
+
+            yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+            yield return null;
+
+            var controller = Object.FindFirstObjectByType<GameController>();
+            var camera = Camera.main;
+            var cameraDriver = camera.GetComponent<DeathCameraView>();
+            if (cameraDriver != null) cameraDriver.enabled = false;
+
+            Object.FindFirstObjectByType<ColosseumDuel.Gameplay.Hud.MenuView>().StartMatch();
+            yield return null;
+            controller.SubmitPlayerPick(controller.Squad[0]);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            // On open sand between the columns, the opponent well out of the way.
+            var player = controller.Manager.State.P1.Active;
+            player.Pos = new Vector2(0f, -240f);
+            controller.Manager.State.Bot.Active.Pos = new Vector2(0f, 330f);
+
+            foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))
+            {
+                player.Buff = default;
+                player.EnsnaredCyclesLeft = 0;
+                yield return null;
+
+                if (key == AbilityKey.Net) player.EnsnaredCyclesLeft = 99;
+                else player.Buff = new ActiveBuff { Key = key, CyclesLeft = 99 };
+
+                // Long enough for a looping effect to fill out, even through the slowed planning phase.
+                yield return RunSeconds(3f);
+                FrameOnPair(camera, controller.Arena, player.Pos, 90f, 110f);
+                yield return Capture(SuffixPath($"-fx-{key}"));
+            }
+
+            if (cameraDriver != null) cameraDriver.enabled = true;
+        }
+
         private static IEnumerator Capture(string outputPath)
         {
             var camera = Camera.main;
