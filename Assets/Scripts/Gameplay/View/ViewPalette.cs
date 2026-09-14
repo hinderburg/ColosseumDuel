@@ -23,7 +23,6 @@ namespace ColosseumDuel.Gameplay.View
         [Header("Items")]
         public Material Weapon;
         public Material Shield;
-        public Material RandomItem;
 
         [Header("Arena hazard")]
         public Material HazardActive;
@@ -146,9 +145,8 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Flame set along the arena wall. Same caveat: absent in a clean clone.</summary>
         public GameObject Torch;
 
-        /// <summary>Iron for the spikes that fill the danger zone and the jaws of the traps.</summary>
+        /// <summary>Iron for the spikes that fill the danger zone.</summary>
         public Material Spike;
-        public Material TrapIron;
 
         /// <summary>Burst played on a gladiator taking a hit. Same caveat.</summary>
         public GameObject BloodHit;
@@ -179,7 +177,7 @@ namespace ColosseumDuel.Gameplay.View
         /// the silhouettes differ as well as the size, which is what the player is reading when they
         /// decide whether running at it will cost them their shield.
         ///
-        /// Null in a clean clone, where ItemView falls back to primitives.
+        /// Null in a clean clone, where the blessing on the sand falls back to a primitive.
         /// </summary>
         [Header("Gear")]
         public GameObject SwordModel;
@@ -195,6 +193,12 @@ namespace ColosseumDuel.Gameplay.View
         /// which from any angle is a margin around the silhouette.
         /// </summary>
         public Material GearUntrained;
+
+        /// <summary>
+        /// The gold glow of the weapon blessing: round a blessed weapon in a fist, and round the
+        /// blessing lying on the sand. Transparent, and faded per object through a property block.
+        /// </summary>
+        public Material WeaponGlow;
 
         /// <summary>
         /// Screen-edge tint for the planning phase, transparent in the middle. Generated, so it is

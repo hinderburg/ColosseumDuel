@@ -211,14 +211,13 @@ namespace ColosseumDuel.Tests
 
         private bool AnyShellShowing()
             => _controller.GetComponentsInChildren<Transform>(true)
-                .Any(t => t.name == ItemView.ShellName && t.gameObject.activeInHierarchy);
+                .Any(t => t.name == GearSizes.ShellName && t.gameObject.activeInHierarchy);
 
         [UnityTest]
-        public IEnumerator GildedGearIsGoldInTheHandAndHisOwnIsSteel()
+        public IEnumerator ABlessedWeaponTurnsGoldAndGlows_BlinkingThroughItsLastCycle()
         {
-            // Gold is the whole of how the player is told the copies on the sand are worth crossing
-            // a mined arena for. Turning it back to steel the moment it was picked up would hide
-            // the one thing that trip bought him.
+            // Gold and a glow are the whole of how the player is told his blows are worth more, and
+            // the blink is how he is told this is the last turn they will be.
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
@@ -226,23 +225,47 @@ namespace ColosseumDuel.Tests
             if (main == null) Assert.Ignore("No gear models - the weapon pack is not imported here.");
 
             var g = _controller.Manager.State.P1.Active;
+            var view = _controller.GetComponentsInChildren<GladiatorView>(true).First(v => v.name == "Player");
             var block = new MaterialPropertyBlock();
 
-            g.WeaponIsGilded = false;
+            g.WeaponBuffCyclesLeft = 0;
             yield return null;
-            Assert.AreEqual(GearSizes.CarriedTint, TintOf(main, block),
-                "the weapon he walked in with should be steel");
+            Assert.AreEqual(GearSizes.CarriedTint, TintOf(main, block), "the weapon he walked in with should be steel");
+            Assert.AreEqual(0f, view.WeaponGlowStrength, 0.0001f, "and not glowing");
 
-            g.WeaponIsGilded = true;
+            g.WeaponBuffCyclesLeft = GameConstants.WeaponBuffCycles;
             yield return null;
-            Assert.AreEqual(GearSizes.GildedTint, TintOf(main, block),
-                "the one he took off the sand should stay gold in his hand");
+            Assert.AreEqual(GearSizes.GildedTint, TintOf(main, block), "blessed, it should turn gold");
+            Assert.IsTrue(main.GetComponentsInChildren<Transform>(true)
+                    .Any(t => t.name == GearSizes.GlowShellName && t.gameObject.activeInHierarchy),
+                "and a glow should be showing round it");
+
+            float least = 1f, most = 0f;
+            for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
+            {
+                yield return null;
+                least = Mathf.Min(least, view.WeaponGlowStrength);
+                most = Mathf.Max(most, view.WeaponGlowStrength);
+            }
+            Assert.AreEqual(1f, least, 0.001f, "the glow should hold steady while the blessing has cycles to run");
+
+            g.WeaponBuffCyclesLeft = 1;
+            least = 1f;
+            most = 0f;
+            for (float t = 0f; t < 1.4f; t += Time.unscaledDeltaTime)
+            {
+                yield return null;
+                least = Mathf.Min(least, view.WeaponGlowStrength);
+                most = Mathf.Max(most, view.WeaponGlowStrength);
+            }
+            Assert.Less(least, 0.4f, "on its last cycle the glow should fade right down as it blinks");
+            Assert.Greater(most, 0.9f, "and come back up again");
         }
 
         private static Color TintOf(Transform holder, MaterialPropertyBlock block)
         {
             var renderer = holder.GetComponentsInChildren<Renderer>(true)
-                .First(r => r.GetComponentsInParent<Transform>(true).All(t => t.name != ItemView.ShellName));
+                .First(r => !GearSizes.IsUnderShell(r.transform));
             renderer.GetPropertyBlock(block);
             return block.GetColor(Shader.PropertyToID("_BaseColor"));
         }
@@ -305,11 +328,6 @@ namespace ColosseumDuel.Tests
             float gap = Mathf.Min(state.P1.Active.WeaponDef.Reach, state.Bot.Active.WeaponDef.Reach) * 0.7f;
             state.P1.Active.Pos = new Vector2(-gap * 0.5f, 0f);
             state.Bot.Active.Pos = new Vector2(gap * 0.5f, 0f);
-
-            // Nothing on the sand but the two of them. Traps are laid at random, and one under
-            // either man would take health off him on the first step - which reads, to a test
-            // watching for a blow, exactly like a blow.
-            _controller.Manager.State.Traps.Traps.Clear();
 
             // Squared up on each other. A blow only lands inside the swinger's own arc now, and a
             // gladiator faces the way he last ran - so set down across the short axis of an arena they
@@ -488,11 +506,6 @@ namespace ColosseumDuel.Tests
 
             player.Pos = new Vector2(-120f, 0f);
             bot.Pos = new Vector2(120f, 0f);
-
-            // Nothing on the sand but the two of them. Traps are laid at random, and one under
-            // either man would take health off him on the first step - which reads, to a test
-            // watching for a blow, exactly like a blow.
-            _controller.Manager.State.Traps.Traps.Clear();
 
             // Pointed along the charge. A run leaves along the nose and bends onto its target, so two
             // men set down across an axis they did not spawn along would curve away rather than meet.

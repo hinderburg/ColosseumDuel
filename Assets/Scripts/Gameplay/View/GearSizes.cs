@@ -88,5 +88,72 @@ namespace ColosseumDuel.Gameplay.View
         /// as one.
         /// </summary>
         public const float PairSpread = 0.28f;
+
+        /// <summary>
+        /// How much bigger the gold glow round a blessed weapon is drawn than the weapon. Wider than
+        /// the red outline of an untrained one, for the same reason that one is uneven: a blade is a
+        /// sliver of a unit thick, so the glow is pushed out by about the same absolute amount on
+        /// every axis rather than by one ratio.
+        /// </summary>
+        public static readonly Vector3 GlowShell = new Vector3(7f, 1.12f, 2.2f);
+
+        /// <summary>Name of the inside-out copy that draws the untrained-weapon outline.</summary>
+        public const string ShellName = "UntrainedShell";
+
+        /// <summary>Name of the copy that draws the blessing's glow round a weapon.</summary>
+        public const string GlowShellName = "GlowShell";
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
+        /// <summary>
+        /// Washes every renderer under this object with one colour.
+        ///
+        /// Through a property block rather than by swapping materials: the models keep their own
+        /// texture, and a shield and a blade can both be gilded by the same line without either
+        /// losing its face. Touching the shared material instead would gild every copy at once.
+        /// The shells round a weapon are left alone - they live inside it, and a blanket wash painted
+        /// the warning and the glow the same colour as the weapon.
+        /// </summary>
+        public static void Tint(GameObject root, Color color)
+        {
+            var block = new MaterialPropertyBlock();
+            block.SetColor(BaseColorId, color);
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (IsUnderShell(renderer.transform)) continue;
+                renderer.SetPropertyBlock(block);
+            }
+        }
+
+        /// <summary>Whether this sits inside either of the shells a weapon can carry.</summary>
+        public static bool IsUnderShell(Transform t)
+        {
+            for (var walk = t; walk != null; walk = walk.parent)
+                if (walk.name == ShellName || walk.name == GlowShellName) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// A copy of a model drawn round it in one material - the outline and the glow are both this.
+        /// Built hidden; whoever needs it shows it.
+        /// </summary>
+        public static GameObject MakeShell(GameObject model, Transform inside, string name, Vector3 scale,
+            Material material)
+        {
+            var shell = Object.Instantiate(model, inside).transform;
+            shell.name = name;
+            shell.localPosition = Vector3.zero;
+            shell.localRotation = Quaternion.identity;
+            shell.localScale = scale;
+            foreach (var renderer in shell.GetComponentsInChildren<Renderer>(true))
+            {
+                var slots = new Material[Mathf.Max(1, renderer.sharedMaterials.Length)];
+                for (int i = 0; i < slots.Length; i++) slots[i] = material;
+                renderer.sharedMaterials = slots;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
+            shell.gameObject.SetActive(false);
+            return shell.gameObject;
+        }
     }
 }

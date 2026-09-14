@@ -46,7 +46,7 @@ namespace ColosseumDuel.Gameplay
 
         /// <summary>The one thing that moves the camera; it takes the shake as well.</summary>
         private DeathCameraView _deathCamera;
-        private readonly List<ItemView> _itemViews = new List<ItemView>();
+        private BuffPickupView _blessingView;
 
         private void Start()
         {
@@ -70,7 +70,7 @@ namespace ColosseumDuel.Gameplay
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
             Manager.Damaged += OnDamaged;
-            Manager.Bitten += OnBitten;
+            Manager.WeaponBlessed += OnWeaponBlessed;
             Manager.Bled += OnBled;
             Manager.Scorched += OnScorched;
             Manager.AbilityFired += OnAbilityFired;
@@ -81,7 +81,7 @@ namespace ColosseumDuel.Gameplay
         }
 
         /// <summary>
-        /// Starts a fresh match on the existing manager. StartMatch rebuilds the rosters, items and
+        /// Starts a fresh match on the existing manager. StartMatch rebuilds the rosters, the blessing and
         /// phase from scratch, and the views bind to MatchState every frame rather than holding onto
         /// gladiator references, so nothing needs tearing down first.
         /// </summary>
@@ -140,7 +140,6 @@ namespace ColosseumDuel.Gameplay
         {
             Arena.BuildHazardRings();
             Arena.BuildSpikes();
-            Arena.BuildTraps();
             Arena.BuildPalisade();
 
             // From the simulation's own list, so the stone drawn on the sand is the stone the paths
@@ -161,8 +160,7 @@ namespace ColosseumDuel.Gameplay
             ControlZone = gameObject.AddComponent<ControlZoneView>();
             ControlZone.Bind(Arena);
 
-            for (int i = 0; i < GameConstants.ItemCountOnArena; i++)
-                _itemViews.Add(ItemView.Create($"Item_{i}", viewRoot, Arena));
+            _blessingView = BuffPickupView.Create("WeaponBlessing", viewRoot, Arena);
         }
 
 
@@ -224,11 +222,7 @@ namespace ColosseumDuel.Gameplay
 
             Arena.Sync(state);
 
-            // ItemSystem replaces entries in place and never changes the list length, so index i of
-            // the pool always maps to index i of the list.
-            var items = state.Items?.Items;
-            for (int i = 0; i < _itemViews.Count; i++)
-                _itemViews[i].Sync(items != null && i < items.Count ? items[i] : null);
+            if (_blessingView != null) _blessingView.Sync(state.Buffs?.Position);
         }
 
         private void OnPhaseChanged(MatchState state)
@@ -353,23 +347,11 @@ namespace ColosseumDuel.Gameplay
         }
 
 
-        /// <summary>
-        /// A trap closed on somebody.
-        ///
-        /// The recoil and the blood, but no swing from the other side - a trap used to be reported
-        /// through Damaged, and since the view reads a hit as "the other one swung", a gladiator
-        /// stepping into one made his opponent throw an attack from wherever he happened to be
-        /// standing, with nothing anywhere near him.
-        /// </summary>
-        private void OnBitten(PlayerSide side, float amount)
-        {
-            if (amount <= 0f) return;
-            ViewFor(side).PlayHit();
+        /// <summary>Colour of the ring that goes out from a gladiator taking up the blessing.</summary>
+        private static readonly Color BlessingBurstColor = new Color(1f, 0.82f, 0.30f);
 
-            var victim = Manager.State.Get(side).Active;
-            if (victim != null) Arena.PlayBlood(victim.Pos);
-            ShowDamage(side, amount, DamageNumbersView.Source.Trap);
-        }
+        /// <summary>A gladiator took up the blessing off the sand: a ring of gold goes out from him.</summary>
+        private void OnWeaponBlessed(PlayerSide side) => ViewFor(side).PlayAbility(BlessingBurstColor);
 
         /// <summary>
         /// A wound opened up at the top of a cycle.

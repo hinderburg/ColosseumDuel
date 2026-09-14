@@ -39,7 +39,6 @@ namespace ColosseumDuel.Tests
 
             // Open sand in the middle, between the columns, with the opponent out of the way at the
             // far end and nothing underfoot.
-            _controller.Manager.State.Traps.Traps.Clear();
             _controller.Manager.State.Bot.Active.Pos = new Vector2(0f, ArenaShape.RadiusY * 0.85f);
             Player.Pos = new Vector2(-40f, -120f);
             _input.Scheme = ControlScheme.Draw;

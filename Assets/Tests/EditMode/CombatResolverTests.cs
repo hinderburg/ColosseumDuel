@@ -16,9 +16,9 @@ namespace ColosseumDuel.Tests
         private static GladiatorInstance Bare()
             => new GladiatorInstance(GladiatorDef.Brutius) { Weapon = WeaponKind.None };
 
-        private static GladiatorInstance With(WeaponKind kind, bool gilded = false)
+        private static GladiatorInstance With(WeaponKind kind, bool buffed = false)
         {
-            var g = new GladiatorInstance(GladiatorDef.Brutius) { Weapon = kind, WeaponIsGilded = gilded };
+            var g = new GladiatorInstance(GladiatorDef.Brutius) { Weapon = kind, WeaponBuffCyclesLeft = buffed ? GameConstants.WeaponBuffCycles : 0 };
             return g;
         }
 
@@ -94,14 +94,14 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void AGildedWeaponHitsHarderThanTheOneHeWalkedInWith()
+        public void ABlessedWeaponHitsHarderThanTheOneHeWalkedInWith()
         {
             // The whole reason to break off and cross a mined arena for one.
             float plain = CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace), Bare());
-            float gilded = CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace, gilded: true), Bare());
+            float blessed = CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace, buffed: true), Bare());
 
-            Assert.AreEqual(plain * GameConstants.GildedWeaponMult, gilded, Tol);
-            Assert.Greater(gilded, plain);
+            Assert.AreEqual(plain * GameConstants.WeaponBuffDamageMult, blessed, Tol);
+            Assert.Greater(blessed, plain);
         }
 
         [Test]
@@ -141,13 +141,13 @@ namespace ColosseumDuel.Tests
             // It used to break after one hit, which made sense while a weapon was a bonus lying on
             // the floor. Now it is half of who a gladiator is: one that vanished after a single
             // exchange would leave him fighting the rest of the match as nobody in particular.
-            var attacker = With(WeaponKind.TwoHandedMace, gilded: true);
+            var attacker = With(WeaponKind.TwoHandedMace, buffed: true);
             var defender = With(WeaponKind.SwordAndShield);
 
             CombatResolver.DealDamage(attacker, defender);
 
             Assert.AreEqual(WeaponKind.TwoHandedMace, attacker.Weapon);
-            Assert.IsTrue(attacker.WeaponIsGilded);
+            Assert.IsTrue(attacker.WeaponBuffed);
             Assert.IsTrue(defender.HasShield, "a shield is not spent by being hit");
         }
 
@@ -233,7 +233,7 @@ namespace ColosseumDuel.Tests
         public void AFreshCutRestartsTheCount_AndNeverTalksTheWoundDown()
         {
             var victim = Bare();
-            var heavy = With(WeaponKind.DualSwords, gilded: true);
+            var heavy = With(WeaponKind.DualSwords, buffed: true);
             var light = With(WeaponKind.DualSwords);
 
             CombatResolver.DealDamage(heavy, victim);

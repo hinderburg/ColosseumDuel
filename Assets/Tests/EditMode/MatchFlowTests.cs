@@ -157,7 +157,6 @@ namespace ColosseumDuel.Tests
         {
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
-            m.State.Traps.Traps.Clear();
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
@@ -544,7 +543,7 @@ namespace ColosseumDuel.Tests
             p1.Rage = GameConstants.RageMax;
             p1.ActivateAbility();
             p1.Weapon = WeaponKind.TwoHandedMace;
-            p1.WeaponIsGilded = true;
+            p1.BlessWeapon();
             p1.Hp = 5f;
             m.State.Cycle = 9;
 
@@ -564,16 +563,16 @@ namespace ColosseumDuel.Tests
                 Assert.AreEqual(g.Def.MaxHp, g.Hp, Tol);
                 Assert.AreEqual(0f, g.Rage, Tol, $"{g.Def.Name} carried rage into a fresh match");
                 Assert.IsFalse(g.Buff.IsActive, $"{g.Def.Name} carried a running ability into a fresh match");
-                Assert.IsFalse(g.WeaponIsGilded,
-                    $"{g.Def.Name} carried a gilded weapon into a fresh match");
+                Assert.IsFalse(g.WeaponBuffed,
+                    $"{g.Def.Name} carried a blessed weapon into a fresh match");
             }
         }
 
         [Test]
-        public void TheTutorialRoundPutsASwordOnTheWayToTheTapPoint()
+        public void TheTutorialRoundPutsTheBlessingOnTheWayToTheTapPoint()
         {
             // Whoever was picked. The layout is a fixed distance, so it has to sit inside the reach
-            // of the slowest of the three - and the sword has to be between him and the point the
+            // of the slowest of them - and the blessing has to be between him and the point the
             // tutorial tells him to tap, or the one sentence the tutorial says is not true.
             foreach (var def in GladiatorDef.All)
             {
@@ -582,63 +581,53 @@ namespace ColosseumDuel.Tests
                 m.SubmitPick(PlayerSide.P1, def.Id);
 
                 var player = m.State.P1.Active;
-                var sword = m.State.Items.Items.Find(i => i.Kind == def.SkilledWith);
+                Assert.IsTrue(m.State.Buffs.Position.HasValue, $"{def.Name}'s tutorial has no blessing on the sand");
+                var blessing = m.State.Buffs.Position.Value;
 
-                Assert.IsNotNull(sword);
-                Assert.Less(Vector2.Distance(player.Pos, sword.Pos), player.DashReach(),
-                    $"{def.Name} cannot reach the weapon the tutorial tells him to run through");
-
-                // And the tap point has to be past it, or running to it stops short of the pickup.
-                float toSword = Vector2.Distance(player.Pos, sword.Pos);
+                float toBlessing = Vector2.Distance(player.Pos, blessing);
                 float toTap = Vector2.Distance(player.Pos, m.State.TutorialTapPoint);
-                Assert.Greater(toTap, toSword, "the tap has to be beyond the sword, not on it");
+                Assert.Less(toBlessing, player.DashReach(),
+                    $"{def.Name} cannot reach the blessing the tutorial tells him to run through");
+                Assert.Greater(toTap, toBlessing, "the tap has to be beyond the blessing, not on it");
                 Assert.Less(toTap, player.DashReach(), "and still inside one run");
             }
         }
 
         [Test]
-        public void TheTutorialPathIsClearOfTraps()
+        public void TheArenaStandsEightColumns_EachWithRoomToRunRound()
         {
-            // Being stopped and bitten by scenery on the one move a tutorial asked for teaches the
-            // wrong lesson entirely. Checked over many layouts, since a clear path by luck proves
-            // nothing about the one the next player gets.
-            for (int seed = 0; seed < 40; seed++)
+            var field = ObstacleField.Standard();
+            int columns = 0;
+            foreach (var o in field.Obstacles)
             {
-                var m = new GameManager(new System.Random(seed));
-                m.StartMatch(Squad, Squad, tutorial: true);
-                m.SubmitPick(PlayerSide.P1, GladiatorId.Hilius); // the longest run, so the widest path
+                if (o.Kind != ObstacleKind.Column) continue;
+                columns++;
 
-                var from = m.State.P1.Active.Pos;
-                var to = m.State.TutorialTapPoint;
-
-                foreach (var trap in m.State.Traps.Traps)
-                    Assert.GreaterOrEqual(DistanceToSegment(trap.Pos, from, to), TrapSystem.TriggerDistance,
-                        $"seed {seed}: a trap sits on the path the tutorial points at");
+                // A man can stand on every side of it, between it and the wall included, so no
+                // column seals off a stretch of the arena.
+                foreach (var side in new[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right })
+                {
+                    var spot = o.Centre + side * (o.Size + GameConstants.GladiatorRadius + 2f);
+                    Assert.IsTrue(field.IsFree(spot, GameConstants.GladiatorRadius),
+                        $"no room to stand beside the column at {o.Centre}, towards {side}");
+                }
             }
+
+            Assert.AreEqual(8, columns, "the arena should stand eight columns");
         }
 
         [Test]
         public void AnOrdinaryMatchIsNotRearranged()
         {
             // The teaching layout is a first-fight thing. A later match that quietly kept the free
-            // sword and the swept path would be an easier game wearing the same clothes.
+            // blessing on the path would be an easier game wearing the same clothes.
             var m = NewMatch();
             m.SubmitPick(PlayerSide.P1, GladiatorId.Brutius);
 
             Assert.IsFalse(m.State.Tutorial);
             Assert.AreEqual(Vector2.zero, m.State.TutorialTapPoint);
-            Assert.AreEqual(GameConstants.TrapCount, m.State.Traps.Traps.Count,
-                "no traps should have been swept off a path nobody is being pointed down");
-        }
-
-        private static float DistanceToSegment(Vector2 point, Vector2 a, Vector2 b)
-        {
-            var ab = b - a;
-            float lengthSq = ab.sqrMagnitude;
-            if (lengthSq < 0.0001f) return Vector2.Distance(point, a);
-
-            float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / lengthSq);
-            return Vector2.Distance(point, a + ab * t);
+            Assert.IsFalse(m.State.Buffs.Position.HasValue,
+                "no blessing should be laid on the path of a man nobody is pointing anywhere");
         }
 
         /// <summary>
@@ -657,7 +646,6 @@ namespace ColosseumDuel.Tests
 
                 var p1 = m.State.P1.Active;
                 var bot = m.State.Bot.Active;
-                m.State.Traps.Traps.Clear();
 
                 // Straight up the middle from the near end - open sand, clear of every obstacle -
                 // with the bot out of the way to one side, well beyond any weapon's reach.
@@ -730,7 +718,6 @@ namespace ColosseumDuel.Tests
         {
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
-            m.State.Traps.Traps.Clear();
 
             var p1 = m.State.P1.Active;
             var bot = m.State.Bot.Active;
@@ -766,7 +753,6 @@ namespace ColosseumDuel.Tests
         {
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
-            m.State.Traps.Traps.Clear();
 
             var p1 = m.State.P1.Active;
             p1.Pos = new Vector2(0f, -100f);
@@ -830,12 +816,12 @@ namespace ColosseumDuel.Tests
         {
             var me = new GladiatorInstance(GladiatorDef.Hilius) { Pos = Vector2.zero };
             var opp = new GladiatorInstance(GladiatorDef.Brutius) { Pos = new Vector2(0f, 120f) };
-            var items = new ItemSystem(new System.Random(1), ObstacleField.Empty);
+            var buffs = new WeaponBuffPickups(new System.Random(1), ObstacleField.Empty);
 
             int moves = 0;
             for (int seed = 0; seed < 20; seed++)
             {
-                var decision = BotAI.Decide(me, opp, items, new System.Random(seed));
+                var decision = BotAI.Decide(me, opp, buffs, new System.Random(seed));
                 if (decision.Action != ActionType.Move) continue;
                 moves++;
 

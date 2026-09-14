@@ -69,20 +69,29 @@ namespace ColosseumDuel.Core
         public Vector2 Facing = Vector2.right;
 
         /// <summary>
-        /// What he is fighting with. Set from his training when the round starts and replaced by
-        /// anything he picks up off the sand - never emptied. A weapon is what a gladiator is, not
+        /// What he is fighting with. Set from his training when the round starts, and never
+        /// emptied - a weapon is what a gladiator is, not
         /// a charge he spends.
         /// </summary>
         public WeaponKind Weapon = WeaponKind.None;
 
         /// <summary>
-        /// True for a weapon taken off the arena floor rather than brought in.
-        ///
-        /// The gilded copies lying on the sand are the same three weapons, better made. It is the
-        /// only reason to break off and cross the arena for one, and the gold is the whole of how
-        /// the player is told so.
+        /// Cycles still to run on the weapon blessing taken off the sand, the one it was taken in
+        /// counted as well. Zero when his weapon is only his weapon.
         /// </summary>
-        public bool WeaponIsGilded;
+        public int WeaponBuffCyclesLeft;
+
+        /// <summary>Whether his blows carry the blessing right now.</summary>
+        public bool WeaponBuffed => WeaponBuffCyclesLeft > 0;
+
+        /// <summary>Whether this is the last cycle the blessing lasts - the one its glow blinks on.</summary>
+        public bool WeaponBuffEnding => WeaponBuffCyclesLeft == 1;
+
+        /// <summary>
+        /// Takes up the blessing: the rest of this cycle and the three after it. Taken again while it
+        /// is still running, it starts the count over rather than stacking.
+        /// </summary>
+        public void BlessWeapon() => WeaponBuffCyclesLeft = GameConstants.WeaponBuffCycles + 1;
 
         public WeaponDef WeaponDef => WeaponDef.Get(Weapon);
 
@@ -93,7 +102,6 @@ namespace ColosseumDuel.Core
         public void EquipTrainedWeapon()
         {
             Weapon = Def.SkilledWith;
-            WeaponIsGilded = false;
         }
 
         /// <summary>True when he is holding something he was never trained to hold.</summary>
@@ -327,6 +335,7 @@ namespace ColosseumDuel.Core
             DealtDamageThisCycle = false;
             TookDamageThisCycle = false;
             if (AbilityLockedCycles > 0) AbilityLockedCycles--;
+            if (WeaponBuffCyclesLeft > 0) WeaponBuffCyclesLeft--;
             if (Buff.CyclesLeft > 0)
             {
                 Buff.CyclesLeft--;
@@ -361,10 +370,11 @@ namespace ColosseumDuel.Core
             Buff = default;
             AbilityLockedCycles = 0;
 
-            // Back to his own weapon each round. A gilded one is the reward for crossing the arena
-            // under fire during a round; carrying it into the next one for free would make the
-            // first round the only one worth taking that risk in.
+            // His own weapon, unblessed. The blessing is the reward for crossing the arena under fire
+            // during a round; carried into the next one for free, it would make the first round the
+            // only one worth taking that risk in.
             EquipTrainedWeapon();
+            WeaponBuffCyclesLeft = 0;
             AttacksRemainingThisCycle = AttacksPerCycle;
 
             // Wounds close between rounds. A bleed that survived would go on draining a fighter

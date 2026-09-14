@@ -110,7 +110,8 @@ namespace ColosseumDuel.Core
         public static readonly ObstacleField Empty = new ObstacleField(new Obstacle[0]);
 
         /// <summary>
-        /// The arena everybody fights in: four columns round the middle and four crates.
+        /// The arena everybody fights in: eight columns - four round the middle and a pair towards
+        /// each end - and four crates.
         ///
         /// Point-symmetric through the centre, so whatever the layout does for one end it does for
         /// the other, and neither side starts a round with more cover than the man opposite. The
@@ -132,6 +133,13 @@ namespace ColosseumDuel.Core
                 new Obstacle(ObstacleKind.Column, new Vector2(110f, -180f), column),
                 new Obstacle(ObstacleKind.Column, new Vector2(-110f, 180f), column),
                 new Obstacle(ObstacleKind.Column, new Vector2(110f, 180f), column),
+
+                // And a pair towards each end, clear of where the two are set down and of the crates,
+                // with a man's width and more between each and the wall.
+                new Obstacle(ObstacleKind.Column, new Vector2(-130f, -400f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(130f, -400f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(-130f, 400f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(130f, 400f), column),
 
                 new Obstacle(ObstacleKind.Crate, new Vector2(-215f, 50f), crate),
                 new Obstacle(ObstacleKind.Crate, new Vector2(215f, -50f), crate),

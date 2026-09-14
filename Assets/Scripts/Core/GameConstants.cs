@@ -69,7 +69,7 @@ namespace ColosseumDuel.Core
         public const float BaseGladiatorRadius = 16f;
 
         public const float GladiatorRadius = BaseGladiatorRadius * GladiatorScale;   // 19.2
-        public const float ItemRadius = 12f;
+        public const float BuffRadius = 12f;   // the weapon blessing lying on the sand
 
         // --- obstacles ---
 
@@ -85,7 +85,7 @@ namespace ColosseumDuel.Core
         public const float CollideDistance = GladiatorRadius * 2f - 4f;   // 34.4
         // Reach for picking something off the sand: the two radii, a little slack, and 15% on top
         // of the lot after a pass where running over an item and not getting it was too common.
-        public const float PickupDistance = (GladiatorRadius + ItemRadius + 6f) * 1.15f;
+        public const float PickupDistance = (GladiatorRadius + BuffRadius + 6f) * 1.15f;
 
         // Both fighters are placed at opposite ends of the arena at the start of every round, this
         // far from the centre as a fraction of the LONG semi-axis - the one they are spread along.
@@ -164,12 +164,17 @@ namespace ColosseumDuel.Core
         public const float FlankAttackMult = 1.20f;
 
         /// <summary>
-        /// How much better the gilded copies on the sand are than the weapon a gladiator arrives
-        /// with. It is the entire reason to break off and cross a mined arena for one, so it has to
-        /// be worth a trap and a stretch of danger zone - but it is a better version of the same
-        /// weapon, not a different tier of weapon.
+        /// How much harder a blessed weapon hits. The blessing lies on the sand every third cycle
+        /// and lasts three cycles after it is taken - it used to be a gilded weapon lying there all
+        /// round, and it is worth the same: a better version of the same weapon, not another tier.
         /// </summary>
-        public const float GildedWeaponMult = 1.35f;
+        public const float WeaponBuffDamageMult = 1.35f;
+
+        /// <summary>How many cycles the blessing lasts after the one it is taken in.</summary>
+        public const int WeaponBuffCycles = 3;
+
+        /// <summary>A blessing is laid on the sand on every cycle that is a multiple of this.</summary>
+        public const int WeaponBuffEveryCycles = 3;
 
         /// <summary>How far one mace blow throws its target, in virtual units - most of a body.</summary>
         public const float MaceKnockback = GladiatorRadius * 1.6f;
@@ -186,18 +191,6 @@ namespace ColosseumDuel.Core
 
         /// <summary>How many cycles a bleed runs for. A fresh one starts the count again.</summary>
         public const int BleedCycles = 2;
-
-        // --- items ---
-        // One of each weapon kind, always on the floor. See ItemSystem.
-        public const int ItemCountOnArena = 3;
-
-        // --- traps ---
-        // Laid out fresh every round, half in each fighter's end. Even, so neither side starts the
-        // round with more holes to worry about than the other - which is why this stays a multiple
-        // of two. Enough that crossing the arena is a decision rather than a formality, few enough
-        // that a dash is not a dice roll.
-        public const int TrapCount = 6;
-        public const float TrapRadius = 14f;
 
         // --- arena hazard (shrinking rings) ---
 

@@ -77,7 +77,7 @@ namespace ColosseumDuel.Tests
             // shield are only visible when someone is actually holding them, and a capture of an
             // unarmed fighter says nothing about whether they attach where they should.
             player.Weapon = WeaponKind.SwordAndShield;
-            player.WeaponIsGilded = true;
+            player.BlessWeapon();
             controller.Manager.State.Bot.Active.Weapon = WeaponKind.TwoHandedMace;
 
             // A few rounds' worth of blood on the sand. The stains are the one thing on the arena

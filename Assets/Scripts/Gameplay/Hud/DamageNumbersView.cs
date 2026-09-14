@@ -9,7 +9,7 @@ namespace ColosseumDuel.Gameplay.Hud
     /// The number that flies off a gladiator when something costs him health.
     ///
     /// Every source, because from the player's seat they are the same event - he is down forty and
-    /// wants to know why. A blow, a trap, a wound still bleeding and the spikes closing in all get
+    /// wants to know why. A blow, a wound still bleeding and the spikes closing in all get
     /// a number; the colour says which, so the reason is readable without a legend.
     ///
     /// Drawn on the HUD canvas and projected from the arena rather than as world-space text. The
@@ -24,9 +24,6 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             /// <summary>A weapon landing.</summary>
             Blow,
-
-            /// <summary>A trap closing.</summary>
-            Trap,
 
             /// <summary>A wound opened earlier, still costing him.</summary>
             Bleed,
@@ -54,11 +51,10 @@ namespace ColosseumDuel.Gameplay.Hud
         /// </summary>
         private const float Scatter = 26f;
 
-        // All four are red, because all four are damage and that is the first thing the number has
-        // to say. They are four reds rather than one so the second thing - what took it - is still
+        // All three are red, because all three are damage and that is the first thing the number has
+        // to say. They are three reds rather than one so the second thing - what took it - is still
         // there to be read: a blow is the bright one, and the rest sit either side of it.
         private static readonly Color BlowColor = new Color(0.95f, 0.20f, 0.16f);
-        private static readonly Color TrapColor = new Color(0.78f, 0.27f, 0.13f);
         private static readonly Color BleedColor = new Color(0.66f, 0.09f, 0.16f);
         private static readonly Color SpikesColor = new Color(0.98f, 0.42f, 0.14f);
 
@@ -169,7 +165,6 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             switch (source)
             {
-                case Source.Trap: return TrapColor;
                 case Source.Bleed: return BleedColor;
                 case Source.Spikes: return SpikesColor;
                 default: return BlowColor;

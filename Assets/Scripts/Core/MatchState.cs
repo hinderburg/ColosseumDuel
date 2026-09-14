@@ -34,8 +34,9 @@ namespace ColosseumDuel.Core
 
         public PlayerState P1 = new PlayerState { Side = PlayerSide.P1 };
         public PlayerState Bot = new PlayerState { Side = PlayerSide.Bot };
-        public ItemSystem Items;
-        public TrapSystem Traps;
+
+        /// <summary>The weapon blessing on the sand, laid every third cycle. See WeaponBuffPickups.</summary>
+        public WeaponBuffPickups Buffs;
 
         /// <summary>
         /// What stands on the sand. Set here rather than only when a match starts, so the views can
@@ -48,13 +49,13 @@ namespace ColosseumDuel.Core
 
         /// <summary>
         /// True for a player's very first fight, which is laid out to teach rather than to be fair:
-        /// a sword within one dash of whoever they picked, no traps on the way to it, and labels on
-        /// everything. Every later match runs on the ordinary rules.
+        /// the weapon blessing lying on the sand within one run of whoever they picked, and labels on
+        /// it. Every later match runs on the ordinary rules.
         /// </summary>
         public bool Tutorial;
 
         /// <summary>
-        /// Where the tutorial is telling the player to tap - just past the sword, so the run picks
+        /// Where the tutorial is telling the player to tap - just past the blessing, so the run picks
         /// it up on the way through. Zero when no tutorial is running.
         /// </summary>
         public Vector2 TutorialTapPoint;

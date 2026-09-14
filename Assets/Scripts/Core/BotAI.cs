@@ -13,12 +13,13 @@ namespace ColosseumDuel.Core
 
     /// <summary>
     /// Rebalanced (per design feedback) to prioritize closing distance and attacking over chasing
-    /// items - items are only worth a detour when they are both close AND meaningfully closer than
-    /// the opponent.
+    /// the blessing - it is only worth a detour when it is meaningfully closer than the opponent and
+    /// his own weapon is not blessed already.
     /// </summary>
     public static class BotAI
     {
-        public static BotDecision Decide(GladiatorInstance me, GladiatorInstance opp, ItemSystem items, System.Random rng)
+        public static BotDecision Decide(GladiatorInstance me, GladiatorInstance opp, WeaponBuffPickups buffs,
+            System.Random rng)
         {
             var decision = new BotDecision();
             if (opp == null)
@@ -28,23 +29,19 @@ namespace ColosseumDuel.Core
             }
 
             float oppDist = Vector2.Distance(me.Pos, opp.Pos);
-            ArenaItem nearestItem = null;
-            float itemDist = float.MaxValue;
-            foreach (var item in items.Items)
-            {
-                float d = Vector2.Distance(me.Pos, item.Pos);
-                if (d < itemDist) { itemDist = d; nearestItem = item; }
-            }
+
+            // The blessing lies on the line between the two of them, so it is usually a little over
+            // half way to the opponent. Worth the detour when it is clearly nearer than he is and
+            // there is something to gain - a second one on a weapon already blessed only restarts
+            // the count.
+            Vector2? blessing = buffs != null && !me.WeaponBuffed ? buffs.Position : null;
+            bool seekBlessing = blessing.HasValue
+                && Vector2.Distance(me.Pos, blessing.Value) < oppDist * 0.8f;
 
             bool wantsAbility = me.CanActivateAbility && rng.NextDouble() < 0.8; // aggressive: use it almost whenever ready
             decision.UseAbility = wantsAbility;
 
-            // Only detour for an item if it's genuinely close AND notably closer than the opponent.
-            bool seekItem = nearestItem != null
-                && itemDist < GameConstants.ArenaRadius * 0.3f
-                && itemDist < oppDist * 0.55f;
-
-            if (!seekItem && rng.NextDouble() < 0.10)
+            if (!seekBlessing && rng.NextDouble() < 0.10)
             {
                 // occasional defensive play
                 decision.Action = ActionType.Defend;
@@ -52,7 +49,7 @@ namespace ColosseumDuel.Core
             }
 
             decision.Action = ActionType.Move;
-            Vector2 target = seekItem ? nearestItem.Pos : opp.Pos;
+            Vector2 target = seekBlessing ? blessing.Value : opp.Pos;
             Vector2 dir = (target - me.Pos);
             if (dir.sqrMagnitude < 0.0001f) dir = Vector2.up;
             decision.AimDirection = dir.normalized;

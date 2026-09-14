@@ -148,53 +148,5 @@ namespace ColosseumDuel.Tests
             Assert.Less(m.State.P1.StrikeEta, m.State.Bot.StrikeEta,
                 "the mace reaches twice as far as the twin swords and should get there first");
         }
-
-        /// <summary>
-        /// A weapon picked up on the way counts from where it is picked up.
-        ///
-        /// Running at a longer weapon and then at the opponent is a real plan, and a prediction that
-        /// used only what he set off with would start his swing for the wrong reach - late by the
-        /// difference between the two, which for swords against a mace is most of a body length.
-        /// </summary>
-        [Test]
-        public void AWeaponSweptUpOnTheWayIsPredictedWith()
-        {
-            var m = StartedRound();
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
-
-            var p1 = m.State.P1.Active;
-            var bot = m.State.Bot.Active;
-            p1.Weapon = WeaponKind.DualSwords;
-            bot.Weapon = WeaponKind.DualSwords;
-
-            p1.Pos = new Vector2(-120f, 0f);
-            bot.Pos = new Vector2(120f, 0f);
-
-            // Pointed along the charge they are about to be given. A run leaves along the nose and
-            // bends onto its target, so two men set down across an axis they did not spawn along
-            // would each curve away rather than meet.
-
-            p1.Facing = Vector2.right;
-            bot.Facing = Vector2.left;
-
-            // Everything off the sand except a mace, laid squarely on his path.
-            m.State.Items.Items.Clear();
-            m.State.Items.Items.Add(new ArenaItem
-            {
-                Kind = WeaponKind.TwoHandedMace,
-                Pos = new Vector2(-40f, 0f),
-            });
-
-            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
-            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
-            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
-
-            // Both start with the same weapon and run at each other, so without the mace on the
-            // ground between them the two predictions would be the same moment.
-            Assert.Greater(m.State.P1.StrikeEta, 0f);
-            Assert.Greater(m.State.Bot.StrikeEta, 0f);
-            Assert.Less(m.State.P1.StrikeEta, m.State.Bot.StrikeEta,
-                "he was predicted with the swords he set off with rather than the mace he picked up");
-        }
     }
 }

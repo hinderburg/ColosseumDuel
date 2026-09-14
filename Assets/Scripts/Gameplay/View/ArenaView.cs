@@ -353,7 +353,6 @@ namespace ColosseumDuel.Gameplay.View
         // traps
         // ------------------------------------------------------------------
 
-        private readonly List<GameObject> _trapProps = new List<GameObject>();
 
         // ------------------------------------------------------------------
         // the timber lining of the wall
@@ -385,61 +384,6 @@ namespace ColosseumDuel.Gameplay.View
                 WallHeight * PalisadeHeightShare, 180, 1f / PalisadeTileWidth);
             var go = ViewPrimitives.Create(mesh, "Palisade", transform, Palette.Palisade);
             go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        }
-
-        /// <summary>
-        /// Builds one prop per trap slot: a dark iron ring with teeth around its rim.
-        ///
-        /// A ring rather than a disc, and teeth rather than a flat marker, because it has to read as
-        /// something that bites from directly above - which is the only angle it is ever seen from.
-        /// </summary>
-        public void BuildTraps()
-        {
-            if (Palette == null) return;
-
-            var root = new GameObject("Traps");
-            root.transform.SetParent(transform, false);
-
-            float radius = ScaleLength(GameConstants.TrapRadius);
-            var jawMesh = ViewPrimitives.CreateCone(radius * 0.16f, radius * 0.55f, 6);
-
-            for (int i = 0; i < GameConstants.TrapCount; i++)
-            {
-                var trap = new GameObject($"Trap_{i:00}");
-                trap.transform.SetParent(root.transform, false);
-
-                var plate = ViewPrimitives.Create(ViewPrimitives.CreateAnnulus(radius * 0.45f, radius, 24),
-                    "Plate", trap.transform, Palette.TrapIron);
-                plate.transform.localPosition = new Vector3(0f, HazardRingHeight, 0f);
-
-                const int teeth = 8;
-                for (int t = 0; t < teeth; t++)
-                {
-                    float a = t / (float)teeth * Mathf.PI * 2f;
-                    var tooth = ViewPrimitives.Create(jawMesh, $"Tooth_{t}", trap.transform, Palette.TrapIron);
-                    tooth.transform.localPosition =
-                        new Vector3(Mathf.Cos(a) * radius * 0.78f, 0f, Mathf.Sin(a) * radius * 0.78f);
-
-                    // Leaning inwards, towards whatever steps into the middle of them.
-                    tooth.transform.localRotation = Quaternion.Euler(
-                        Mathf.Cos(a) * 34f, 0f, -Mathf.Sin(a) * 34f);
-                }
-
-                trap.SetActive(false);
-                _trapProps.Add(trap);
-            }
-        }
-
-        /// <summary>Puts each prop where its trap is, and hides the ones already sprung.</summary>
-        private void SyncTraps(MatchState state)
-        {
-            var traps = state.Traps?.Traps;
-            for (int i = 0; i < _trapProps.Count; i++)
-            {
-                bool visible = traps != null && i < traps.Count && traps[i].Armed;
-                if (_trapProps[i].activeSelf != visible) _trapProps[i].SetActive(visible);
-                if (visible) _trapProps[i].transform.localPosition = ToWorld(traps[i].Pos);
-            }
         }
 
         [Tooltip("How many blood bursts can overlap before the oldest is reused.")]
@@ -593,7 +537,6 @@ namespace ColosseumDuel.Gameplay.View
         public void Sync(MatchState state)
         {
             SyncSpikes(state);
-            SyncTraps(state);
 
             if (_hazardRings.Count == 0 || Palette == null) return;
 

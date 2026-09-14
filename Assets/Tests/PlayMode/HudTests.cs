@@ -413,11 +413,6 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Pos = new Vector2(-40f, 0f);
             State.Bot.Active.Pos = new Vector2(40f, 0f);
 
-            // Nothing on the sand but the two of them. Traps are laid at random, and one under
-            // either man would take health off him on the first step - which reads, to a test
-            // watching for a blow, exactly like a blow.
-            _controller.Manager.State.Traps.Traps.Clear();
-
             // Pointed along the charge. A run leaves along the nose and bends onto its target, so two
             // men set down across an axis they did not spawn along would curve away rather than meet.
 
@@ -453,11 +448,6 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Hp = 0.01f;
             State.P1.Active.Pos = new Vector2(-40f, 0f);
             State.Bot.Active.Pos = new Vector2(40f, 0f);
-
-            // Nothing on the sand but the two of them. Traps are laid at random, and one under
-            // either man would take health off him on the first step - which reads, to a test
-            // watching for a blow, exactly like a blow.
-            _controller.Manager.State.Traps.Traps.Clear();
 
             // Pointed along the charge. A run leaves along the nose and bends onto its target, so two
             // men set down across an axis they did not spawn along would curve away rather than meet.
@@ -513,11 +503,6 @@ namespace ColosseumDuel.Tests
             State.P1.Active.Pos = new Vector2(-40f, 0f);
             State.Bot.Active.Pos = new Vector2(40f, 0f);
 
-            // Nothing on the sand but the two of them. Traps are laid at random, and one under
-            // either man would take health off him on the first step - which reads, to a test
-            // watching for a blow, exactly like a blow.
-            _controller.Manager.State.Traps.Traps.Clear();
-
             // Pointed along the charge. A run leaves along the nose and bends onto its target, so two
             // men set down across an axis they did not spawn along would curve away rather than meet.
 
@@ -541,23 +526,11 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// The teaching labels are for the opening of the first fight and then they go.
-        ///
-        /// Two cycles is long enough to run at the sword and swing once with it. Left up they cover
-        /// the sand the player has just learned to read - a caption over every trap and pickup is
-        /// help on cycle one and an obstruction on cycle five - so the end of it is worth a test
-        /// rather than an eyeball: it only shows itself several cycles into a match nobody replays.
-        /// </summary>
-        /// <summary>
-        /// One label per kind, on the nearest one of that kind.
-        ///
-        /// A caption on every trap and every weapon taught the same two things six times over and
-        /// filled the arena doing it. The nearest is the one the player can act on: a label on a
-        /// trap across the arena is a fact, one on the trap in front of them is a warning about the
-        /// run they are deciding on.
+        /// The tutorial labels the blessing on the sand, over the blessing itself, with what it does -
+        /// and takes the label away when there is nothing there to label.
         /// </summary>
         [UnityTest]
-        public IEnumerator TheTutorialLabelsOnlyOneOfEachAndTheNearest()
+        public IEnumerator TheTutorialLabelsTheBlessingWhereItLies()
         {
             var tutorial = Object.FindFirstObjectByType<TutorialView>(FindObjectsInactive.Include);
             Assert.IsNotNull(tutorial);
@@ -565,41 +538,31 @@ namespace ColosseumDuel.Tests
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
-            var player = State.P1.Active;
-            player.Pos = new Vector2(0f, -200f);
-
-            // Two of each, one beside him and one across the arena, so "nearest" and "first in the
-            // list" are different answers and picking the wrong one shows.
-            State.Items.Items.Clear();
-            State.Items.Items.Add(new ArenaItem { Kind = WeaponKind.TwoHandedMace, Pos = new Vector2(0f, 250f) });
-            State.Items.Items.Add(new ArenaItem { Kind = WeaponKind.DualSwords, Pos = new Vector2(20f, -180f) });
-
-            State.Traps.Traps.Clear();
-            State.Traps.Traps.Add(new ArenaTrap { Pos = new Vector2(0f, 240f), Armed = true });
-            State.Traps.Traps.Add(new ArenaTrap { Pos = new Vector2(-25f, -170f), Armed = true });
+            var spot = new Vector2(20f, -120f);
+            State.Buffs.PlaceAt(spot);
             yield return null;
 
-            var shownItems = ActiveHints(tutorial, "ItemHint_");
-            var shownTraps = ActiveHints(tutorial, "TrapHint_");
+            var hint = tutorial.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "BlessingHint");
+            Assert.IsNotNull(hint, "the tutorial has no label for the blessing");
+            Assert.IsTrue(hint.gameObject.activeSelf, "the blessing on the sand is not labelled");
+            StringAssert.Contains("Blessing", hint.GetComponentInChildren<Text>().text);
 
-            Assert.AreEqual(1, shownItems.Count, "every weapon on the sand was labelled");
-            Assert.AreEqual(1, shownTraps.Count, "every trap on the sand was labelled");
+            var onScreen = _controller.Arena.ArenaCamera.WorldToScreenPoint(_controller.Arena.ToWorld(spot));
+            Assert.Less(Mathf.Abs(hint.position.x - onScreen.x), 80f, "the label is not over the blessing");
 
-            // The near one, by where the label ended up on screen relative to the far one's world
-            // position - read through the same camera the player is looking through.
-            var camera = _controller.Arena.ArenaCamera;
-            var near = camera.WorldToScreenPoint(_controller.Arena.ToWorld(new Vector2(20f, -180f)));
-            var far = camera.WorldToScreenPoint(_controller.Arena.ToWorld(new Vector2(0f, 250f)));
-
-            float toNear = Mathf.Abs(shownItems[0].position.y - near.y);
-            float toFar = Mathf.Abs(shownItems[0].position.y - far.y);
-            Assert.Less(toNear, toFar, "the weapon label went to the one across the arena");
+            State.Buffs.Clear();
+            yield return null;
+            Assert.IsFalse(hint.gameObject.activeSelf, "a label left over sand with nothing on it");
         }
 
-        private static List<Transform> ActiveHints(TutorialView tutorial, string prefix)
-            => tutorial.GetComponentsInChildren<Transform>(true)
-                .Where(t => t.name.StartsWith(prefix) && t.gameObject.activeSelf)
-                .ToList();
+        /// <summary>
+        /// The teaching labels are for the opening of the first fight and then they go.
+        ///
+        /// Two cycles is long enough to run at the blessing and swing once with it. Left up they
+        /// cover the sand the player has just learned to read - a caption is help on cycle one and
+        /// an obstruction on cycle five - so the end of it is worth a test rather than an eyeball:
+        /// it only shows itself several cycles into a match nobody replays.
+        /// </summary>
 
         [UnityTest]
         public IEnumerator TheTutorialLabelsGoAwayAfterTwoCycles()

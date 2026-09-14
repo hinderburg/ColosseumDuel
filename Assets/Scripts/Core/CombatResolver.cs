@@ -14,7 +14,7 @@ namespace ColosseumDuel.Core
         public static float ComputeAttackDamage(GladiatorInstance attacker)
         {
             float damage = attacker.Def.Damage * attacker.WeaponDef.DamageMultiplier;
-            if (attacker.WeaponIsGilded) damage *= GameConstants.GildedWeaponMult;
+            if (attacker.WeaponBuffed) damage *= GameConstants.WeaponBuffDamageMult;
             return damage;
         }
 

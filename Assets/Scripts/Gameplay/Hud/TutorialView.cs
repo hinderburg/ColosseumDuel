@@ -7,12 +7,12 @@ using UnityEngine.UI;
 namespace ColosseumDuel.Gameplay.Hud
 {
     /// <summary>
-    /// The first fight's teaching layer: a short label floating over everything on the sand, and one
+    /// The first fight's teaching layer: a short label over the weapon blessing on the sand, and one
     /// line telling the player what to do with it.
     ///
-    /// Labels rather than a wall of text at the start: what a shield does is worth knowing at the
-    /// moment you are looking at a shield, and nowhere else. They are placed over the things
-    /// themselves, so reading one is the same glance as deciding whether to run at it.
+    /// A label rather than a wall of text at the start: what the blessing does is worth knowing at
+    /// the moment you are looking at it, and nowhere else. It is placed over the thing itself, so
+    /// reading it is the same glance as deciding whether to run at it.
     ///
     /// Screen-space labels following world positions, the same way the action buttons work: they
     /// stay a constant size and stay crisp whatever the camera is doing, and they layer over the
@@ -52,11 +52,13 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>Parchment, matching the sand it lies on rather than fighting it.</summary>
         private static readonly Color PlateColor = new Color(0.96f, 0.93f, 0.85f, 0.94f);
 
-        /// <summary>The same plate, gone the colour of the thing it warns about.</summary>
-        private static readonly Color TrapPlateColor = new Color(0.97f, 0.76f, 0.70f, 0.95f);
-
         /// <summary>The order of the round, so it carries the eye before the labels do.</summary>
         private static readonly Color InstructionPlateColor = new Color(1f, 0.87f, 0.52f, 0.96f);
+
+        /// <summary>What the blessing does, in as few words as will fit above it.</summary>
+        public static readonly string BlessingCaption =
+            $"Blessing: +{Mathf.RoundToInt((GameConstants.WeaponBuffDamageMult - 1f) * 100f)}% damage " +
+            $"for {GameConstants.WeaponBuffCycles} cycles";
 
         private ArenaView _arena;
         private Canvas _canvas;
@@ -64,8 +66,10 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>Which control is in play, so the instruction names the gesture it wants.</summary>
         private PlayerInputController _input;
 
-        private readonly List<Hint> _itemHints = new List<Hint>();
-        private readonly List<Hint> _trapHints = new List<Hint>();
+        private Hint _blessingHint;
+
+        /// <summary>Every label that floats over the sand - the ones the de-overlap pass settles.</summary>
+        private readonly List<Hint> _floating = new List<Hint>();
 
         /// <summary>Scratch list for the de-overlap pass, reused so it allocates nothing per frame.</summary>
         private readonly List<Hint> _placed = new List<Hint>();
@@ -83,11 +87,8 @@ namespace ColosseumDuel.Gameplay.Hud
             public RectTransform Rect => Plate.rectTransform;
 
             /// <summary>
-            /// Sets the caption and fits the plate to it.
-            ///
-            /// Sized from the text rather than left at a fixed width: these captions run from
-            /// "Trap" to "Two-handed: hits in passing", and one width that suits both is either a
-            /// slab of empty parchment around the short one or a plate the long one hangs out of.
+            /// Sets the caption and fits the plate to it, so a short caption does not sit in a slab
+            /// of empty parchment and a long one does not hang out of its plate.
             /// </summary>
             public void SetText(string text)
             {
@@ -113,11 +114,8 @@ namespace ColosseumDuel.Gameplay.Hud
             view._input = input;
             view._canvas = canvas.GetComponentInParent<Canvas>();
 
-            for (int i = 0; i < GameConstants.ItemCountOnArena; i++)
-                view._itemHints.Add(MakeHint(root, $"ItemHint_{i}", PlateColor, LabelSize));
-
-            for (int i = 0; i < GameConstants.TrapCount; i++)
-                view._trapHints.Add(MakeHint(root, $"TrapHint_{i}", TrapPlateColor, LabelSize));
+            view._blessingHint = MakeHint(root, "BlessingHint", PlateColor, LabelSize);
+            view._floating.Add(view._blessingHint);
 
             view._instruction = MakeHint(root, "TutorialInstruction", InstructionPlateColor, 17);
             view._instruction.Height = 36f;
@@ -150,115 +148,19 @@ namespace ColosseumDuel.Gameplay.Hud
             return hint;
         }
 
-        /// <summary>Which weapon and which trap carry the labels this cycle. See ChooseWhatToLabel.</summary>
-        private int _labelledItem = -1;
-        private int _labelledTrap = -1;
-        private int _chosenForCycle = -1;
-
-        /// <summary>
-        /// Picks which trap and which weapon carry the labels, once per cycle.
-        ///
-        /// Once per cycle rather than once, because the sand changes under it - a weapon picked up
-        /// respawns elsewhere and a sprung trap stops being worth warning about - and once per frame
-        /// would mean a label that walks from one object to another while the player reads it.
-        /// </summary>
-        private void ChooseWhatToLabel(MatchState state,
-            IReadOnlyList<ArenaItem> items, IReadOnlyList<ArenaTrap> traps)
-        {
-            bool stale = _chosenForCycle != state.Cycle
-                         || _labelledItem < 0
-                         || items == null || _labelledItem >= items.Count
-                         || _labelledTrap < 0
-                         || traps == null || _labelledTrap >= traps.Count
-                         || !traps[_labelledTrap].Armed;
-            if (!stale) return;
-
-            var player = state.P1.Active;
-            var here = player != null ? player.Pos : Vector2.zero;
-
-            _labelledItem = NearestIndex(items, here, item => item.Pos, _ => true);
-            _labelledTrap = NearestIndex(traps, here, trap => trap.Pos, trap => trap.Armed);
-            _chosenForCycle = state.Cycle;
-        }
-
-        /// <summary>
-        /// Which of these is closest to a point, or -1 if none of them counts.
-        ///
-        /// Takes the position and the "counts at all" test as functions rather than being written
-        /// twice, once for weapons and once for traps: a trap has to be armed to be worth warning
-        /// about and a weapon has no such condition, and that is the only difference between them.
-        /// </summary>
-        private static int NearestIndex<T>(IReadOnlyList<T> candidates, Vector2 to,
-            System.Func<T, Vector2> positionOf, System.Func<T, bool> counts)
-        {
-            if (candidates == null) return -1;
-
-            int nearest = -1;
-            float best = float.MaxValue;
-
-            for (int i = 0; i < candidates.Count; i++)
-            {
-                if (candidates[i] == null || !counts(candidates[i])) continue;
-
-                float d = Vector2.SqrMagnitude(positionOf(candidates[i]) - to);
-                if (d >= best) continue;
-
-                best = d;
-                nearest = i;
-            }
-
-            return nearest;
-        }
-
-        /// <summary>What a pickup is worth, in as few words as will fit above it.</summary>
-        private static string DescribeItem(ArenaItem item)
-        {
-            switch (item.Kind)
-            {
-                case WeaponKind.SwordAndShield: return "Sword and shield: half the damage taken";
-                case WeaponKind.TwoHandedMace: return "Mace: one heavy blow, knocks back";
-                case WeaponKind.DualSwords: return "Twin swords: two blows, and bleeding";
-                default: return "A weapon";
-            }
-        }
-
         public void Sync(MatchState state)
         {
             // The first two cycles of a first fight and nothing else. Two is enough to run at the
-            // sword and swing once with it; past that the player has done the thing the labels were
-            // there to explain, and a caption on every trap and pickup is in the way rather than in
-            // aid - it covers exactly the sand they are now trying to read.
+            // blessing and swing once with it; past that the player has done the thing the labels
+            // were there to explain, and a caption on the sand is in the way rather than in aid.
             bool teaching = state.Tutorial && state.Round == 1 && state.Cycle <= TutorialCycles
                             && state.Phase != MatchPhase.Pick && state.Phase != MatchPhase.MatchEnd;
 
             if (gameObject.activeSelf != teaching) gameObject.SetActive(teaching);
             if (!teaching || _arena == null || _arena.ArenaCamera == null) return;
 
-            // One of each kind, and the nearest one.
-            //
-            // A caption on every trap and every weapon taught the same two things six times over and
-            // filled the arena doing it - and the arena is what the labels are pointing at. One
-            // example says as much as six, and the nearest is the one the player can act on: a label
-            // on a trap across the arena is a fact, a label on the trap in front of them is a
-            // warning about the run they are deciding on.
-            // Chosen once a cycle and then left alone. Nearest is measured from a gladiator who is
-            // running, so recomputing it every frame hands the label from one trap to the next
-            // partway through a charge - and a caption that moves while you are reading it is worse
-            // than a caption on the wrong trap.
-            var items = state.Items?.Items;
-            var traps = state.Traps?.Traps;
-            ChooseWhatToLabel(state, items, traps);
-
-            bool showItem = _labelledItem >= 0 && items != null && _labelledItem < items.Count;
-            for (int i = 0; i < _itemHints.Count; i++)
-                Place(_itemHints[i], i == 0 && showItem ? (Vector2?)items[_labelledItem].Pos : null,
-                      i == 0 && showItem ? DescribeItem(items[_labelledItem]) : null);
-
-            bool showTrap = _labelledTrap >= 0 && traps != null && _labelledTrap < traps.Count
-                            && traps[_labelledTrap].Armed;
-            for (int i = 0; i < _trapHints.Count; i++)
-                Place(_trapHints[i], i == 0 && showTrap ? (Vector2?)traps[_labelledTrap].Pos : null,
-                      i == 0 && showTrap ? "Trap" : null);
+            var blessing = state.Buffs?.Position;
+            Place(_blessingHint, blessing, BlessingCaption);
 
             // The instruction first: it is an obstacle for the rest, and it has to be at its final
             // width before anything can be lifted clear of it.
@@ -267,29 +169,18 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>
-        /// Lifts labels off each other.
+        /// Lifts labels off each other and off the instruction.
         ///
-        /// Six traps and three pickups on one oval put plates on top of plates - a trap sitting just
-        /// behind a sword hides half its caption, and the top one wins by draw order rather than by
-        /// being the one worth reading. It never showed while the labels were bare text, because two
-        /// transparent captions overlapping merely look untidy; a plate is opaque and simply deletes
-        /// what is under it.
-        ///
-        /// Away from the middle of the frame, and only as far as clearing takes: the label stays
-        /// visibly attached to the thing it names, which matters more than perfect placement.
-        ///
-        /// Which way "away" is depends on which half the label is in. Everything used to stack
-        /// upwards, so a knot of traps at the far end of the arena piled up into the opponent's
-        /// roster cards - opaque, and drawn over everything. In the top half a stack therefore grows
-        /// downwards, into the empty middle of the arena, and only in the bottom half does it grow
-        /// up. Both directions run away from the squad strips rather than into them.
+        /// A plate is opaque and simply deletes what is under it, so two that overlap read as one
+        /// with a caption missing. Away from the middle of the frame, and only as far as clearing
+        /// takes: the label stays visibly attached to the thing it names, which matters more than
+        /// perfect placement. In the top half a stack grows downwards and in the bottom half up, so
+        /// it runs away from the squad strips rather than into them.
         /// </summary>
         private void SeparateOverlaps()
         {
-            // The instruction is an obstacle rather than a participant: it sits where it sits, and
-            // an item that happens to lie near the bottom of the arena had its label swallowed whole
-            // by it - the plate is opaque, so the caption did not even read as hidden, it read as
-            // absent.
+            // The instruction is an obstacle rather than a participant: it sits where it sits, and a
+            // label that happens to lie near the bottom of the arena was swallowed whole by it.
             var fixedCentre = Centre(_instruction);
             var fixedSize = _instruction.Rect.sizeDelta;
 
@@ -298,17 +189,13 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>
-        /// Settles the labels in one half of the frame, pushing them in the given direction.
-        ///
-        /// The two halves are settled independently. They cannot reach each other: nothing is ever
-        /// moved across the middle, so a label in the bottom half is no obstacle to one in the top.
+        /// Settles the labels in one half of the frame, pushing them in the given direction. The two
+        /// halves cannot reach each other: nothing is ever moved across the middle.
         /// </summary>
         private void SeparateHalf(float direction, Vector2 fixedCentre, Vector2 fixedSize)
         {
             _placed.Clear();
-            foreach (var hint in _itemHints)
-                if (hint.Active && Mathf.Sign(Centre(hint).y) == direction) _placed.Add(hint);
-            foreach (var hint in _trapHints)
+            foreach (var hint in _floating)
                 if (hint.Active && Mathf.Sign(Centre(hint).y) == direction) _placed.Add(hint);
 
             // Nearest the middle first, so a stack grows outwards and each label only ever has to
@@ -373,35 +260,32 @@ namespace ColosseumDuel.Gameplay.Hud
                && Mathf.Abs(aCentre.x - bCentre.x) < (aSize.x + bSize.x) * 0.5f + LabelGap;
 
         /// <summary>
-        /// One line, changing as the lesson lands: run through the sword, then fight.
+        /// One line, changing as the lesson lands: run through the blessing, then fight.
         ///
-        /// Keyed off what the player is actually carrying rather than off a step counter, so it
-        /// cannot get out of step with the match - a player who picks the sword up by accident on
+        /// Keyed off whether his weapon is actually blessed rather than off a step counter, so it
+        /// cannot get out of step with the match - a player who takes the blessing by accident on
         /// the way somewhere else has still learned the thing and is told so.
         /// </summary>
         private void SyncInstruction(MatchState state)
         {
             var player = state.P1.Active;
-            bool armed = player != null && player.WeaponIsGilded;
+            bool blessed = player != null && player.WeaponBuffed;
 
-            // Says the gesture the game is actually listening for.
-            //
-            // It was a fixed string naming whichever control happened to be default when it was
-            // written, and it has now been wrong in both directions - "tap" after the swipe took
-            // over, then "swipe" after the tap came back. The ring that used to point at the spot is
-            // gone, so this line is the only guidance there is; it reads the scheme.
+            // Says the gesture the game is actually listening for. It was a fixed string naming
+            // whichever control happened to be default when it was written, and was wrong in both
+            // directions before it read the scheme.
             var scheme = _input != null ? _input.Scheme : ControlScheme.Draw;
-            _instruction.SetText(armed ? ChargeOrder(scheme) : FetchOrder(scheme));
+            _instruction.SetText(blessed ? ChargeOrder(scheme) : FetchOrder(scheme));
         }
 
-        /// <summary>Go and get the weapon, in the gesture this player is using.</summary>
+        /// <summary>Go and get the blessing, in the gesture this player is using.</summary>
         private static string FetchOrder(ControlScheme scheme)
         {
             switch (scheme)
             {
-                case ControlScheme.Drag: return "Pull back from your gladiator, away from the gold weapon";
-                case ControlScheme.Swipe: return "Swipe away from the gold weapon - you take it on the way";
-                default: return "Tap just past the gold weapon - you take it on the way";
+                case ControlScheme.Drag: return "Pull back from your gladiator, away from the golden blessing";
+                case ControlScheme.Swipe: return "Swipe away from the golden blessing - you take it on the way";
+                default: return "Tap just past the golden blessing - you take it on the way";
             }
         }
 
@@ -410,9 +294,9 @@ namespace ColosseumDuel.Gameplay.Hud
         {
             switch (scheme)
             {
-                case ControlScheme.Drag: return "Gilded and stronger - pull back away from the enemy";
-                case ControlScheme.Swipe: return "Gilded and stronger - swipe away from the enemy and charge";
-                default: return "Gilded and stronger - tap toward the enemy and swing";
+                case ControlScheme.Drag: return "Your weapon glows - pull back away from the enemy";
+                case ControlScheme.Swipe: return "Your weapon glows - swipe away from the enemy and charge";
+                default: return "Your weapon glows - tap toward the enemy and strike";
             }
         }
 
@@ -441,12 +325,9 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>
-        /// Keeps a label inside the frame.
-        ///
-        /// Things near the wall project close to the edge of the screen, and a label centred on one
-        /// of them hangs half off it - which is how the first version read: several hints trailing
-        /// off both sides mid-word. Nudged in rather than hidden, because a label the player cannot
-        /// finish reading is still better than a hazard nobody labelled.
+        /// Keeps a label inside the frame, and out of the squad strips along the top and bottom.
+        /// Nudged in rather than hidden, because a label the player cannot finish reading is still
+        /// better than one they never see.
         /// </summary>
         private Vector2 ClampToCanvas(Vector2 local, float labelWidth)
         {
@@ -455,10 +336,6 @@ namespace ColosseumDuel.Gameplay.Hud
             float sideLimit = Mathf.Max(canvasRect.width * 0.5f - labelWidth * 0.5f - 6f, 0f);
             local.x = Mathf.Clamp(local.x, -sideLimit, sideLimit);
 
-            // And out of the squad strips along the top and bottom. A trap at the far end of the
-            // arena projects up behind the opponent's roster cards, which are opaque and sit over
-            // everything - so its label was landing on top of a gladiator portrait, reading as part
-            // of the card rather than as something on the sand.
             float endLimit = Mathf.Max(
                 canvasRect.height * (0.5f - RosterBandFraction) - LabelHeight * 0.5f, 0f);
             local.y = Mathf.Clamp(local.y, -endLimit, endLimit);

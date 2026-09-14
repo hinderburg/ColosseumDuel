@@ -32,8 +32,8 @@ namespace ColosseumDuel.Core
         /// </summary>
         public event Action<PlayerSide, float> Damaged;
 
-        /// <summary>A trap closed on a gladiator. Nobody swung, so nothing should swing.</summary>
-        public event Action<PlayerSide, float> Bitten;
+        /// <summary>A gladiator took up the weapon blessing off the sand.</summary>
+        public event Action<PlayerSide> WeaponBlessed;
 
         /// <summary>A head-on collision resolved, at this point in virtual space.</summary>
         public event Action<Vector2> Impact;
@@ -88,12 +88,9 @@ namespace ColosseumDuel.Core
             State.P1.Active = null;
             State.Bot.Active = null;
 
-            // The obstacles first, because the items and the traps are laid out round them.
+            // The obstacles first, because the blessing is laid out round them.
             State.Obstacles = ObstacleField.Standard();
-            State.Items = new ItemSystem(_rng, State.Obstacles);
-            State.Items.SpawnInitial();
-            State.Traps = new TrapSystem(_rng, State.Obstacles);
-            State.Traps.SpawnForRound();
+            State.Buffs = new WeaponBuffPickups(_rng, State.Obstacles);
             State.Round = 0;
             State.Cycle = 0;
             State.WinnerSide = null;
@@ -171,9 +168,9 @@ namespace ColosseumDuel.Core
             State.Cycle = 0;
             PlaceFightersForRound();
 
-            // Fresh traps every round. Left from the last one they would all be sprung by the time
-            // the third round started, and the arena would quietly stop having a hazard in it.
-            State.Traps?.SpawnForRound();
+            // A bare arena every round: a blessing left lying from the last one would hand the new
+            // round's opening to whoever was set down nearer it.
+            State.Buffs?.Clear();
 
             if (State.Tutorial && State.Round == 1) ArrangeTutorialRound();
             // Reveal is a real phase with a duration (see Tick) so the UI can show both picks
@@ -211,44 +208,18 @@ namespace ColosseumDuel.Core
         private void ArrangeTutorialRound()
         {
             var player = State.P1.Active;
-            if (player == null || State.Items == null) return;
+            if (player == null || State.Buffs == null) return;
 
             // A fixed distance rather than a share of his reach, which at three times the old dash
-            // would put the sword past the opponent for Hilius. A short run up the arena for everyone.
+            // would put the blessing past the opponent for Hilius. A short run up the arena for everyone.
             float reach = GameConstants.TutorialRunLength;
             var forward = player.Facing.sqrMagnitude > 0.0001f ? player.Facing.normalized : Vector2.up;
 
-            // The gilded copy of his own weapon, so the first thing the player is ever told to do
-            // hands them a straight upgrade rather than a different way of fighting they have not
-            // been taught yet - and so the lesson is the same lesson whoever they picked.
-            var sword = State.Items.Items.FirstOrDefault(i => i.Kind == player.Def.SkilledWith)
-                        ?? State.Items.Items.FirstOrDefault();
-            if (sword != null) sword.Pos = player.Pos + forward * (reach * 0.55f);
-
+            // The blessing, laid straight away rather than on the third cycle, so the first thing the
+            // player is ever told to do hands them a straight upgrade - and so the lesson is the same
+            // lesson whoever they picked.
+            State.Buffs.PlaceAt(player.Pos + forward * (reach * 0.55f));
             State.TutorialTapPoint = player.Pos + forward * (reach * 0.85f);
-
-            // Nothing on the path the player is being told to run. Being stopped and bitten by
-            // scenery on the one move a tutorial asked for teaches the wrong lesson entirely.
-            ClearTrapsBetween(player.Pos, State.TutorialTapPoint);
-        }
-
-        private void ClearTrapsBetween(Vector2 from, Vector2 to)
-        {
-            var traps = State.Traps?.Traps;
-            if (traps == null) return;
-
-            float clearance = TrapSystem.TriggerDistance + GameConstants.TrapRadius;
-            traps.RemoveAll(t => DistanceToSegment(t.Pos, from, to) < clearance);
-        }
-
-        private static float DistanceToSegment(Vector2 point, Vector2 a, Vector2 b)
-        {
-            var ab = b - a;
-            float lengthSq = ab.sqrMagnitude;
-            if (lengthSq < 0.0001f) return Vector2.Distance(point, a);
-
-            float t = Mathf.Clamp01(Vector2.Dot(point - a, ab) / lengthSq);
-            return Vector2.Distance(point, a + ab * t);
         }
 
         /// <summary>Which side a gladiator is fighting for, for events that carry the victim.</summary>
@@ -272,6 +243,12 @@ namespace ColosseumDuel.Core
             State.Cycle++;
             State.P1.Active?.BeginCycle();
             State.Bot.Active?.BeginCycle();
+
+            // Every third cycle a blessing is laid on the sand between the two, if the last one has
+            // been taken - between them rather than anywhere, so neither starts nearer to it.
+            if (State.Buffs != null && WeaponBuffPickups.IsDueOn(State.Cycle)
+                && State.P1.Active != null && State.Bot.Active != null)
+                State.Buffs.SpawnBetween(State.P1.Active.Pos, State.Bot.Active.Pos);
             SetPhase(MatchPhase.Planning);
         }
 
@@ -502,7 +479,7 @@ namespace ColosseumDuel.Core
             var bot = State.Bot.Active;
             if (bot != null && bot.Alive && bot.PlannedAction == ActionType.None)
             {
-                var decision = BotAI.Decide(bot, State.P1.Active, State.Items, _rng);
+                var decision = BotAI.Decide(bot, State.P1.Active, State.Buffs, _rng);
                 SubmitPlanningAction(PlayerSide.Bot, decision.Action, decision.AimDirection, decision.Power, decision.UseAbility);
             }
             // If the human player didn't submit a move in time, default to Defend - but only the
@@ -644,10 +621,6 @@ namespace ColosseumDuel.Core
         /// be a second simulation quietly disagreeing with the first. Collisions are the exception,
         /// because running into somebody is an exchange and there is nothing after it worth
         /// predicting.
-        ///
-        /// A weapon picked up mid-run counts from the moment it is picked up, which is the whole
-        /// reason a fighter runs at one: the reach he strikes with is the reach he has when he
-        /// arrives, not the one he set off with.
         /// </summary>
         private void PredictStrikes()
         {
@@ -678,10 +651,7 @@ namespace ColosseumDuel.Core
 
                 t += PredictionStep;
 
-                // What he will be holding by the time he gets there, and the way he will be
-                // looking once he is moving - both of them the future, not the present.
-                armedA = LongerOf(armedA, WeaponAt(posA));
-                armedB = LongerOf(armedB, WeaponAt(posB));
+                // The way he will be looking once he is moving - the future, not the present.
                 if (velA.sqrMagnitude > 0.000001f) lookA = velA.normalized;
                 if (velB.sqrMagnitude > 0.000001f) lookB = velB.normalized;
 
@@ -704,35 +674,6 @@ namespace ColosseumDuel.Core
 
                 if (State.P1.StrikeEta >= 0f && State.Bot.StrikeEta >= 0f) return;
             }
-        }
-
-        /// <summary>
-        /// The weapon lying close enough to be swept up at this point, or null.
-        ///
-        /// Null rather than a miss, so callers can take the longer of this and what they carry: a
-        /// fighter never picks up something shorter than the weapon in his hands and loses reach.
-        /// </summary>
-        private WeaponDef WeaponAt(Vector2 pos)
-        {
-            var items = State.Items?.Items;
-            if (items == null) return null;
-
-            WeaponDef best = null;
-            foreach (var item in items)
-            {
-                if (item == null) continue;
-                if (Vector2.Distance(pos, item.Pos) > GameConstants.PickupDistance) continue;
-                best = LongerOf(best, WeaponDef.Get(item.Kind));
-            }
-            return best;
-        }
-
-        /// <summary>Whichever of the two strikes further. Either may be null.</summary>
-        private static WeaponDef LongerOf(WeaponDef a, WeaponDef b)
-        {
-            if (a == null) return b;
-            if (b == null) return a;
-            return b.Reach > a.Reach ? b : a;
         }
 
         /// <summary>
@@ -878,18 +819,9 @@ namespace ColosseumDuel.Core
                 _scorched[(int)SideOf(g)] += bite;
             }
 
-            // item pickup
-            var item = State.Items.TryPickup(g);
-            if (item != null) State.Items.ApplyPickup(g, item);
-
-            // traps - checked after the move, so a gladiator who ran into one this substep is
-            // stopped at the jaws rather than a substep past them.
-            var trap = State.Traps?.TryTrigger(g);
-            if (trap != null)
-            {
-                Bitten?.Invoke(SideOf(g), TrapSystem.Damage);
-                Impact?.Invoke(trap.Pos);
-            }
+            // The blessing, if he has run over it.
+            if (State.Buffs != null && State.Buffs.TryPickup(g))
+                WeaponBlessed?.Invoke(SideOf(g));
         }
 
         private void ResolveCollision(GladiatorInstance a, GladiatorInstance b)

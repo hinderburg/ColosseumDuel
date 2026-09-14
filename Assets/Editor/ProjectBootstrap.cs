@@ -433,7 +433,6 @@ namespace ColosseumDuel.EditorTools
 
             palette.Weapon = Lit("ItemWeapon", new Color(0.85f, 0.80f, 0.35f));
             palette.Shield = Lit("ItemShield", new Color(0.55f, 0.60f, 0.70f));
-            palette.RandomItem = Lit("ItemRandom", new Color(0.60f, 0.35f, 0.80f));
 
             // Washes over the sand rather than paint on top of it. Opaque and fully saturated, the
             // danger zone read as the arena having been repainted red - it took over the frame from
@@ -515,11 +514,10 @@ namespace ColosseumDuel.EditorTools
             if (palette.Torch == null)
                 Debug.LogWarning($"[Colosseum] Torch prefab not found at {TorchPrefabPath} - the wall will be unlit.");
 
-            // Iron, for the spikes that fill a danger zone and for the jaws of the traps. Dark and
+            // Iron, for the spikes that fill a danger zone. Dark and
             // barely lit: they come up out of the sand and should read as a threat rather than as
             // decoration, and against bright sand a dark silhouette does that better than a colour.
             palette.Spike = Lit("Spike", new Color(0.30f, 0.31f, 0.35f));
-            palette.TrapIron = Lit("TrapIron", new Color(0.22f, 0.22f, 0.25f));
 
             palette.BloodHit = AssetDatabase.LoadAssetAtPath<GameObject>(BloodPrefabPath);
             if (palette.BloodHit == null)
@@ -597,6 +595,10 @@ namespace ColosseumDuel.EditorTools
             palette.ShieldModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.ShieldPath);
             palette.HelmetModel = AssetDatabase.LoadAssetAtPath<GameObject>(GearPrefabs.HelmetPath);
             palette.GearUntrained = InsideOutUnlit("GearUntrained", new Color(0.95f, 0.12f, 0.10f));
+
+            // The blessing's gold: a transparent glow, faded per object, drawn round a blessed weapon
+            // and round the blessing on the sand.
+            palette.WeaponGlow = TransparentUnlit("WeaponGlow", new Color(1f, 0.80f, 0.28f, 0.55f));
             if (palette.SwordModel == null)
                 Debug.LogWarning($"[Colosseum] Gear prefabs missing at {GearPrefabs.SwordPath} - pickups " +
                                  "will be primitives and nobody will carry anything visible.");

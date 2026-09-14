@@ -78,146 +78,114 @@ namespace ColosseumDuel.Tests
         }
     }
 
-    /// <summary>Exactly three weapons on the floor, one of each kind, all gilded.</summary>
-    public class ItemSystemTests
+    /// <summary>
+    /// The weapon blessing: laid on the sand every third cycle, between the two, and worth a third
+    /// again on every blow for the three cycles after the one it is taken in.
+    /// </summary>
+    public class WeaponBuffTests
     {
-        [Test]
-        public void SpawnInitial_PutsOneOfEveryWeaponOnTheSand()
-        {
-            // One of each rather than a random roll. The arena is a menu of three answers now, and
-            // which of them is on offer should not be luck: a player being beaten by a mace has to
-            // be able to go looking for the shield.
-            var items = new ItemSystem(new System.Random(1));
-            items.SpawnInitial();
+        private const float Tol = 0.0001f;
 
-            Assert.AreEqual(GameConstants.ItemCountOnArena, items.Items.Count);
-            foreach (var weapon in WeaponDef.All)
-                Assert.AreEqual(1, CountOf(items, weapon.Kind), $"exactly one {weapon.Name}");
+        [Test]
+        public void ItIsLaidOnEveryThirdCycleAndNoOther()
+        {
+            for (int cycle = 0; cycle <= 12; cycle++)
+                Assert.AreEqual(cycle > 0 && cycle % 3 == 0, WeaponBuffPickups.IsDueOn(cycle), $"cycle {cycle}");
         }
 
         [Test]
-        public void PickingUpAWeapon_ImmediatelyRefillsItsSlot()
+        public void ItLandsAsFarFromOneAsFromTheOther_OnOpenSand()
         {
-            var items = new ItemSystem(new System.Random(7));
-            items.SpawnInitial();
+            var field = ObstacleField.Standard();
+            var a = new Vector2(-40f, -330f);
+            var b = new Vector2(60f, 330f);
+
+            for (int seed = 0; seed < 30; seed++)
+            {
+                var buffs = new WeaponBuffPickups(new System.Random(seed), field);
+                Assert.IsTrue(buffs.SpawnBetween(a, b));
+
+                var p = buffs.Position.Value;
+                Assert.AreEqual(Vector2.Distance(p, a), Vector2.Distance(p, b), 1f,
+                    $"seed {seed}: it landed nearer one of them");
+                Assert.IsTrue(field.IsFree(p, GameConstants.BuffRadius), $"seed {seed}: on stone or past the wall");
+            }
+        }
+
+        [Test]
+        public void ASecondIsNotLaidWhileOneIsStillLyingThere()
+        {
+            var buffs = new WeaponBuffPickups(new System.Random(1), ObstacleField.Empty);
+            buffs.SpawnBetween(new Vector2(0f, -200f), new Vector2(0f, 200f));
+            var first = buffs.Position;
+
+            Assert.IsFalse(buffs.SpawnBetween(new Vector2(-100f, 0f), new Vector2(100f, 0f)));
+            Assert.AreEqual(first, buffs.Position, "and the one already there stays where it was");
+        }
+
+        [Test]
+        public void RunningOverItBlessesTheWeaponAndTakesItOffTheSand()
+        {
+            var buffs = new WeaponBuffPickups(new System.Random(1), ObstacleField.Empty);
+            buffs.PlaceAt(new Vector2(50f, 50f));
+            var g = new GladiatorInstance(GladiatorDef.Brutius) { Pos = Vector2.zero };
+
+            Assert.IsFalse(buffs.TryPickup(g), "too far away to take it");
+            Assert.IsFalse(g.WeaponBuffed);
+
+            g.Pos = new Vector2(50f, 45f);
+            Assert.IsTrue(buffs.TryPickup(g));
+            Assert.IsTrue(g.WeaponBuffed);
+            Assert.IsFalse(buffs.Position.HasValue, "it should be gone from the sand");
+        }
+
+        [Test]
+        public void ItLastsThreeCyclesAfterTheOneItIsTakenIn_AndOnlyTheLastIsMarkedAsTheLast()
+        {
+            var g = new GladiatorInstance(GladiatorDef.Barbarius);
+            g.BlessWeapon();
+            Assert.IsTrue(g.WeaponBuffed, "the cycle it is taken in");
+            Assert.IsFalse(g.WeaponBuffEnding);
+
+            for (int cycle = 1; cycle <= GameConstants.WeaponBuffCycles; cycle++)
+            {
+                g.BeginCycle();
+                Assert.IsTrue(g.WeaponBuffed, $"{cycle} cycle(s) after it was taken");
+                Assert.AreEqual(cycle == GameConstants.WeaponBuffCycles, g.WeaponBuffEnding,
+                    $"{cycle} cycle(s) after: only the last is the last");
+            }
+
+            g.BeginCycle();
+            Assert.IsFalse(g.WeaponBuffed, "and gone after that");
+        }
+
+        [Test]
+        public void TheBlessingEndsWithTheRound()
+        {
             var g = new GladiatorInstance(GladiatorDef.Brutius);
+            g.BlessWeapon();
+            g.ResetForNewRound();
+            Assert.IsFalse(g.WeaponBuffed);
+        }
 
-            for (int i = 0; i < 30; i++)
+        [Test]
+        public void InAMatchTheFirstOneIsLaidOnTheThirdCycle()
+        {
+            var squad = new[] { GladiatorDef.Brutius, GladiatorDef.Barbarius, GladiatorDef.Hilius };
+            var m = new GameManager(new System.Random(3));
+            m.StartMatch(squad, squad);
+            m.SubmitPick(PlayerSide.P1, GladiatorId.Brutius);
+
+            for (int frame = 0; frame < 20000 && m.State.Cycle < 3; frame++)
             {
-                var target = items.Items[i % items.Items.Count];
-                g.Pos = target.Pos;
-                var picked = items.TryPickup(g);
-                Assert.IsNotNull(picked, "standing on a weapon must pick it up");
-                items.ApplyPickup(g, picked);
-
-                Assert.AreEqual(GameConstants.ItemCountOnArena, items.Items.Count,
-                    "the arena always holds exactly three weapons");
-                foreach (var weapon in WeaponDef.All)
-                    Assert.AreEqual(1, CountOf(items, weapon.Kind),
-                        $"all three choices stay on the floor - {weapon.Name} went missing");
+                Assert.IsFalse(m.State.Buffs.Position.HasValue, $"a blessing lay on the sand on cycle {m.State.Cycle}");
+                m.Tick(1f / 60f);
+                if (m.State.Phase == MatchPhase.RoundEnd || m.State.Phase == MatchPhase.MatchEnd)
+                    Assert.Ignore("the round ended before the third cycle");
             }
+
+            Assert.AreEqual(3, m.State.Cycle);
+            Assert.IsTrue(m.State.Buffs.Position.HasValue, "the third cycle should have laid one");
         }
-
-        [Test]
-        public void APickedUpWeaponIsTheGildedOne()
-        {
-            var items = new ItemSystem(new System.Random(3));
-            items.SpawnInitial();
-
-            var g = new GladiatorInstance(GladiatorDef.Brutius);
-            g.EquipTrainedWeapon();
-            Assert.IsFalse(g.WeaponIsGilded, "he walks in with his own");
-
-            var shieldPair = items.Items.Find(i => i.Kind == WeaponKind.SwordAndShield);
-            items.ApplyPickup(g, shieldPair);
-
-            Assert.AreEqual(WeaponKind.SwordAndShield, g.Weapon);
-            Assert.IsTrue(g.HasShield);
-            Assert.IsTrue(g.WeaponIsGilded, "everything on the sand is the better copy");
-        }
-
-        [Test]
-        public void AnythingCanBePickedUp_TrainedOrNot()
-        {
-            // The old rule about a two-hander refusing a shield went with the slots it policed.
-            // Taking the wrong weapon is a mistake the player is allowed to make - the HUD rings it
-            // in red rather than the simulation silently declining it, because a pickup that does
-            // not happen reads as a bug and a red ring reads as a warning.
-            var items = new ItemSystem(new System.Random(5));
-            items.SpawnInitial();
-
-            var g = new GladiatorInstance(GladiatorDef.Hilius);
-            g.EquipTrainedWeapon();
-            Assert.AreEqual(WeaponKind.SwordAndShield, g.Weapon);
-
-            var mace = items.Items.Find(i => i.Kind == WeaponKind.TwoHandedMace);
-            g.Pos = mace.Pos;
-            Assert.AreSame(mace, items.TryPickup(g), "he is allowed to pick up the wrong weapon");
-
-            items.ApplyPickup(g, mace);
-            Assert.AreEqual(WeaponKind.TwoHandedMace, g.Weapon);
-            Assert.IsTrue(g.IsUntrained, "and the HUD has to be able to say so");
-        }
-
-        [Test]
-        public void StandingOnTheGildedWeaponHeIsAlreadyHolding_DoesNothing()
-        {
-            // Otherwise walking over your own mace teleports an identical mace to the far end of
-            // the arena, and the three choices quietly shuffle every time anyone stands still.
-            var items = new ItemSystem(new System.Random(9));
-            items.SpawnInitial();
-
-            var mace = items.Items.Find(i => i.Kind == WeaponKind.TwoHandedMace);
-            var g = new GladiatorInstance(GladiatorDef.Brutius)
-            {
-                Weapon = WeaponKind.TwoHandedMace,
-                WeaponIsGilded = true,
-                Pos = mace.Pos,
-            };
-
-            Assert.IsNull(items.TryPickup(g));
-            CollectionAssert.Contains(items.Items, mace, "and it stays exactly where it was");
-        }
-
-        [Test]
-        public void ItemsAlwaysSpawnInsideTheArena()
-        {
-            var items = new ItemSystem(new System.Random(11));
-            for (int i = 0; i < 50; i++)
-            {
-                items.SpawnInitial();
-                foreach (var item in items.Items)
-                    Assert.Less(ArenaShape.NormalizedDistance(item.Pos), 1f,
-                        "an item spawned outside the wall would be unreachable");
-            }
-        }
-
-        [Test]
-        public void TrapsAreSplitEvenlyBetweenTheTwoEndsOfTheArena()
-        {
-            // The two ends are not interchangeable - the player starts in one and the opponent in
-            // the other - so a free scatter that happened to drop four of six into one end would
-            // hand that round to whoever was standing in the other. Checked over many draws,
-            // because getting it right once by luck is exactly the failure being guarded against.
-            for (int seed = 0; seed < 40; seed++)
-            {
-                var traps = new TrapSystem(new System.Random(seed));
-                traps.SpawnForRound();
-
-                Assert.AreEqual(GameConstants.TrapCount, traps.Traps.Count);
-
-                int near = traps.Traps.Count(t => t.Pos.y < 0f);
-                int far = traps.Traps.Count(t => t.Pos.y > 0f);
-                Assert.AreEqual(GameConstants.TrapCount / 2, near, $"seed {seed}: near end");
-                Assert.AreEqual(GameConstants.TrapCount / 2, far, $"seed {seed}: far end");
-
-                foreach (var trap in traps.Traps)
-                    Assert.LessOrEqual(ArenaShape.NormalizedDistance(trap.Pos), 1f,
-                        $"seed {seed}: a trap was laid outside the wall");
-            }
-        }
-
-        private static int CountOf(ItemSystem items, WeaponKind kind)
-            => items.Items.FindAll(i => i.Kind == kind).Count;
     }
 }

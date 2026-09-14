@@ -65,24 +65,26 @@ namespace ColosseumDuel.Tests
         }
 
         [UnityTest]
-        public IEnumerator ItemViewsTrackTheThreePickupsOnTheFloor()
+        public IEnumerator TheBlessingIsDrawnWhereItLiesAndGoesWhenItIsTaken()
         {
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return null;
 
-            var items = _controller.Manager.State.Items.Items;
-            Assert.AreEqual(GameConstants.ItemCountOnArena, items.Count);
+            var view = FindView("WeaponBlessing");
+            Assert.IsNotNull(view, "the blessing has no view");
 
-            for (int i = 0; i < items.Count; i++)
-            {
-                var view = FindView($"Item_{i}");
-                Assert.IsNotNull(view, $"Item_{i} view is missing");
-                Assert.IsTrue(view.gameObject.activeInHierarchy, $"Item_{i} should be visible");
+            var buffs = _controller.Manager.State.Buffs;
+            var spot = new Vector2(40f, 60f);
+            buffs.PlaceAt(spot);
+            yield return null;
 
-                var expected = _controller.Arena.ToWorld(items[i].Pos);
-                Assert.Less(Vector3.Distance(view.position, expected), 0.001f,
-                    $"Item_{i} is not drawn where the simulation says it is");
-            }
+            Assert.IsTrue(view.gameObject.activeInHierarchy, "a blessing on the sand should be drawn");
+            Assert.Less(Vector3.Distance(view.position, _controller.Arena.ToWorld(spot)), 0.001f,
+                "and drawn where the simulation says it lies");
+
+            buffs.Clear();
+            yield return null;
+            Assert.IsFalse(view.gameObject.activeInHierarchy, "a blessing taken should not still be drawn");
         }
 
         [UnityTest]
@@ -223,40 +225,6 @@ namespace ColosseumDuel.Tests
             Assert.Greater(Vector2.Dot(g.PlannedAimDirection, Vector2.up), 0.95f,
                 "the ordered run should point at the tap");
         }
-
-        [UnityTest]
-        public IEnumerator ATrapStopsTheGladiatorAndBites()
-        {
-            _controller.SubmitPlayerPick(GladiatorId.Brutius);
-            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
-
-            var traps = _controller.Manager.State.Traps;
-            Assert.IsNotNull(traps);
-
-            // Not the full count: the scene opens on a tutorial match, which sweeps traps off the
-            // path it points the player down. What matters here is that the ones left still bite.
-            Assert.Greater(traps.Traps.Count, 0);
-            Assert.LessOrEqual(traps.Traps.Count, GameConstants.TrapCount);
-
-            var g = _controller.Manager.State.P1.Active;
-            var trap = traps.Traps[0];
-            g.Pos = trap.Pos;
-            g.Vel = new Vector2(0f, 200f);
-            float hp = g.Hp;
-
-            Assert.AreSame(trap, traps.TryTrigger(g));
-
-            // Stopping him is the point; the bite is the smallest attack in the game on purpose, so
-            // the scenery never out-hits the fighters it is there to inconvenience.
-            Assert.AreEqual(Vector2.zero, g.Vel, "a sprung trap has to stop the charge");
-            Assert.AreEqual(hp - TrapSystem.Damage, g.Hp, 0.001f);
-            Assert.AreEqual(GladiatorDef.All.Min(d => d.Damage), TrapSystem.Damage, 0.001f);
-
-            Assert.IsFalse(trap.Armed);
-            Assert.IsNull(traps.TryTrigger(g), "a sprung trap must not bite twice");
-            yield return null;
-        }
-
 
         /// <summary>Distance from the centre in wall units, measured on the arena's ellipse.</summary>
         private float NormalisedRadius(Vector3 localPosition)
