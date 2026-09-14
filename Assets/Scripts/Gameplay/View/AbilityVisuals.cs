@@ -10,9 +10,9 @@ namespace ColosseumDuel.Gameplay.View
     /// fires, the name that goes up over the man, and the aura at his feet while it lasts - and all
     /// three have to be recognisably the same thing.
     ///
-    /// The glow follows the weapon blessing's rule on purpose: steady for as long as it lasts, and a
-    /// slow blink through the last cycle, so "this is the last turn you have it" reads the same
-    /// whether it is a blessing on a blade or a Bulwark round a shield.
+    /// An ability's glow is steady for as long as it lasts and blinks slowly through the last cycle,
+    /// so "this is the last turn you have it" reads at his feet. The weapon blessing used to share the
+    /// rule; its last cycle now turns the weapon yellow instead - see GladiatorView.SyncWeaponGlow.
     /// </summary>
     public static class AbilityVisuals
     {

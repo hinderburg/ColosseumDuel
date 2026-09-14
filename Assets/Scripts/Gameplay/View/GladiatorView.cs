@@ -366,6 +366,7 @@ namespace ColosseumDuel.Gameplay.View
         private Transform _offRoundShield;
         private WeaponKind? _shownWeapon;
         private bool _shownBuffed;
+        private bool _shownBuffEnding;
 
         /// <summary>
         /// The gear a gladiator carries, built once and re-parented to whichever archetype is
@@ -526,13 +527,18 @@ namespace ColosseumDuel.Gameplay.View
             if (_offHand != null && _offHand.gameObject.activeSelf != offHanded)
                 _offHand.gameObject.SetActive(offHanded);
 
-            if (armed && (_shownWeapon != g.Weapon || _shownBuffed != g.WeaponBuffed))
+            if (armed && (_shownWeapon != g.Weapon || _shownBuffed != g.WeaponBuffed
+                          || _shownBuffEnding != g.WeaponBuffEnding))
             {
                 _shownWeapon = g.Weapon;
                 _shownBuffed = g.WeaponBuffed;
+                _shownBuffEnding = g.WeaponBuffEnding;
 
-                // Steel for the weapon he walked in with, red while the blessing is on it.
-                var tint = g.WeaponBuffed ? GearSizes.BlessedTint : GearSizes.CarriedTint;
+                // Steel for the weapon he walked in with, red while the blessing is on it, and yellow
+                // on the last cycle it lasts.
+                var tint = !g.WeaponBuffed ? GearSizes.CarriedTint
+                    : g.WeaponBuffEnding ? GearSizes.BlessingEndingTint
+                    : GearSizes.BlessedTint;
                 GearSizes.Tint(_mainHand.gameObject, tint);
                 if (_offHand != null) GearSizes.Tint(_offHand.gameObject, tint);
 
@@ -567,14 +573,14 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         /// <summary>
-        /// The blessing's glow round the weapon in his hands: steady for as long as it lasts, and a
-        /// slow blink through its last cycle, so the player can see this is the last turn it will
-        /// hit harder. On unscaled time - planning slows the world to a fifth, and a blink at a fifth
-        /// of its speed is not a blink.
+        /// The blessing's glow round the weapon in his hands: steady for as long as it lasts, red,
+        /// and yellow through its last cycle, so the player can see at a glance this is the last turn
+        /// it will hit harder. It blinked through the last cycle once; a colour reads without having
+        /// to be watched.
         /// </summary>
         private void SyncWeaponGlow(bool glowing, bool ending)
         {
-            float strength = AbilityVisuals.GlowStrength(glowing, ending);
+            float strength = glowing ? 1f : 0f;
             WeaponGlowStrength = strength;
 
             foreach (var shell in _glowShells)
@@ -583,6 +589,11 @@ namespace ColosseumDuel.Gameplay.View
 
             if (_glowProperties == null) _glowProperties = new MaterialPropertyBlock();
             var color = _palette.WeaponGlow.color;
+            if (ending)
+            {
+                var yellow = GearSizes.BlessingEndingTint;
+                color = new Color(yellow.r, yellow.g, yellow.b, color.a);
+            }
             color.a *= strength;
             _glowProperties.SetColor(BaseColorId, color);
             foreach (var renderer in _glowRenderers) renderer.SetPropertyBlock(_glowProperties);

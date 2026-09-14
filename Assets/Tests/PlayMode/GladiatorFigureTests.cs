@@ -214,10 +214,10 @@ namespace ColosseumDuel.Tests
                 .Any(t => t.name == GearSizes.ShellName && t.gameObject.activeInHierarchy);
 
         [UnityTest]
-        public IEnumerator ABlessedWeaponTurnsRedAndGlows_BlinkingThroughItsLastCycle()
+        public IEnumerator ABlessedWeaponTurnsRedAndGlows_ThenYellowForItsLastCycle()
         {
             // Red and a glow are the whole of how the player is told his blows are worth more, and
-            // the blink is how he is told this is the last turn they will be.
+            // yellow is how he is told this is the last turn they will be.
             _controller.SubmitPlayerPick(GladiatorId.Brutius);
             yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
@@ -258,8 +258,16 @@ namespace ColosseumDuel.Tests
                 least = Mathf.Min(least, view.WeaponGlowStrength);
                 most = Mathf.Max(most, view.WeaponGlowStrength);
             }
-            Assert.Less(least, 0.4f, "on its last cycle the glow should fade right down as it blinks");
-            Assert.Greater(most, 0.9f, "and come back up again");
+            Assert.AreEqual(1f, least, 0.001f, "on its last cycle the glow should hold steady, not blink");
+            Assert.AreEqual(GearSizes.BlessingEndingTint, TintOf(main, block),
+                "on its last cycle the weapon should turn yellow");
+
+            var glowShell = main.GetComponentsInChildren<Transform>(true)
+                .First(t => t.name == GearSizes.GlowShellName && t.gameObject.activeInHierarchy);
+            glowShell.GetComponentInChildren<Renderer>(true).GetPropertyBlock(block);
+            var glowColor = block.GetColor(Shader.PropertyToID("_BaseColor"));
+            Assert.AreEqual(GearSizes.BlessingEndingTint.r, glowColor.r, 0.01f, "and its glow yellow with it");
+            Assert.AreEqual(GearSizes.BlessingEndingTint.g, glowColor.g, 0.01f, "and its glow yellow with it");
         }
 
         private static Color TintOf(Transform holder, MaterialPropertyBlock block)
