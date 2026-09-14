@@ -253,10 +253,10 @@ namespace ColosseumDuel.Gameplay.Hud
 
             // The ability differs per gladiator, so name it rather than saying "special" - the
             // names are short enough to fit and tell the player what the button will actually do.
-            _abilityLabel.text = gladiator.Def.AbilityName;
+            _abilityLabel.text = gladiator.AbilityInfo.Name;
 
             // With a glyph the name drops below it; without one - no icon pack - it keeps the middle.
-            HudFactory.UseSprite(_abilityIcon, _palette != null ? _palette.AbilityIconFor(gladiator.Def.Ability) : null);
+            HudFactory.UseSprite(_abilityIcon, _palette != null ? _palette.AbilityIconFor(gladiator.Ability) : null);
             bool hasIcon = _abilityIcon.sprite != null;
             if (_abilityIcon.enabled != hasIcon) _abilityIcon.enabled = hasIcon;
             _abilityLabel.alignment = hasIcon ? TextAnchor.LowerCenter : TextAnchor.MiddleCenter;

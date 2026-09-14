@@ -49,12 +49,24 @@ namespace ColosseumDuel.EditorTools
         {
             switch (key)
             {
-                case AbilityKey.Spirit: return "Skip_Bright";         // run half as far again
-                case AbilityKey.Fury: return "Heart01_Bright";        // take a quarter less
-                case AbilityKey.Mongoose: return "Thunder_Bright";    // strike twice
-                case AbilityKey.Bulwark: return "Padlock01_Bright";   // the front is shut
-                case AbilityKey.SecondWind: return "Potion01_Bright"; // drink and go on
-                case AbilityKey.Net: return "Network_Bright";         // the mesh itself
+                case AbilityKey.Earthshaker: return "ThunderStrike_Bright";
+                case AbilityKey.Rampage: return "Skip_Bright";
+                case AbilityKey.StoneSkin: return "Shield_Bright";
+                case AbilityKey.Bloodlust: return "Heart01_Bright";
+                case AbilityKey.Frenzy: return "Sword_Bright";
+                case AbilityKey.Berserk: return "Thunder_Bright";
+                case AbilityKey.Backstab: return "Aim01_Bright";
+                case AbilityKey.Riposte: return "Reload_Bright";
+                case AbilityKey.Mongoose: return "Star01_Bright";
+                case AbilityKey.Bulwark: return "Padlock01_Bright";
+                case AbilityKey.Testudo: return "Padlock02_Bright";
+                case AbilityKey.ShieldBash: return "Right_Bright";
+                case AbilityKey.Lunge: return "Up02_Bright";
+                case AbilityKey.Brace: return "Point_Bright";
+                case AbilityKey.SecondWind: return "Potion01_Bright";
+                case AbilityKey.Net: return "Network_Bright";
+                case AbilityKey.Shackles: return "Key_Bright";
+                case AbilityKey.TridentThrow: return "Aim02_Bright";
                 default: return null;
             }
         }

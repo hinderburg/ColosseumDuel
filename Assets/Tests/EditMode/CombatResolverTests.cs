@@ -38,16 +38,16 @@ namespace ColosseumDuel.Tests
             // The one place the actual numbers are stated. They dropped by a factor of ten when the
             // weapon started carrying a multiplier of its own; everything else in this file checks
             // what is applied on top, so a future balance pass touches this test alone.
-            Assert.AreEqual(200f, GladiatorDef.Brutius.MaxHp, Tol);
-            Assert.AreEqual(10f, GladiatorDef.Brutius.Damage, Tol);
+            Assert.AreEqual(160f, GladiatorDef.Brutius.MaxHp, Tol);
+            Assert.AreEqual(9f, GladiatorDef.Brutius.Damage, Tol);
             Assert.AreEqual(10f, GladiatorDef.Brutius.Speed, Tol);
 
-            Assert.AreEqual(100f, GladiatorDef.Barbarius.MaxHp, Tol);
+            Assert.AreEqual(115f, GladiatorDef.Barbarius.MaxHp, Tol);
             Assert.AreEqual(13f, GladiatorDef.Barbarius.Damage, Tol);
             Assert.AreEqual(15f, GladiatorDef.Barbarius.Speed, Tol);
 
             Assert.AreEqual(150f, GladiatorDef.Hilius.MaxHp, Tol);
-            Assert.AreEqual(7f, GladiatorDef.Hilius.Damage, Tol);
+            Assert.AreEqual(8f, GladiatorDef.Hilius.Damage, Tol);
             Assert.AreEqual(20f, GladiatorDef.Hilius.Speed, Tol);
         }
 
@@ -72,7 +72,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(1, WeaponDef.SwordAndShield.Attacks);
             Assert.AreEqual(0.5f, WeaponDef.SwordAndShield.IncomingDamageMultiplier, Tol);
 
-            Assert.AreEqual(1.5f, WeaponDef.TwoHandedMace.DamageMultiplier, Tol);
+            Assert.AreEqual(1.3f, WeaponDef.TwoHandedMace.DamageMultiplier, Tol);
             Assert.AreEqual(1, WeaponDef.TwoHandedMace.Attacks);
             Assert.Greater(WeaponDef.TwoHandedMace.Knockback, 0f);
 
@@ -90,7 +90,8 @@ namespace ColosseumDuel.Tests
         {
             Assert.AreEqual(Base * 0.7f, CombatResolver.DealDamage(With(WeaponKind.DualSwords), Bare()), Tol);
             Assert.AreEqual(Base, CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), Bare()), Tol);
-            Assert.AreEqual(Base * 1.5f, CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace), Bare()), Tol);
+            Assert.AreEqual(Base * WeaponDef.TwoHandedMace.DamageMultiplier,
+                CombatResolver.DealDamage(With(WeaponKind.TwoHandedMace), Bare()), Tol);
         }
 
         [Test]
@@ -127,12 +128,12 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void FuryBuff_Reduces25PercentOfIncomingDamage()
+        public void StoneSkin_Takes30PercentOffIncomingDamage()
         {
-            var furious = Bare();
-            furious.Buff = new ActiveBuff { Key = AbilityKey.Fury, CyclesLeft = 2 };
-            Assert.AreEqual(Base * 0.75f,
-                CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), furious), Tol);
+            var stone = Bare();
+            stone.Buff = new ActiveBuff { Key = AbilityKey.StoneSkin, CyclesLeft = 2 };
+            Assert.AreEqual(Base * GameConstants.StoneSkinTakenMult,
+                CombatResolver.DealDamage(With(WeaponKind.SwordAndShield), stone), Tol);
         }
 
         [Test]

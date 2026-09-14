@@ -69,14 +69,18 @@ namespace ColosseumDuel.Gameplay.View
         /// mark him, not to cover the sand round him. Set against EachAbilityEffectRendersAFrame.
         /// </summary>
         private static float AbilityFxScale(AbilityKey key)
-            => key == AbilityKey.Fury || key == AbilityKey.Bulwark ? 1.75f : 1f;
+            => key == AbilityKey.Berserk || IsSphere(key) ? 1.75f : 1f;
+
+        /// <summary>The three whose effect is a sphere round him rather than something on the ground.</summary>
+        private static bool IsSphere(AbilityKey key)
+            => key == AbilityKey.Bulwark || key == AbilityKey.Testudo || key == AbilityKey.StoneSkin;
 
         /// <summary>
         /// How far up him an effect sits, in world units. The auras and the net are on the ground and
         /// stay at his feet; the sphere is round him, and at his feet it was a glow under his boots.
         /// </summary>
         private static float AbilityFxHeight(AbilityKey key)
-            => key == AbilityKey.Bulwark ? FigureHeight * 0.5f : 0f;
+            => IsSphere(key) ? FigureHeight * 0.5f : 0f;
 
         /// <summary>How tall a figure stands in the world: the prefabs' height, grown with the man.</summary>
         private const float FigureHeight = 3.75f * GameConstants.GladiatorScale;
@@ -1072,7 +1076,8 @@ namespace ColosseumDuel.Gameplay.View
 
             foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))
             {
-                if (key == AbilityKey.Net) continue;
+                // Not the two that act on the other man - the net plays on whoever it caught.
+                if (key == AbilityKey.Net || key == AbilityKey.Shackles) continue;
                 var prefab = palette.AbilityFxFor(key);
                 if (prefab != null)
                     _abilityFx[(int)key] = MakeFx(prefab, $"AbilityFx_{key}", AbilityFxScale(key), AbilityFxHeight(key));

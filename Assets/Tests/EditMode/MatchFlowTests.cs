@@ -487,6 +487,7 @@ namespace ColosseumDuel.Tests
 
             var hilius = m.State.P1.Active;
             var victim = m.State.Bot.Active;
+            hilius.Ability = AbilityKey.Mongoose;
             hilius.Rage = GameConstants.RageMax;
 
             // Nose to nose, so the collision resolves on the first substep and neither has room to
@@ -514,10 +515,10 @@ namespace ColosseumDuel.Tests
         [Test]
         public void MongooseKeepsBothAttacksOnTheFollowingCycleAndDropsBackAfter()
         {
-            // The buff runs two cycles, and the attack budget is derived after the buff is aged - so
-            // the cycle it expires on must drop back to one. Off by one either way and the ability
+            // The buff runs three cycles, and the attack budget is derived after the buff is aged -
+            // so the cycle it expires on must drop back to one. Off by one either way and the ability
             // silently lasts one cycle too few or too many.
-            var hilius = new GladiatorInstance(GladiatorDef.Hilius);
+            var hilius = new GladiatorInstance(GladiatorDef.Hilius) { Ability = AbilityKey.Mongoose };
             hilius.BeginCycle();
             hilius.Rage = GameConstants.RageMax;
             hilius.ActivateAbility();
@@ -526,6 +527,9 @@ namespace ColosseumDuel.Tests
 
             hilius.BeginCycle();
             Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the second cycle of the buff");
+
+            hilius.BeginCycle();
+            Assert.AreEqual(2, hilius.AttacksRemainingThisCycle, "the third cycle of the buff");
 
             hilius.BeginCycle();
             Assert.AreEqual(1, hilius.AttacksRemainingThisCycle, "the buff has expired by now");
@@ -781,17 +785,17 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// Armed, Spirit lengthens the run that can be filed by half again - before it has fired,
+        /// Armed, Rampage lengthens the run that can be filed by half again - before it has fired,
         /// because the run is drawn during planning and the ability fires as the action phase opens.
         /// </summary>
         [Test]
-        public void ArmedSpiritLengthensTheRunThatCanBeDrawn()
+        public void ArmedRampageLengthensTheRunThatCanBeDrawn()
         {
             var m = StartedRound();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
             var p1 = m.State.P1.Active;
-            Assert.AreEqual(AbilityKey.Spirit, p1.Def.Ability, "this test needs Brutius and his Spirit");
+            p1.Ability = AbilityKey.Rampage;
             p1.Pos = new Vector2(0f, -100f);
 
             var strokes = new[]
@@ -804,7 +808,7 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(m.SubmitPlanningPath(PlayerSide.P1, strokes));
 
             Assert.AreEqual(p1.DashReach() * 1.5f, ObstacleField.Length(p1.PlannedPath), 0.5f,
-                "an armed Spirit should let him be sent half as far again");
+                "an armed Rampage should let him be sent half as far again");
         }
 
         /// <summary>
@@ -914,7 +918,7 @@ namespace ColosseumDuel.Tests
             // Mongoose lets Hilius swing twice in one cycle, so an unarmed, undefended exchange
             // lands twice his base damage. Expressed against the stat rather than as a number, so a
             // balance pass on the damage table does not break a test about the ability.
-            var attacker = new GladiatorInstance(GladiatorDef.Hilius);
+            var attacker = new GladiatorInstance(GladiatorDef.Hilius) { Ability = AbilityKey.Mongoose };
             attacker.BeginCycle();
             attacker.Rage = 1f;
             attacker.ActivateAbility();

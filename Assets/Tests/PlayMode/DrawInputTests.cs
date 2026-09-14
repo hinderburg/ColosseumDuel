@@ -120,12 +120,13 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// Arming Spirit while drawing gives the run the reach it will have, so drawing can carry on
+        /// Arming Rampage while drawing gives the run the reach it will have, so drawing can carry on
         /// past where it ran out; taking it back cuts the run to the reach he has without it.
         /// </summary>
         [Test]
-        public void SpiritChangesHowFarTheRunCanBeDrawn()
+        public void RampageChangesHowFarTheRunCanBeDrawn()
         {
+            Player.Ability = AbilityKey.Rampage;
             Player.Pos = new Vector2(0f, -100f);
             float plain = Player.PlannedReach();
 
@@ -143,7 +144,7 @@ namespace ColosseumDuel.Tests
             _input.DrawTo(new Vector2(0f, 100f));
             _input.DrawTo(new Vector2(0f, -100f));
             Assert.AreEqual(plain * 1.5f, ObstacleField.Length(Player.PlannedPath), 0.5f,
-                "Spirit should let the run go half as far again");
+                "Rampage should let the run go half as far again");
             _input.EndDraw();
 
             _input.ToggleAbility();

@@ -9,19 +9,21 @@ namespace ColosseumDuel.Tests
 {
     /// <summary>
     /// Bot against bot, every archetype against every other, to see whether the six are anywhere
-    /// near even.
+    /// near even - and, since each man now takes one of three abilities, how each ability does.
     ///
     /// Explicit: it plays hundreds of whole duels, which is a minute rather than milliseconds, and
-    /// it is a tuning instrument rather than a guard - run it by name after touching a stat or a
-    /// weapon. The table it logs is the useful part; the assertion is only the loosest bound on it.
+    /// it is a tuning instrument rather than a guard - run it by name after touching a stat, a
+    /// weapon or an ability. The tables it logs are the useful part; the assertion is only the
+    /// loosest bound on them.
     ///
     /// The bot is not a good player, so this measures how the archetypes do in its hands, which is
     /// the only opponent the game has. Each pairing is played from both ends of the arena, since
-    /// the player's end and the bot's end are not the same end.
+    /// the player's end and the bot's end are not the same end, and each man takes an ability at
+    /// random, seeded, so a pairing's duels spread over all nine combinations.
     /// </summary>
     public class BalanceHarness
     {
-        private const int DuelsPerPairing = 16;
+        private const int DuelsPerPairing = 18;
         private const float Dt = 1f / 30f;
         private const float MaxSeconds = 900f;
 
@@ -34,6 +36,8 @@ namespace ColosseumDuel.Tests
             var defs = GladiatorDef.All;
             var wins = defs.ToDictionary(d => d.Id, d => 0);
             var played = defs.ToDictionary(d => d.Id, d => 0);
+            var abilityWins = new Dictionary<AbilityKey, int>();
+            var abilityPlayed = new Dictionary<AbilityKey, int>();
             var beat = new Dictionary<(GladiatorId, GladiatorId), int>();
             int draws = 0;
 
@@ -46,7 +50,16 @@ namespace ColosseumDuel.Tests
                 {
                     bool aFirst = duel % 2 == 0;
                     int seed = 1000 * i + 100 * j + duel;
-                    var winner = Duel(aFirst ? a : b, aFirst ? b : a, seed);
+                    var first = aFirst ? a : b;
+                    var second = aFirst ? b : a;
+
+                    // Every combination of the two men's abilities, in turn.
+                    var firstAbility = first.Abilities[duel % 3];
+                    var secondAbility = second.Abilities[(duel / 3) % 3];
+
+                    var winner = Duel(first, firstAbility, second, secondAbility, seed);
+                    Count(abilityPlayed, firstAbility);
+                    Count(abilityPlayed, secondAbility);
 
                     if (winner == null)
                     {
@@ -57,6 +70,7 @@ namespace ColosseumDuel.Tests
                     played[a.Id]++;
                     played[b.Id]++;
                     wins[winner.Id]++;
+                    Count(abilityWins, winner == first ? firstAbility : secondAbility);
 
                     var loser = winner == a ? b : a;
                     beat.TryGetValue((winner.Id, loser.Id), out int n);
@@ -78,14 +92,21 @@ namespace ColosseumDuel.Tests
                 }
                 report.Append($"{Rate(wins[a.Id], played[a.Id]),10:0.00}\n");
             }
-            report.Append($"draws: {draws}");
+            report.Append($"draws: {draws}\n[Balance] ability win rates:\n");
+            foreach (var d in defs)
+            {
+                report.Append($"  {d.Name,-10}");
+                foreach (var key in d.Abilities)
+                {
+                    abilityWins.TryGetValue(key, out int w);
+                    abilityPlayed.TryGetValue(key, out int p);
+                    report.Append($"  {AbilityDef.Get(key).Name,-14}{Rate(w, p),5:0.00}");
+                }
+                report.Append('\n');
+            }
             Debug.Log(report.ToString());
 
-            // Held to the bound: the three that came with the new weapons, which were tuned against
-            // this table. The first three are reported and not asserted - in the bot's hands Brutius
-            // wins nearly everything, and that is a question about the original roster rather than
-            // about whether the new men fit into it.
-            foreach (var d in new[] { GladiatorDef.Scutarius, GladiatorDef.Hastarius, GladiatorDef.Retiarius })
+            foreach (var d in defs)
             {
                 float rate = Rate(wins[d.Id], played[d.Id]);
                 Assert.That(rate, Is.InRange(Floor, 1f - Floor),
@@ -93,29 +114,29 @@ namespace ColosseumDuel.Tests
             }
         }
 
+        private static void Count(Dictionary<AbilityKey, int> counts, AbilityKey key)
+        {
+            counts.TryGetValue(key, out int n);
+            counts[key] = n + 1;
+        }
+
         private static float Rate(int wins, int played) => played > 0 ? wins / (float)played : 0f;
 
         /// <summary>One man a side, both driven by the bot, played to the end. Null for a draw.</summary>
-        private static GladiatorDef Duel(GladiatorDef p1, GladiatorDef bot, int seed)
+        private static GladiatorDef Duel(GladiatorDef p1, AbilityKey p1Ability, GladiatorDef bot, AbilityKey botAbility,
+            int seed)
         {
             var m = new GameManager(new System.Random(seed));
-            m.StartMatch(new[] { p1 }, new[] { bot });
+            m.StartMatch(new[] { p1 }, new[] { bot }, false,
+                new Dictionary<GladiatorId, AbilityKey> { { p1.Id, p1Ability } },
+                new Dictionary<GladiatorId, AbilityKey> { { bot.Id, botAbility } });
             m.SubmitPick(PlayerSide.P1, p1.Id);
-            var rng = new System.Random(seed * 7 + 3);
+            m.P1Auto = true;
 
             for (float t = 0f; t < MaxSeconds; t += Dt)
             {
                 var s = m.State;
                 if (s.Phase == MatchPhase.RoundEnd || s.Phase == MatchPhase.MatchEnd) break;
-
-                var me = s.P1.Active;
-                if (s.Phase == MatchPhase.Planning && me != null && me.Alive && me.PlannedAction == ActionType.None)
-                {
-                    var decision = BotAI.Decide(me, s.Bot.Active, s.Buffs, rng);
-                    m.SubmitPlanningAction(PlayerSide.P1, decision.Action, decision.AimDirection,
-                        decision.Power, decision.UseAbility);
-                }
-
                 m.Tick(Dt);
             }
 

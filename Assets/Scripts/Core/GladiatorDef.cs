@@ -23,9 +23,12 @@ namespace ColosseumDuel.Core
         /// </summary>
         public readonly float Speed;
 
-        public readonly AbilityKey Ability;
-        public readonly string AbilityName;
-        public readonly string AbilityDescription;
+        /// <summary>
+        /// The three abilities he can take into a fight. The player picks one for him on the roster
+        /// screen; until then, and for the bot's tests, he takes the first. See AbilityDef for what
+        /// each does, and GladiatorInstance.Ability for the one he actually has.
+        /// </summary>
+        public readonly IReadOnlyList<AbilityKey> Abilities;
 
         /// <summary>
         /// The weapon he is trained in. He starts the match holding it, and anything else he picks
@@ -53,17 +56,15 @@ namespace ColosseumDuel.Core
         public readonly int Level;
 
         public GladiatorDef(GladiatorId id, string name, float maxHp, float damage, float speed,
-            AbilityKey ability, string abilityName, string abilityDescription,
-            WeaponKind skilledWith, float buildWidth = 1f, float buildHeight = 1f, int level = 1)
+            AbilityKey[] abilities, WeaponKind skilledWith, float buildWidth = 1f, float buildHeight = 1f,
+            int level = 1)
         {
             Id = id;
             Name = name;
             MaxHp = maxHp;
             Damage = damage;
             Speed = speed;
-            Ability = ability;
-            AbilityName = abilityName;
-            AbilityDescription = abilityDescription;
+            Abilities = abilities;
             SkilledWith = skilledWith;
             BuildWidth = buildWidth;
             BuildHeight = buildHeight;
@@ -76,43 +77,37 @@ namespace ColosseumDuel.Core
         // anyone hands him anything.
 
         public static readonly GladiatorDef Brutius = new GladiatorDef(
-            GladiatorId.Brutius, "Brutius", maxHp: 200f, damage: 10f, speed: 10f,
-            ability: AbilityKey.Spirit, abilityName: "Spirit",
-            abilityDescription: "+50% speed for 2 cycles",
+            GladiatorId.Brutius, "Brutius", maxHp: 160f, damage: 9f, speed: 10f,
+            abilities: new[] { AbilityKey.Earthshaker, AbilityKey.Rampage, AbilityKey.StoneSkin },
             skilledWith: WeaponKind.TwoHandedMace, buildWidth: 1.2f);
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Barbarius", maxHp: 100f, damage: 13f, speed: 15f,
-            ability: AbilityKey.Fury, abilityName: "Fury",
-            abilityDescription: "-25% damage taken for 2 cycles",
+            GladiatorId.Barbarius, "Barbarius", maxHp: 115f, damage: 13f, speed: 15f,
+            abilities: new[] { AbilityKey.Bloodlust, AbilityKey.Frenzy, AbilityKey.Berserk },
             skilledWith: WeaponKind.DualSwords);
 
         public static readonly GladiatorDef Hilius = new GladiatorDef(
-            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 7f, speed: 20f,
-            ability: AbilityKey.Mongoose, abilityName: "Mongoose",
-            abilityDescription: "2 attacks per cycle, for 2 cycles",
+            GladiatorId.Hilius, "Hilius", maxHp: 150f, damage: 8f, speed: 20f,
+            abilities: new[] { AbilityKey.Backstab, AbilityKey.Riposte, AbilityKey.Mongoose },
             skilledWith: WeaponKind.SwordAndShield, buildWidth: 0.85f, buildHeight: 0.85f);
 
-        // The second three. Each walks in with a weapon of his own and an ability nobody else has;
+        // The second three. Each walks in with a weapon of his own and abilities nobody else has;
         // the numbers are set against the first three by the bot-against-bot table in
         // BalanceHarness rather than by argument.
 
         public static readonly GladiatorDef Scutarius = new GladiatorDef(
-            GladiatorId.Scutarius, "Scutarius", maxHp: 150f, damage: 8f, speed: 12f,
-            ability: AbilityKey.Bulwark, abilityName: "Bulwark",
-            abilityDescription: "no damage from the front for 2 cycles",
+            GladiatorId.Scutarius, "Scutarius", maxHp: 150f, damage: 9f, speed: 12f,
+            abilities: new[] { AbilityKey.Bulwark, AbilityKey.Testudo, AbilityKey.ShieldBash },
             skilledWith: WeaponKind.ScutumAndGladius, buildWidth: 1.1f);
 
         public static readonly GladiatorDef Hastarius = new GladiatorDef(
-            GladiatorId.Hastarius, "Hastarius", maxHp: 130f, damage: 10f, speed: 16f,
-            ability: AbilityKey.SecondWind, abilityName: "Second Wind",
-            abilityDescription: "heals 25% of his health",
+            GladiatorId.Hastarius, "Hastarius", maxHp: 140f, damage: 12f, speed: 16f,
+            abilities: new[] { AbilityKey.Lunge, AbilityKey.Brace, AbilityKey.SecondWind },
             skilledWith: WeaponKind.SpearAndShield, buildHeight: 1.08f);
 
         public static readonly GladiatorDef Retiarius = new GladiatorDef(
             GladiatorId.Retiarius, "Retiarius", maxHp: 130f, damage: 12f, speed: 18f,
-            ability: AbilityKey.Net, abilityName: "Net",
-            abilityDescription: "enemy runs at half speed for 2 cycles",
+            abilities: new[] { AbilityKey.Net, AbilityKey.Shackles, AbilityKey.TridentThrow },
             skilledWith: WeaponKind.Trident, buildWidth: 0.9f);
 
         public static readonly IReadOnlyList<GladiatorDef> All = new List<GladiatorDef>

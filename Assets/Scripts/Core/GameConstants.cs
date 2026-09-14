@@ -151,18 +151,41 @@ namespace ColosseumDuel.Core
         // --- combat modifiers ---
         public const float DefendDamageMult = 0.70f;      // -30% incoming damage while defending
         public const float ShieldDamageMult = 0.50f;      // what the sword-and-shield wielder takes
-        public const float ScutumDamageMult = 0.80f;      // the scutum: less than the shield, and it shoves
+        public const float ScutumDamageMult = 0.75f;      // the scutum: less than the shield, and it shoves
         public const float RoundShieldDamageMult = 0.80f; // the spearman's small round shield
 
         /// <summary>How far a blow from behind the scutum shoves its target - half the mace's throw.</summary>
         public const float ShieldBashKnockback = GladiatorRadius * 0.8f;
 
-        /// <summary>Share of his own health Second Wind gives back, at once.</summary>
-        public const float SecondWindHeal = 0.25f;
+        // --- abilities: the numbers behind the words on each card (see AbilityDef) ---
 
-        /// <summary>What a net leaves of a man's speed, and for how many cycles (the one it lands in counted).</summary>
-        public const float NetSpeedMult = 0.5f;
+        /// <summary>Share of his own health Second Wind gives back, at once.</summary>
+        public const float SecondWindHeal = 0.35f;
+
+        /// <summary>How many cycles a net holds a man still (the one it lands in counted).</summary>
         public const int NetCycles = 2;
+
+        /// <summary>How many cycles Earthshaker roots the man it lands on (this one and the next).</summary>
+        public const int StaggerCycles = 2;
+
+        /// <summary>How many whole cycles Shackles keeps the other man from his ability.</summary>
+        public const int ShacklesCycles = 2;
+
+        public const float RampageSpeedMult = 1.5f;
+        public const float RampageDamageMult = 0.7f;
+        public const float StoneSkinTakenMult = 0.7f;
+        public const float BloodlustHeal = 0.5f;
+        public const float FrenzyBleedMult = 2f;
+        public const int FrenzyBleedCycles = 3;
+        public const float BerserkDamageMult = 1.5f;
+        public const float BerserkTakenMult = 1.25f;
+        public const float RiposteReturn = 0.5f;
+        public const float TestudoTakenMult = 0.4f;
+        public const float TestudoSpeedMult = 0.5f;
+        public const float EarthshakerKnockbackMult = 2f;
+        public const float ShieldBashKnockbackMult = 3f;
+        public const float LungeReachMult = 1.5f;
+        public const float TridentThrowReachMult = 2f;
 
         /// <summary>
         /// What a blow is worth for landing behind a gladiator, and for landing on his flank.

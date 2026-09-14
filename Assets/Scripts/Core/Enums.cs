@@ -63,13 +63,29 @@ namespace ColosseumDuel.Core
         Back,
     }
 
+    /// <summary>
+    /// Every ability in the game, three to an archetype and in his order. See AbilityDef for what
+    /// each one does and GladiatorDef.Abilities for whose they are.
+    /// </summary>
     public enum AbilityKey
     {
-        Spirit,   // Brutius - +50% speed for 2 cycles
-        Fury,     // Barbarius - -25% damage taken for 2 cycles
-        Mongoose,   // Hilius - 2 attacks per cycle for 2 cycles
-        Bulwark,    // Scutarius - blows from the front do nothing for 2 cycles
-        SecondWind, // Hastarius - heals a quarter of his health at once
-        Net         // Retiarius - the enemy runs at half speed for 2 cycles
+        Earthshaker,  // Brutius
+        Rampage,
+        StoneSkin,
+        Bloodlust,    // Barbarius
+        Frenzy,
+        Berserk,
+        Backstab,     // Hilius
+        Riposte,
+        Mongoose,
+        Bulwark,      // Scutarius
+        Testudo,
+        ShieldBash,
+        Lunge,        // Hastarius
+        Brace,
+        SecondWind,
+        Net,          // Retiarius
+        Shackles,
+        TridentThrow
     }
 }

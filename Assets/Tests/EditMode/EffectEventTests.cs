@@ -154,6 +154,7 @@ namespace ColosseumDuel.Tests
         {
             var m = StartedRound();
             m.State.P1.Active = m.State.P1.Roster.Find(g => g.Def.Id == GladiatorId.Hilius);
+            m.State.P1.Active.Ability = AbilityKey.Mongoose;
             m.State.P1.Active.Pos = new Vector2(-40f, 0f);
             m.State.P1.Active.Rage = GameConstants.RageMax;
             m.State.Bot.Active.Pos = new Vector2(40f, 0f);

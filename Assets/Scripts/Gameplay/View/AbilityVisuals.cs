@@ -7,8 +7,8 @@ namespace ColosseumDuel.Gameplay.View
     /// How an ability looks: its colour, and how brightly anything lasting from it glows.
     ///
     /// One place for both, because three things draw an ability - the ring that goes out when it
-    /// fires, the name that goes up over the man, and the aura at his feet while it lasts - and all
-    /// three have to be recognisably the same thing.
+    /// fires, the effect on the man while it lasts, and the aura at his feet - and all three have to
+    /// be recognisably the same thing.
     ///
     /// An ability's glow is steady for as long as it lasts and blinks slowly through the last cycle,
     /// so "this is the last turn you have it" reads at his feet. The weapon blessing used to share the
@@ -40,21 +40,34 @@ namespace ColosseumDuel.Gameplay.View
         {
             switch (key)
             {
-                case AbilityKey.Spirit: return new Color(0.35f, 0.85f, 1.00f);     // quick, cold
-                case AbilityKey.Fury: return new Color(1.00f, 0.32f, 0.20f);       // blood up
-                case AbilityKey.Mongoose: return new Color(1.00f, 0.86f, 0.25f);   // the second strike
-                case AbilityKey.Bulwark: return new Color(0.55f, 0.72f, 1.00f);    // the wall
-                case AbilityKey.SecondWind: return new Color(0.40f, 0.95f, 0.45f); // healing
-                case AbilityKey.Net: return new Color(0.80f, 0.80f, 0.70f);        // rope
+                case AbilityKey.Earthshaker: return new Color(1.00f, 0.62f, 0.18f);  // the ground giving
+                case AbilityKey.Rampage: return new Color(0.35f, 0.85f, 1.00f);      // quick, cold
+                case AbilityKey.StoneSkin: return new Color(0.72f, 0.66f, 0.55f);    // stone
+                case AbilityKey.Bloodlust: return new Color(0.90f, 0.10f, 0.16f);    // blood drunk
+                case AbilityKey.Frenzy: return new Color(0.75f, 0.12f, 0.30f);       // the wound
+                case AbilityKey.Berserk: return new Color(1.00f, 0.32f, 0.20f);      // blood up
+                case AbilityKey.Backstab: return new Color(0.55f, 0.45f, 0.85f);     // unseen
+                case AbilityKey.Riposte: return new Color(0.60f, 0.85f, 1.00f);      // steel flash
+                case AbilityKey.Mongoose: return new Color(1.00f, 0.86f, 0.25f);     // the second strike
+                case AbilityKey.Bulwark: return new Color(0.55f, 0.72f, 1.00f);      // the wall
+                case AbilityKey.Testudo: return new Color(0.35f, 0.80f, 0.45f);      // the shell
+                case AbilityKey.ShieldBash: return new Color(1.00f, 0.45f, 0.22f);   // impact
+                case AbilityKey.Lunge: return new Color(0.40f, 0.95f, 0.60f);        // the long point
+                case AbilityKey.Brace: return new Color(1.00f, 0.38f, 0.30f);        // set against it
+                case AbilityKey.SecondWind: return new Color(0.40f, 0.95f, 0.45f);   // healing
+                case AbilityKey.Net: return new Color(0.80f, 0.80f, 0.70f);          // rope
+                case AbilityKey.Shackles: return new Color(0.70f, 0.40f, 0.95f);     // the chain
+                case AbilityKey.TridentThrow: return new Color(0.40f, 0.70f, 1.00f); // thrown steel
                 default: return new Color(0.95f, 0.65f, 0.15f);
             }
         }
 
         /// <summary>
-        /// Whether the ability leaves something on him while it lasts. Not Second Wind: it heals once
-        /// and is spent, and an aura for two cycles after would say it was still doing something.
-        /// Not Net either - its aura goes on the man it lands on, not the man who threw it.
+        /// Whether the ability leaves something on the man who used it while it lasts. Not Second
+        /// Wind: it heals once and is spent, and an aura after would say it was still doing something.
+        /// Not Net or Shackles either - they act on the other man, not on the one who threw them.
         /// </summary>
-        public static bool AurasOnUser(AbilityKey key) => key != AbilityKey.SecondWind && key != AbilityKey.Net;
+        public static bool AurasOnUser(AbilityKey key)
+            => key != AbilityKey.SecondWind && key != AbilityKey.Net && key != AbilityKey.Shackles;
     }
 }

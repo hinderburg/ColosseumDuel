@@ -79,7 +79,7 @@ namespace ColosseumDuel.Tests
                 }
 
             foreach (var def in GladiatorDef.All)
-                foreach (char c in def.Name + def.AbilityName + def.AbilityDescription)
+                foreach (char c in def.Name + string.Concat(def.Abilities.Select(k => AbilityDef.Get(k).Name + AbilityDef.Get(k).Summary)))
                 {
                     if (char.IsWhiteSpace(c)) continue;
                     Assert.IsTrue(font.HasCharacter(c),
@@ -213,12 +213,12 @@ namespace ColosseumDuel.Tests
             var shown = callouts.GetComponentsInChildren<Transform>(true)
                 .Where(t => t.name.StartsWith("Callout_") && t.gameObject.activeSelf)
                 .Select(t => t.GetComponentsInChildren<Text>(true))
-                .FirstOrDefault(labels => labels.Any(l => l.name == "Name" && l.text == g.Def.AbilityName));
-            Assert.IsNotNull(shown, $"{g.Def.AbilityName} went off and nothing said so");
+                .FirstOrDefault(labels => labels.Any(l => l.name == "Name" && l.text == g.AbilityInfo.Name));
+            Assert.IsNotNull(shown, $"{g.AbilityInfo.Name} went off and nothing said so");
 
             var name = shown.First(l => l.name == "Name");
             var description = shown.First(l => l.name == "Description");
-            StringAssert.AreEqualIgnoringCase(g.Def.AbilityDescription, description.text);
+            StringAssert.AreEqualIgnoringCase(g.AbilityInfo.Summary, description.text);
             Assert.Greater(name.fontSize, description.fontSize, "the name should be the big line");
 
             // The player's own man: the name goes up in the player's blue, not the ability's colour.
@@ -273,8 +273,9 @@ namespace ColosseumDuel.Tests
                 var ability = card.GetComponentsInChildren<Text>(true)
                     .FirstOrDefault(t => t.name == $"Ability_{slot}");
                 Assert.IsNotNull(ability, $"{def.Name}'s card has no ability line");
-                StringAssert.Contains(def.AbilityName, ability.text);
-                StringAssert.Contains(def.AbilityDescription, ability.text);
+                var chosen = AbilityDef.Get(_controller.AbilityFor(def.Id));
+                StringAssert.Contains(chosen.Name, ability.text);
+                StringAssert.Contains(chosen.Summary, ability.text);
             }
         }
 

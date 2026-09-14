@@ -109,7 +109,37 @@ namespace ColosseumDuel.Gameplay
             // the sand he fell on is the same sand, and by the third round it should look like it.
             if (Arena != null) Arena.ClearBloodStains();
 
-            Manager.StartMatch(Squad.Select(GladiatorDef.Get), BotSquadAgainst(Squad), tutorial);
+            // The bot takes one of each of its men's three abilities at random, so the three it
+            // fields are not the same three every match. Unity's random rather than the manager's,
+            // which is seeded and which every other roll of the match comes off.
+            var bot = BotSquadAgainst(Squad);
+            var botAbilities = bot.ToDictionary(d => d.Id,
+                d => d.Abilities[UnityEngine.Random.Range(0, d.Abilities.Count)]);
+
+            Manager.StartMatch(Squad.Select(GladiatorDef.Get), bot, tutorial, AbilityChoices, botAbilities);
+        }
+
+        /// <summary>
+        /// The ability the player has chosen for each archetype - on the roster screen, one of his
+        /// three. Kept per archetype rather than per squad slot, so taking a man out of the squad and
+        /// back in again does not forget what he was going to fight with.
+        /// </summary>
+        public readonly Dictionary<GladiatorId, AbilityKey> AbilityChoices =
+            GladiatorDef.All.ToDictionary(d => d.Id, d => d.Abilities[0]);
+
+        public AbilityKey AbilityFor(GladiatorId id)
+            => AbilityChoices.TryGetValue(id, out var key) ? key : GladiatorDef.Get(id).Abilities[0];
+
+        /// <summary>
+        /// Chooses the ability an archetype takes into the fight. Refuses one that is not his, and
+        /// starts the match behind the menu again so the men waiting in it carry the choice.
+        /// </summary>
+        public bool SetAbility(GladiatorId id, AbilityKey key)
+        {
+            if (!GladiatorDef.Get(id).Abilities.Contains(key)) return false;
+            AbilityChoices[id] = key;
+            RestartMatch();
+            return true;
         }
 
         /// <summary>
@@ -415,12 +445,12 @@ namespace ColosseumDuel.Gameplay
         private void OnAbilityFired(PlayerSide side)
         {
             var g = Manager.State.Get(side).Active;
-            ViewFor(side).PlayAbility(g != null ? AbilityVisuals.ColorFor(g.Def.Ability) : AbilityBurstColor);
+            ViewFor(side).PlayAbility(g != null ? AbilityVisuals.ColorFor(g.Ability) : AbilityBurstColor);
             if (g == null) return;
 
             // Found on demand, like the damage numbers: the HUD builds it in its own Start.
             if (_callouts == null) _callouts = FindFirstObjectByType<AbilityCalloutView>();
-            if (_callouts != null) _callouts.Show(g.Pos, g.Def, side);
+            if (_callouts != null) _callouts.Show(g.Pos, g.Ability, side);
         }
 
         private AbilityCalloutView _callouts;

@@ -79,9 +79,10 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void SpiritBuff_Gives50PercentMoreSpeed_ForTwoCycles()
+        public void RampageBuff_Gives50PercentMoreSpeed_ForTwoCycles()
         {
-            var g = Fresh(GladiatorDef.Brutius); // speed 10, ability Spirit
+            var g = Fresh(GladiatorDef.Brutius); // speed 10
+            g.Ability = AbilityKey.Rampage;
             g.BeginCycle();
             g.Rage = 1f;
             g.ActivateAbility();
@@ -94,11 +95,12 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void MongooseBuff_Gives2AttacksPerCycle_ForTwoCycles()
+        public void MongooseBuff_Gives2AttacksPerCycle_ForThreeCycles()
         {
             // Regression: AttacksRemainingThisCycle used to be reset to a hard-coded 1 in BeginCycle,
-            // which silently dropped the second attack on the buff's second cycle.
+            // which silently dropped the second attack on the buff's later cycles.
             var g = Fresh(GladiatorDef.Hilius);
+            g.Ability = AbilityKey.Mongoose;
             g.BeginCycle();
             Assert.AreEqual(1, g.AttacksRemainingThisCycle);
 
@@ -108,6 +110,9 @@ namespace ColosseumDuel.Tests
 
             g.BeginCycle();
             Assert.AreEqual(2, g.AttacksRemainingThisCycle, "second buffed cycle");
+
+            g.BeginCycle();
+            Assert.AreEqual(2, g.AttacksRemainingThisCycle, "third buffed cycle");
 
             g.BeginCycle();
             Assert.AreEqual(1, g.AttacksRemainingThisCycle, "back to one attack once the buff expires");

@@ -121,7 +121,7 @@ namespace ColosseumDuel.Core
             description: "An even blow, and half the damage taken");
 
         public static readonly WeaponDef TwoHandedMace = new WeaponDef(
-            WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.5f, attacks: 1,
+            WeaponKind.TwoHandedMace, "Two-handed mace", damageMultiplier: 1.3f, attacks: 1,
             incomingDamageMultiplier: 1f, bleeds: false, knockback: GameConstants.MaceKnockback,
             reach: Scaled(78f), swingArcDegrees: 120f,   // 132
             description: "One heavy blow that throws them back");

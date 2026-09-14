@@ -553,7 +553,7 @@ namespace ColosseumDuel.Gameplay.Hud
                         ? $"{def.Name}\n{Mathf.CeilToInt(instance.Hp)} HP · {Mathf.RoundToInt(def.Damage)} dmg · {Mathf.RoundToInt(def.Speed)} spd"
                         : $"{def.Name}\nout";
                     _pickAbilityLabels[i].text = alive
-                        ? $"{def.AbilityName}: {def.AbilityDescription}"
+                        ? $"{instance.AbilityInfo.Name}: {instance.AbilityInfo.Summary}"
                         : "";
                 }
                 return;

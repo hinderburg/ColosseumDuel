@@ -404,8 +404,7 @@ namespace ColosseumDuel.Tests
         {
             var line = FindLine("TrajectoryPreview");
             var player = Player;
-            if (player.Def.Ability != AbilityKey.Spirit)
-                Assert.Ignore("This fixture's gladiator does not have the speed ability.");
+            player.Ability = AbilityKey.Rampage;
 
             _input.Scheme = ControlScheme.Swipe;
             var anchor = player.Pos + new Vector2(-120f, -120f);

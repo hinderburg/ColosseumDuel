@@ -99,9 +99,10 @@ namespace ColosseumDuel.Gameplay.Hud
         /// Puts one ability's name up over the point he is standing on, in his side's colour - blue
         /// for the player's men, red for the opponent's - so whose ability it was reads before the name.
         /// </summary>
-        public void Show(Vector2 virtualPos, GladiatorDef def, PlayerSide side)
+        public void Show(Vector2 virtualPos, AbilityKey ability, PlayerSide side)
         {
-            if (_arena == null || def == null) return;
+            if (_arena == null) return;
+            var def = AbilityDef.Get(ability);
             var camera = _arena.ArenaCamera;
             if (camera == null) return;
 
@@ -113,9 +114,9 @@ namespace ColosseumDuel.Gameplay.Hud
             var slot = Take();
             slot.From = local;
             slot.Left = Seconds;
-            slot.Name.text = def.AbilityName;
+            slot.Name.text = def.Name;
             slot.Name.color = side == PlayerSide.P1 ? HudFactory.PlayerColor : HudFactory.BotColor;
-            slot.Description.text = Capitalised(def.AbilityDescription);
+            slot.Description.text = Capitalised(def.Summary);
             slot.Description.color = HudFactory.TextColor;
             slot.Root.anchoredPosition = local;
             slot.Root.SetAsLastSibling();

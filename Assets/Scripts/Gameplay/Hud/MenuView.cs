@@ -209,7 +209,8 @@ namespace ColosseumDuel.Gameplay.Hud
                 label.rectTransform.offsetMax = new Vector2(-62f, -8f);
 
                 var ability = HudFactory.CreateLabel($"OfferAbility_{i}", button.transform,
-                    $"{def.AbilityName}: {def.AbilityDescription}", 13, TextAnchor.LowerLeft,
+                    $"{AbilityDef.Get(_controller.AbilityFor(def.Id)).Name}: " +
+                    $"{AbilityDef.Get(_controller.AbilityFor(def.Id)).Summary}", 13, TextAnchor.LowerLeft,
                     HudFactory.RageColor);
                 ability.rectTransform.anchorMin = Vector2.zero;
                 ability.rectTransform.anchorMax = Vector2.one;

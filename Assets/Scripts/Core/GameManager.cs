@@ -112,14 +112,20 @@ namespace ColosseumDuel.Core
         // match lifecycle
         // ------------------------------------------------------------------
 
+        /// <param name="p1Abilities">The ability each of the player's archetypes takes in; the first of his three where missing.</param>
+        /// <param name="botAbilities">The same for the bot's.</param>
         public void StartMatch(IEnumerable<GladiatorDef> p1Squad, IEnumerable<GladiatorDef> botSquad,
-                               bool tutorial = false)
+                               bool tutorial = false,
+                               IReadOnlyDictionary<GladiatorId, AbilityKey> p1Abilities = null,
+                               IReadOnlyDictionary<GladiatorId, AbilityKey> botAbilities = null)
         {
             State.Tutorial = tutorial;
             State.TutorialTapPoint = Vector2.zero;
 
             State.P1.Roster = p1Squad.Select(d => new GladiatorInstance(d)).ToList();
             State.Bot.Roster = botSquad.Select(d => new GladiatorInstance(d)).ToList();
+            ChooseAbilities(State.P1.Roster, p1Abilities);
+            ChooseAbilities(State.Bot.Roster, botAbilities);
 
             // Both sides put back to "nobody chosen yet". Without this a restart kept the previous
             // match's fighter as the active one: NeedsPick reads Active == null, so the pick screen
@@ -136,6 +142,16 @@ namespace ColosseumDuel.Core
             State.WinnerSide = null;
 
             BeginRoundPick();
+        }
+
+        /// <summary>Gives each man the ability chosen for his archetype, if it is one of his three.</summary>
+        private static void ChooseAbilities(List<GladiatorInstance> roster,
+            IReadOnlyDictionary<GladiatorId, AbilityKey> choices)
+        {
+            if (choices == null) return;
+            foreach (var g in roster)
+                if (choices.TryGetValue(g.Def.Id, out var key) && g.Def.Abilities.Contains(key))
+                    g.Ability = key;
         }
 
         private void SetPhase(MatchPhase phase)
@@ -578,15 +594,19 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
-        /// Fires an armed ability. A supplementary effect - it does not consume the turn. The net is
-        /// the one that acts on the other man rather than on the one who used it.
+        /// Fires an armed ability. A supplementary effect - it does not consume the turn. The net and
+        /// the shackles are the ones that act on the other man rather than on the one who used them.
         /// </summary>
         private void FireAbility(PlayerSide side, GladiatorInstance g, GladiatorInstance opponent)
         {
             if (g == null || !g.Alive || !g.AbilityArmed || !g.CanActivateAbility) return;
 
             g.ActivateAbility();
-            if (g.Def.Ability == AbilityKey.Net && opponent != null && opponent.Alive) opponent.Ensnare();
+            if (opponent != null && opponent.Alive)
+            {
+                if (g.Ability == AbilityKey.Net) opponent.Ensnare();
+                if (g.Ability == AbilityKey.Shackles) opponent.Shackle();
+            }
             AbilityFired?.Invoke(side);
         }
 
@@ -716,9 +736,9 @@ namespace ColosseumDuel.Core
                 var metA = Vector2.Lerp(wasA, posA, when);
                 var metB = Vector2.Lerp(wasB, posB, when);
 
-                if (State.P1.StrikeEta < 0f && GladiatorInstance.WithinSwing(metA, lookA, armedA, metB))
+                if (State.P1.StrikeEta < 0f && GladiatorInstance.WithinSwing(metA, lookA, armedA, metB, a.Reach))
                     State.P1.StrikeEta = t;
-                if (State.Bot.StrikeEta < 0f && GladiatorInstance.WithinSwing(metB, lookB, armedB, metA))
+                if (State.Bot.StrikeEta < 0f && GladiatorInstance.WithinSwing(metB, lookB, armedB, metA, b.Reach))
                     State.Bot.StrikeEta = t;
 
                 // A collision is an exchange, and both sides swing in it whatever their reach.
@@ -887,6 +907,10 @@ namespace ColosseumDuel.Core
 
             Impact?.Invoke((a.Pos + b.Pos) * 0.5f);
 
+            // A man braced against a charge strikes whoever runs onto his front first, and stops him.
+            BraceAgainst(a, b, PlayerSide.Bot);
+            BraceAgainst(b, a, PlayerSide.P1);
+
             // Both land every attack they still have this cycle - a weapon that swings twice lands
             // twice, and Mongoose doubles whatever that was.
             ExchangeBlows(a, b);
@@ -927,6 +951,20 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>
+        /// Brace: the man set against a charge strikes whoever runs onto his front, before the
+        /// exchange and outside his attack budget, and the runner stops where he is struck.
+        /// </summary>
+        private void BraceAgainst(GladiatorInstance braced, GladiatorInstance runner, PlayerSide runnerSide)
+        {
+            if (!braced.Alive || !runner.Alive || !braced.Has(AbilityKey.Brace)) return;
+            if (!runner.IsRunning || braced.SectorHitFrom(runner.Pos) != HitSector.Front) return;
+
+            float dealt = CombatResolver.DealDamage(braced, runner);
+            Damaged?.Invoke(runnerSide, dealt);
+            runner.StopRunning();
+        }
+
+        /// <summary>
         /// A blow the moment the other one comes inside your weapon's reach - running past him, or
         /// standing your ground while he runs past you, or simply ending the cycle next to him.
         ///
@@ -952,7 +990,7 @@ namespace ColosseumDuel.Core
             Vector2 atA, Vector2 atB, float distance)
         {
             if (a == null || b == null || !a.Alive || !b.Alive) return;
-            if (distance > Mathf.Max(a.WeaponDef.Reach, b.WeaponDef.Reach)) return;
+            if (distance > Mathf.Max(a.Reach, b.Reach)) return;
 
             bool aReaches = a.AttacksRemainingThisCycle > 0 && a.CanStrikeFrom(atA, atB);
             bool bReaches = b.AttacksRemainingThisCycle > 0 && b.CanStrikeFrom(atB, atA);
@@ -988,15 +1026,19 @@ namespace ColosseumDuel.Core
                 // Deal first, announce second. Folding the call into Damaged?.Invoke(...) would put
                 // it inside a null-conditional, and with no subscriber the argument is never
                 // evaluated - so nobody watching would mean nobody taking damage.
+                // A Riposte sends part of a blow back at the man who struck it; that is reported as
+                // him being struck, since it is.
                 if (aSwings)
                 {
-                    float dealt = CombatResolver.DealDamage(a, b);
+                    float dealt = CombatResolver.DealDamage(a, b, out float returned);
                     Damaged?.Invoke(PlayerSide.Bot, dealt);
+                    if (returned > 0f) Damaged?.Invoke(PlayerSide.P1, returned);
                 }
                 if (bSwings)
                 {
-                    float dealt = CombatResolver.DealDamage(b, a);
+                    float dealt = CombatResolver.DealDamage(b, a, out float returned);
                     Damaged?.Invoke(PlayerSide.P1, dealt);
+                    if (returned > 0f) Damaged?.Invoke(PlayerSide.Bot, returned);
                 }
 
                 // After the exchange, not between the two halves of it: shoving the defender out of
@@ -1015,7 +1057,12 @@ namespace ColosseumDuel.Core
         /// </summary>
         private void Shove(GladiatorInstance attacker, GladiatorInstance target)
         {
-            float distance = attacker.WeaponDef.Knockback;
+            // Earthshaker throws twice as far and roots the man it lands on through the next cycle;
+            // Shield Bash throws three times as far and ends his run where he lands.
+            if (target.Alive && attacker.Has(AbilityKey.Earthshaker)) target.Stagger();
+            float distance = attacker.WeaponDef.Knockback
+                             * (attacker.Has(AbilityKey.Earthshaker) ? GameConstants.EarthshakerKnockbackMult : 1f)
+                             * (attacker.Has(AbilityKey.ShieldBash) ? GameConstants.ShieldBashKnockbackMult : 1f);
             if (distance <= 0f || !target.Alive) return;
 
             var away = target.Pos - attacker.Pos;
@@ -1027,6 +1074,12 @@ namespace ColosseumDuel.Core
 
             // And not into the stone. A mace can throw a man at a column as easily as away from one.
             State.Obstacles.PushOut(ref target.Pos, GameConstants.GladiatorRadius);
+
+            if (attacker.Has(AbilityKey.ShieldBash))
+            {
+                target.StopRunning();
+                return;
+            }
 
             // Thrown, not stopped: a shove has always moved a man and left his charge going, and it
             // still does. What it cannot do any more is leave him walking straight on to the next

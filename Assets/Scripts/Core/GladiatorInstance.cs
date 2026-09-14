@@ -100,8 +100,9 @@ namespace ColosseumDuel.Core
                                  || Weapon == WeaponKind.SpearAndShield;
 
         /// <summary>
-        /// Cycles still to run on a net thrown over him, the one it landed in counted. He runs at
-        /// half speed while it lasts - see EffectiveSpeed.
+        /// Cycles still to run on a net thrown over him, the one it landed in counted. He cannot run
+        /// while it lasts - and since a man only turns to where he runs, he cannot turn either, so
+        /// whatever he had his back to stays behind him. See EffectiveSpeed.
         /// </summary>
         public int EnsnaredCyclesLeft;
 
@@ -109,6 +110,31 @@ namespace ColosseumDuel.Core
 
         /// <summary>A net lands on him. Thrown again while one is on him, it starts the count over.</summary>
         public void Ensnare() => EnsnaredCyclesLeft = GameConstants.NetCycles;
+
+        /// <summary>
+        /// Cycles still to run on the stagger an Earthshaker blow leaves - the one it landed in and
+        /// the next. Rooted like a net, without the net: he stands where the blow put him.
+        /// </summary>
+        public int StaggeredCyclesLeft;
+
+        public bool IsStaggered => StaggeredCyclesLeft > 0;
+
+        public void Stagger() => StaggeredCyclesLeft = GameConstants.StaggerCycles;
+
+        /// <summary>Held still, by a net or a stagger: his runs are cut to nothing.</summary>
+        public bool IsRooted => IsEnsnared || IsStaggered;
+
+        /// <summary>
+        /// Shackles land on him: his rage burns away and his ability is out of reach for the next
+        /// two whole cycles - locked the way his own use of it locks it, so rage does not build back
+        /// while it lasts either.
+        /// </summary>
+        public void Shackle()
+        {
+            Rage = 0f;
+            AbilityArmed = false;
+            AbilityLockedCycles = Mathf.Max(AbilityLockedCycles, GameConstants.ShacklesCycles + 1);
+        }
 
         /// <summary>Arms him with the weapon he trained on. Called when he enters the arena.</summary>
         public void EquipTrainedWeapon()
@@ -134,10 +160,10 @@ namespace ColosseumDuel.Core
         /// bleed never runs out. It takes the worse of the two rates rather than the newer one - a
         /// light blow arriving after a heavy one should not talk the wound down.
         /// </summary>
-        public void ApplyBleed(float rawAttackDamage)
+        public void ApplyBleed(float rawAttackDamage, float rateMult = 1f, int cycles = GameConstants.BleedCycles)
         {
-            BleedPerCycle = Mathf.Max(BleedPerCycle, rawAttackDamage * GameConstants.BleedFraction);
-            BleedCyclesLeft = GameConstants.BleedCycles;
+            BleedPerCycle = Mathf.Max(BleedPerCycle, rawAttackDamage * GameConstants.BleedFraction * rateMult);
+            BleedCyclesLeft = Mathf.Max(BleedCyclesLeft, cycles);
         }
 
         /// <summary>
@@ -188,13 +214,32 @@ namespace ColosseumDuel.Core
         /// two - the ability says "twice as many attacks", and a weapon that already attacks twice
         /// should not quietly cancel half of it.
         /// </summary>
-        public int AttacksPerCycle
-            => WeaponDef.Attacks * (Buff.IsActive && Buff.Key == AbilityKey.Mongoose ? 2 : 1);
+        public int AttacksPerCycle => WeaponDef.Attacks * (Has(AbilityKey.Mongoose) ? 2 : 1);
+
+        /// <summary>
+        /// The ability he took into this fight - one of his archetype's three, picked on the roster
+        /// screen (the bot's at random). The first of the three until somebody says otherwise.
+        /// </summary>
+        public AbilityKey Ability;
+
+        public AbilityDef AbilityInfo => AbilityDef.Get(Ability);
+
+        /// <summary>Whether this ability of his is running right now.</summary>
+        public bool Has(AbilityKey key) => Buff.IsActive && Buff.Key == key;
+
+        /// <summary>
+        /// How far his blows reach right now: his weapon's, lengthened while Lunge or Trident Throw
+        /// is up. Everything that asks whether he can strike asks this rather than the weapon.
+        /// </summary>
+        public float Reach => WeaponDef.Reach
+                              * (Has(AbilityKey.Lunge) ? GameConstants.LungeReachMult : 1f)
+                              * (Has(AbilityKey.TridentThrow) ? GameConstants.TridentThrowReachMult : 1f);
 
         public GladiatorInstance(GladiatorDef def)
         {
             Def = def;
             Hp = def.MaxHp;
+            Ability = def.Abilities[0];
 
             // Armed from the moment he exists. He is never without a weapon in a match, and an
             // instance that started empty-handed only meant every caller had to remember to arm
@@ -243,7 +288,7 @@ namespace ColosseumDuel.Core
         /// without ever turning towards him.
         /// </summary>
         public bool CanStrikeFrom(Vector2 myPos, Vector2 targetPos)
-            => WithinSwing(myPos, Facing, WeaponDef, targetPos);
+            => WithinSwing(myPos, Facing, WeaponDef, targetPos, Reach);
 
         /// <summary>
         /// The same test with everything spelled out, for the strike prediction - which walks a
@@ -251,10 +296,14 @@ namespace ColosseumDuel.Core
         /// does not have yet, so it cannot ask a gladiator about himself.
         /// </summary>
         public static bool WithinSwing(Vector2 from, Vector2 facing, WeaponDef weapon, Vector2 target)
+            => WithinSwing(from, facing, weapon, target, weapon.Reach);
+
+        /// <summary>The same, with the reach given - lengthened by an ability, say.</summary>
+        public static bool WithinSwing(Vector2 from, Vector2 facing, WeaponDef weapon, Vector2 target, float reach)
         {
             var toTarget = target - from;
             float distance = toTarget.magnitude;
-            if (distance > weapon.Reach) return false;
+            if (distance > reach) return false;
 
             // A body pressed against his own is inside every arc there is. Without this a collision
             // - two men who have run into each other - could resolve as a miss because one of them
@@ -268,12 +317,19 @@ namespace ColosseumDuel.Core
 
         public float EffectiveSpeed()
         {
-            float speed = Def.Speed;
-            if (Buff.IsActive && Buff.Key == AbilityKey.Spirit)
-                speed *= 1.5f;
-            if (IsEnsnared)
-                speed *= GameConstants.NetSpeedMult;
-            return speed;
+            if (IsRooted) return 0f;
+            return Def.Speed * SpeedMultiplierOf(Buff.IsActive ? Buff.Key : (AbilityKey?)null);
+        }
+
+        /// <summary>What an ability does to his speed while it runs: Rampage speeds him, Testudo slows him.</summary>
+        private static float SpeedMultiplierOf(AbilityKey? key)
+        {
+            switch (key)
+            {
+                case AbilityKey.Rampage: return GameConstants.RampageSpeedMult;
+                case AbilityKey.Testudo: return GameConstants.TestudoSpeedMult;
+                default: return 1f;
+            }
         }
 
         /// <summary>
@@ -287,10 +343,10 @@ namespace ColosseumDuel.Core
         /// </summary>
         public float PlannedSpeed()
         {
-            float speed = EffectiveSpeed();
-            bool willBeSpirited = AbilityArmed && Def.Ability == AbilityKey.Spirit
-                                  && !(Buff.IsActive && Buff.Key == AbilityKey.Spirit);
-            return willBeSpirited ? speed * 1.5f : speed;
+            // Armed and not already running, it will be by the time he moves: Rampage's run is drawn
+            // half as long again, Testudo's half as long.
+            if (IsRooted || !AbilityArmed || Has(Ability)) return EffectiveSpeed();
+            return Def.Speed * SpeedMultiplierOf(Ability);
         }
 
         /// <summary>
@@ -322,10 +378,12 @@ namespace ColosseumDuel.Core
         {
             if (!CanActivateAbility) return;
 
-            Buff = new ActiveBuff { Key = Def.Ability, CyclesLeft = 2 };
+            // One cycle at the least, even for an ability spent the moment it fires: the buff is
+            // also what says, for that phase, which ability went off.
+            Buff = new ActiveBuff { Key = Ability, CyclesLeft = System.Math.Max(1, AbilityInfo.Cycles) };
 
             // Second Wind is the one ability that is spent the moment it fires rather than lasting.
-            if (Def.Ability == AbilityKey.SecondWind)
+            if (Ability == AbilityKey.SecondWind)
                 Hp = Mathf.Min(Def.MaxHp, Hp + Def.MaxHp * GameConstants.SecondWindHeal);
 
             // The ability fires at the start of Action, after BeginCycle already set the attack
@@ -355,6 +413,7 @@ namespace ColosseumDuel.Core
             if (AbilityLockedCycles > 0) AbilityLockedCycles--;
             if (WeaponBuffCyclesLeft > 0) WeaponBuffCyclesLeft--;
             if (EnsnaredCyclesLeft > 0) EnsnaredCyclesLeft--;
+            if (StaggeredCyclesLeft > 0) StaggeredCyclesLeft--;
             if (Buff.CyclesLeft > 0)
             {
                 Buff.CyclesLeft--;
@@ -388,6 +447,7 @@ namespace ColosseumDuel.Core
             AbilityArmed = false;
             Buff = default;
             EnsnaredCyclesLeft = 0;
+            StaggeredCyclesLeft = 0;
             AbilityLockedCycles = 0;
 
             // His own weapon, unblessed. The blessing is the reward for crossing the arena under fire

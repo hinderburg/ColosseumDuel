@@ -54,12 +54,24 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 1b8c77ec49e8a174dbc6990d9395b5b2, type: 3}
   ArchetypeIconsArePortraits: 1
   AbilityIcons:
+  - {fileID: 798309987, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 1386808307, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: -2081245629, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 381300419, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1744151977, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: -1756047590, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 566335295, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1510120445, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: -1107025847, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 1822879496, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1087086722, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1502802138, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1870898176, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: -897676795, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: 994223573, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   - {fileID: -248196999, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 1426590355, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
+  - {fileID: 151241378, guid: 132358e9bf26b60458b731bf001e31db, type: 3}
   ArchetypeColors:
   - {r: 0.4126481, g: 0.30002418, b: 0.64342517, a: 1}
   - {r: 0.982971, g: 0.4779909, b: 0.16305146, a: 1}
@@ -69,12 +81,24 @@ MonoBehaviour:
   - {r: 0.93876123, g: 0.7008529, b: 0.23922439, a: 1}
   AbilityReadyFire: {fileID: 161738, guid: 7cfc30e9807ebb54e92fbc67239154cc, type: 3}
   AbilityFx:
+  - {fileID: 162722, guid: 1fc71432c1bd537489e1be6246b56973, type: 3}
   - {fileID: 108178, guid: e053c479a3add9649af9d847a748547d, type: 3}
+  - {fileID: 171482, guid: 5bc71fb5e90182941b584e88079e3ec5, type: 3}
+  - {fileID: 153674, guid: 98e35bc5094f25441a4c3b405abf1870, type: 3}
+  - {fileID: 128724, guid: ece958bbba812cd4ca52c389ccc91c24, type: 3}
   - {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
+  - {fileID: 166724, guid: 254ac81d69ffe6342ad05aa1f459477e, type: 3}
+  - {fileID: 147226, guid: 4d496338295339f4ab150256f9d9f4b7, type: 3}
   - {fileID: 181232, guid: b9cf594d1d8302e4a884738a176ead3a, type: 3}
   - {fileID: 110446, guid: f6322404d6e3b914aa01ac044fb9415e, type: 3}
+  - {fileID: 112812, guid: 347c3709b22d3bb4b800383efe154521, type: 3}
+  - {fileID: 117784, guid: db879c9dd49be994b9fcce9fea26448c, type: 3}
+  - {fileID: 158776, guid: c4e46d0b8ddbfe049ac8facbc1652648, type: 3}
+  - {fileID: 119634, guid: 8d2980ba5e59f33419a0275c1ec29e38, type: 3}
   - {fileID: 187180, guid: 1ed56f4c486ff6141a344e5e5714e1b9, type: 3}
   - {fileID: 134560, guid: 4f491700992cb06488116943d3b5c9b8, type: 3}
+  - {fileID: 0}
+  - {fileID: 158776, guid: 524b12464dce5b248a893d67a188da05, type: 3}
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}

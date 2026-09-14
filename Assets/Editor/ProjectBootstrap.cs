@@ -52,17 +52,30 @@ namespace ColosseumDuel.EditorTools
         private static string AbilityFxPath(AbilityKey key)
         {
             const string magic = "Assets/Epic Toon FX/Prefabs/Combat/Magic";
+            const string blood = "Assets/Epic Toon FX/Prefabs/Combat/Blood/Red";
             switch (key)
             {
-                // The soft aura was tried first and all but vanished on the sand at this size.
-                case AbilityKey.Spirit: return magic + "/Aura/MagicAuraBlue.prefab";
-                case AbilityKey.Fury: return TorchPrefabPath;
+                case AbilityKey.Earthshaker: return magic + "/Charge/MagicChargeYellow.prefab";
+                // The soft aura was tried first for the speed and all but vanished on the sand.
+                case AbilityKey.Rampage: return magic + "/Aura/MagicAuraBlue.prefab";
+                case AbilityKey.StoneSkin: return magic + "/Sphere/MagicSphereYellow.prefab";
+                case AbilityKey.Bloodlust: return blood + "/BloodDripping.prefab";
+                case AbilityKey.Frenzy: return blood + "/BloodFlowing.prefab";
+                case AbilityKey.Berserk: return TorchPrefabPath;
+                case AbilityKey.Backstab: return magic + "/Aura/MagicAuraGreen.prefab";
+                case AbilityKey.Riposte: return magic + "/Charge/MagicChargeBlue.prefab";
                 case AbilityKey.Mongoose: return magic + "/Aura/MagicAuraYellow.prefab";
                 // A glowing sphere round him. The magic shield's particles are a quarter of a unit
                 // across and did not show at all, and the soft shield bubble was a faint rim on the sand.
                 case AbilityKey.Bulwark: return magic + "/Sphere/MagicSphereBlue.prefab";
+                case AbilityKey.Testudo: return magic + "/Sphere/MagicSphereGreen.prefab";
+                case AbilityKey.ShieldBash: return magic + "/Field/MagicFieldYellow.prefab";
+                case AbilityKey.Lunge: return magic + "/Field/MagicFieldGreen.prefab";
+                case AbilityKey.Brace: return magic + "/Charge/MagicChargeGreen.prefab";
                 case AbilityKey.SecondWind: return magic + "/Buff/MagicBuffGreen.prefab";
                 case AbilityKey.Net: return magic + "/Field/MagicFieldWhite.prefab";
+                case AbilityKey.TridentThrow: return magic + "/Field/MagicFieldBlue.prefab";
+                // Shackles act on the other man and say so in the name that goes up; nothing plays on him.
                 default: return null;
             }
         }
@@ -559,7 +572,7 @@ namespace ColosseumDuel.EditorTools
             {
                 string fxPath = AbilityFxPath(key);
                 palette.AbilityFx[(int)key] = fxPath != null ? AssetDatabase.LoadAssetAtPath<GameObject>(fxPath) : null;
-                if (palette.AbilityFx[(int)key] == null)
+                if (fxPath != null && palette.AbilityFx[(int)key] == null)
                     Debug.LogWarning($"[Colosseum] Effect prefab for {key} not found at {fxPath} - it will play " +
                                      "without one. Import Epic Toon FX to get it.");
             }

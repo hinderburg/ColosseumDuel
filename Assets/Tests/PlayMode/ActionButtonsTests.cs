@@ -124,7 +124,7 @@ namespace ColosseumDuel.Tests
         {
             yield return null;
             var label = _buttons.Ability.GetComponentInChildren<Text>();
-            Assert.AreEqual(GladiatorDef.Brutius.AbilityName, label.text,
+            Assert.AreEqual(AbilityDef.Get(GladiatorDef.Brutius.Abilities[0]).Name, label.text,
                 "the button should say what it actually does, and that differs per gladiator");
         }
 
