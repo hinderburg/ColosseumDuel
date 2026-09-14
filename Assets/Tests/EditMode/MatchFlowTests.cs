@@ -595,7 +595,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void TheArenaStandsEightColumns_EachWithRoomToRunRound()
+        public void TheArenaStandsTenColumns_EachWithRoomToRunRound()
         {
             var field = ObstacleField.Standard();
             int columns = 0;
@@ -614,7 +614,7 @@ namespace ColosseumDuel.Tests
                 }
             }
 
-            Assert.AreEqual(8, columns, "the arena should stand eight columns");
+            Assert.AreEqual(10, columns, "the arena should stand ten columns, as sketched");
         }
 
         [Test]

@@ -110,11 +110,11 @@ namespace ColosseumDuel.Core
         public static readonly ObstacleField Empty = new ObstacleField(new Obstacle[0]);
 
         /// <summary>
-        /// The arena everybody fights in: eight columns - four round the middle and a pair towards
-        /// each end - and four crates.
+        /// The arena everybody fights in: ten columns - a pair behind each end's gladiator, two
+        /// pairs either side of the middle, and one out at each side - and no crates.
         ///
-        /// Point-symmetric through the centre, so whatever the layout does for one end it does for
-        /// the other, and neither side starts a round with more cover than the man opposite. The
+        /// Symmetric both ways through the centre, so whatever the layout does for one end it does
+        /// for the other, and neither side starts a round with more cover than the man opposite. The
         /// middle is left open on purpose - the straight charge down it is still there to be taken,
         /// and the columns either side of it are what make taking it a choice rather than the
         /// only line there is.
@@ -125,26 +125,27 @@ namespace ColosseumDuel.Core
         public static ObstacleField Standard()
         {
             float column = GameConstants.ColumnRadius;
-            float crate = GameConstants.CrateHalfSize;
 
+            // Laid out from the sketch drawn over a screenshot of the arena, read through the camera
+            // and then evened up: a sketch on a tilted view is never quite symmetrical, and the layout
+            // has to be, or one end starts every round with more cover than the other.
             return new ObstacleField(new[]
             {
-                new Obstacle(ObstacleKind.Column, new Vector2(-110f, -180f), column),
-                new Obstacle(ObstacleKind.Column, new Vector2(110f, -180f), column),
-                new Obstacle(ObstacleKind.Column, new Vector2(-110f, 180f), column),
-                new Obstacle(ObstacleKind.Column, new Vector2(110f, 180f), column),
+                // A pair behind each end's gladiator, flanking where he is set down.
+                new Obstacle(ObstacleKind.Column, new Vector2(-90f, -355f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(90f, -355f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(-90f, 355f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(90f, 355f), column),
 
-                // And a pair towards each end, clear of where the two are set down and of the crates,
-                // with a man's width and more between each and the wall.
-                new Obstacle(ObstacleKind.Column, new Vector2(-130f, -400f), column),
-                new Obstacle(ObstacleKind.Column, new Vector2(130f, -400f), column),
-                new Obstacle(ObstacleKind.Column, new Vector2(-130f, 400f), column),
-                new Obstacle(ObstacleKind.Column, new Vector2(130f, 400f), column),
+                // Two pairs either side of the middle, the open lane up the centre between them.
+                new Obstacle(ObstacleKind.Column, new Vector2(-90f, -125f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(90f, -125f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(-90f, 125f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(90f, 125f), column),
 
-                new Obstacle(ObstacleKind.Crate, new Vector2(-215f, 50f), crate),
-                new Obstacle(ObstacleKind.Crate, new Vector2(215f, -50f), crate),
-                new Obstacle(ObstacleKind.Crate, new Vector2(-150f, -300f), crate),
-                new Obstacle(ObstacleKind.Crate, new Vector2(150f, 300f), crate),
+                // And one out at each side, level with the middle, with a man's width to the wall.
+                new Obstacle(ObstacleKind.Column, new Vector2(-212f, 0f), column),
+                new Obstacle(ObstacleKind.Column, new Vector2(212f, 0f), column),
             });
         }
 
