@@ -38,8 +38,8 @@ namespace ColosseumDuel.Core
         {
             new BoonDef(BoonKey.SharpenedSteel, "Sharpened Steel", "+6% damage"),
             new BoonDef(BoonKey.IronHide, "Iron Hide", "-6% damage taken"),
-            new BoonDef(BoonKey.FleetFoot, "Fleet Foot", "+10% run distance"),
-            new BoonDef(BoonKey.LongReach, "Long Reach", "+8% weapon reach"),
+            new BoonDef(BoonKey.FleetFoot, "Fleet Foot", "+8% run distance"),
+            new BoonDef(BoonKey.LongReach, "Long Reach", "+7% weapon reach"),
             new BoonDef(BoonKey.BattleSpirit, "Battle Spirit", "each clash starts with 20% rage"),
             new BoonDef(BoonKey.Flanker, "Flanker", "+10% damage to the side or back"),
             new BoonDef(BoonKey.Stalwart, "Stalwart", "a guard takes 40% off a blow, not 30%"),

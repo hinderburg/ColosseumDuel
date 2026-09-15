@@ -310,8 +310,8 @@ namespace ColosseumDuel.Core
 
         public const float SharpenedSteelDamageMult = 1.06f;
         public const float IronHideTakenMult = 0.94f;
-        public const float FleetFootSpeedMult = 1.1f;
-        public const float LongReachMult = 1.08f;
+        public const float FleetFootSpeedMult = 1.08f;
+        public const float LongReachMult = 1.07f;
 
         /// <summary>The rage every man of a side with Battle Spirit starts a clash with, at least.</summary>
         public const float BattleSpiritRage = 0.2f;
