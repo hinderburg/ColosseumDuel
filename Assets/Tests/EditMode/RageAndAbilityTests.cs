@@ -97,7 +97,7 @@ namespace ColosseumDuel.Tests
         }
 
         [Test]
-        public void MongooseBuff_Gives2AttacksPerRound_ForThreeRounds()
+        public void MongooseBuff_Gives2AttacksPerRound_ForAsLongAsItsCardSays()
         {
             // Regression: AttacksRemainingThisRound used to be reset to a hard-coded 1 in BeginRound,
             // which silently dropped the second attack on the buff's later rounds.
@@ -110,11 +110,12 @@ namespace ColosseumDuel.Tests
             g.ActivateAbility();
             Assert.AreEqual(2, g.AttacksRemainingThisRound, "activation round");
 
-            g.BeginRound();
-            Assert.AreEqual(2, g.AttacksRemainingThisRound, "second buffed round");
-
-            g.BeginRound();
-            Assert.AreEqual(2, g.AttacksRemainingThisRound, "third buffed round");
+            int rounds = AbilityDef.Get(AbilityKey.Mongoose).Rounds;
+            for (int round = 2; round <= rounds; round++)
+            {
+                g.BeginRound();
+                Assert.AreEqual(2, g.AttacksRemainingThisRound, $"buffed round {round} of {rounds}");
+            }
 
             g.BeginRound();
             Assert.AreEqual(1, g.AttacksRemainingThisRound, "back to one attack once the buff expires");

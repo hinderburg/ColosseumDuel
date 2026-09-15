@@ -42,29 +42,29 @@ namespace ColosseumDuel.Core
             // Brutius: the tank. Nothing here makes him faster for free any more - that was the one
             // weakness he had, and a way round it made him win almost every duel.
             new AbilityDef(AbilityKey.Earthshaker, "Earthshaker",
-                "the next blow throws twice as far and roots them next round", 1),
-            new AbilityDef(AbilityKey.Rampage, "Rampage", "+50% speed, -30% damage", 2),
+                "the next blow hits +50%, throws twice as far and roots them next round", 1),
+            new AbilityDef(AbilityKey.Rampage, "Rampage", "+50% speed, +20% damage", 2),
             new AbilityDef(AbilityKey.StoneSkin, "Stone Skin", "-30% damage taken", 2),
 
             // Barbarius: the glass cannon.
-            new AbilityDef(AbilityKey.Bloodlust, "Bloodlust", "heals 50% of the damage he deals", 2),
+            new AbilityDef(AbilityKey.Bloodlust, "Bloodlust", "heals 80% of the damage he deals", 2),
             new AbilityDef(AbilityKey.Frenzy, "Frenzy", "his bleeds deal double and last 3 rounds", 2),
             new AbilityDef(AbilityKey.Berserk, "Berserk", "+50% damage, +25% damage taken", 2),
 
             // Hilius: the fast one with the light blow.
             new AbilityDef(AbilityKey.Backstab, "Backstab", "every blow lands as if from behind (+40%)", 2),
             new AbilityDef(AbilityKey.Riposte, "Riposte", "blows from the front return 50% to the striker", 2),
-            new AbilityDef(AbilityKey.Mongoose, "Mongoose", "2 attacks per round", 3),
+            new AbilityDef(AbilityKey.Mongoose, "Mongoose", "2 attacks per round", 2),
 
             // Scutarius: the wall.
             new AbilityDef(AbilityKey.Bulwark, "Bulwark", "no damage from the front", 2),
             new AbilityDef(AbilityKey.Testudo, "Testudo", "-60% damage taken, half speed", 2),
-            new AbilityDef(AbilityKey.ShieldBash, "Shield Bash", "a hit throws them 3x as far and stops their run", 2),
+            new AbilityDef(AbilityKey.ShieldBash, "Shield Bash", "+50% damage; a hit throws them 3x as far and stops their run", 2),
 
             // Hastarius: the reach.
-            new AbilityDef(AbilityKey.Lunge, "Lunge", "+50% reach", 2),
+            new AbilityDef(AbilityKey.Lunge, "Lunge", "+50% reach and damage", 2),
             new AbilityDef(AbilityKey.Brace, "Brace", "a man charging into his front is struck first and stopped", 2),
-            new AbilityDef(AbilityKey.SecondWind, "Second Wind", "heals 35% of his health", 0),
+            new AbilityDef(AbilityKey.SecondWind, "Second Wind", "heals 25% of his health", 0),
 
             // Retiarius: control.
             new AbilityDef(AbilityKey.Net, "Net", "the enemy cannot move or turn", 2),

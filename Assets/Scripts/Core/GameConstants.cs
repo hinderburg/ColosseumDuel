@@ -169,7 +169,9 @@ namespace ColosseumDuel.Core
         // --- abilities: the numbers behind the words on each card (see AbilityDef) ---
 
         /// <summary>Share of his own health Second Wind gives back, at once.</summary>
-        public const float SecondWindHeal = 0.35f;
+        // Down from 0.35: in a clash of four to six rounds a third of his health back was more than a
+        // round of blows, and the man who took it won nine clashes in ten.
+        public const float SecondWindHeal = 0.25f;
 
         /// <summary>How many rounds a net holds a man still (the one it lands in counted).</summary>
         public const int NetRounds = 2;
@@ -181,9 +183,11 @@ namespace ColosseumDuel.Core
         public const int ShacklesRounds = 2;
 
         public const float RampageSpeedMult = 1.5f;
-        public const float RampageDamageMult = 0.7f;
+        // A fifth more, not three tenths less: the two men meet every round anyway, so the speed
+        // bought nothing a clash was decided by, and the price was paid on every blow.
+        public const float RampageDamageMult = 1.2f;
         public const float StoneSkinTakenMult = 0.7f;
-        public const float BloodlustHeal = 0.5f;
+        public const float BloodlustHeal = 0.8f;
         public const float FrenzyBleedMult = 2f;
         public const int FrenzyBleedRounds = 3;
         public const float BerserkDamageMult = 1.5f;
@@ -194,6 +198,13 @@ namespace ColosseumDuel.Core
         public const float EarthshakerKnockbackMult = 2f;
         public const float ShieldBashKnockbackMult = 3f;
         public const float LungeReachMult = 1.5f;
+
+        // What Lunge, Shield Bash and Earthshaker add to a blow while they last. They threw a man,
+        // held him or reached him from further off, and none of it was damage - in a clash decided by
+        // one exchange a round, the three lost almost every fight they were used in.
+        public const float LungeDamageMult = 1.5f;
+        public const float ShieldBashDamageMult = 1.5f;
+        public const float EarthshakerDamageMult = 1.5f;
         public const float TridentThrowReachMult = 2f;
 
         /// <summary>

@@ -21,6 +21,9 @@ namespace ColosseumDuel.Core
             if (attacker.WeaponBuffed) damage *= GameConstants.WeaponBuffDamageMult;
             if (attacker.Has(AbilityKey.Berserk)) damage *= GameConstants.BerserkDamageMult;
             if (attacker.Has(AbilityKey.Rampage)) damage *= GameConstants.RampageDamageMult;
+            if (attacker.Has(AbilityKey.Lunge)) damage *= GameConstants.LungeDamageMult;
+            if (attacker.Has(AbilityKey.ShieldBash)) damage *= GameConstants.ShieldBashDamageMult;
+            if (attacker.Has(AbilityKey.Earthshaker)) damage *= GameConstants.EarthshakerDamageMult;
             return damage;
         }
 

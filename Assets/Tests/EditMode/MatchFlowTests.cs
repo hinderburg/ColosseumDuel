@@ -515,9 +515,9 @@ namespace ColosseumDuel.Tests
         [Test]
         public void MongooseKeepsBothAttacksOnTheFollowingRoundAndDropsBackAfter()
         {
-            // The buff runs three rounds, and the attack budget is derived after the buff is aged -
-            // so the round it expires on must drop back to one. Off by one either way and the ability
-            // silently lasts one round too few or too many.
+            // The buff runs as many rounds as its card says, and the attack budget is derived after the
+            // buff is aged - so the round it expires on must drop back to one. Off by one either way
+            // and the ability silently lasts one round too few or too many.
             var hilius = new GladiatorInstance(GladiatorDef.Hilius) { Ability = AbilityKey.Mongoose };
             hilius.BeginRound();
             hilius.Rage = GameConstants.RageMax;
@@ -525,11 +525,13 @@ namespace ColosseumDuel.Tests
 
             Assert.AreEqual(2, hilius.AttacksRemainingThisRound, "the round it was used in");
 
-            hilius.BeginRound();
-            Assert.AreEqual(2, hilius.AttacksRemainingThisRound, "the second round of the buff");
-
-            hilius.BeginRound();
-            Assert.AreEqual(2, hilius.AttacksRemainingThisRound, "the third round of the buff");
+            int rounds = AbilityDef.Get(AbilityKey.Mongoose).Rounds;
+            Assert.GreaterOrEqual(rounds, 2, "this test is about the round after the one it was used in");
+            for (int round = 2; round <= rounds; round++)
+            {
+                hilius.BeginRound();
+                Assert.AreEqual(2, hilius.AttacksRemainingThisRound, $"round {round} of the buff");
+            }
 
             hilius.BeginRound();
             Assert.AreEqual(1, hilius.AttacksRemainingThisRound, "the buff has expired by now");

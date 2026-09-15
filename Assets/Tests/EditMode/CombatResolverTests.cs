@@ -45,7 +45,7 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(13f, GladiatorDef.Brutius.Speed, Tol);
 
             Assert.AreEqual(125f, GladiatorDef.Barbarius.MaxHp, Tol);
-            Assert.AreEqual(23f, GladiatorDef.Barbarius.Damage, Tol);
+            Assert.AreEqual(25f, GladiatorDef.Barbarius.Damage, Tol);
             Assert.AreEqual(15f, GladiatorDef.Barbarius.Speed, Tol);
 
             Assert.AreEqual(110f, GladiatorDef.Hilius.MaxHp, Tol);

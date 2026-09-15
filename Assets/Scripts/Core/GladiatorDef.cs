@@ -82,7 +82,7 @@ namespace ColosseumDuel.Core
             skilledWith: WeaponKind.TwoHandedMace, buildWidth: 1.2f);
 
         public static readonly GladiatorDef Barbarius = new GladiatorDef(
-            GladiatorId.Barbarius, "Barbarius", maxHp: 125f, damage: 23f, speed: 15f,
+            GladiatorId.Barbarius, "Barbarius", maxHp: 125f, damage: 25f, speed: 15f,
             abilities: new[] { AbilityKey.Bloodlust, AbilityKey.Frenzy, AbilityKey.Berserk },
             skilledWith: WeaponKind.DualSwords);
 
