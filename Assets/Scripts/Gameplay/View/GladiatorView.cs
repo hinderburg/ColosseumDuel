@@ -64,6 +64,23 @@ namespace ColosseumDuel.Gameplay.View
         private GameObject _appleFx;
         private GameObject _hornFx;
 
+        /// <summary>Sparks at the chest when his guard meets a blow, and dust at his feet as he lands from a throw.</summary>
+        private GameObject _blockSparkFx;
+        private GameObject _dustFx;
+
+        /// <summary>His guard met a blow: sparks off it.</summary>
+        public void PlayBlockSparks() => Replay(_blockSparkFx);
+
+        /// <summary>He came down from a throw: dust off the sand.</summary>
+        public void PlayDust() => Replay(_dustFx);
+
+        private static void Replay(GameObject fx)
+        {
+            if (fx == null) return;
+            fx.SetActive(false);
+            fx.SetActive(true);
+        }
+
         public void PlayBlessing() => PlayPickup(PickupKind.Blessing);
 
         /// <summary>
@@ -1311,6 +1328,11 @@ namespace ColosseumDuel.Gameplay.View
                     source.clip = palette.BlessingSound;
             if (palette.AppleFx != null) _appleFx = MakeFx(palette.AppleFx, "AppleFx", 1f, 0f);
             if (palette.HornFx != null) _hornFx = MakeFx(palette.HornFx, "HornFx", 1f, 0f);
+
+            // The sparks at chest height, where a guard meets a blow; the dust on the ground.
+            float chest = _arena != null ? _arena.ScaleLength(GameConstants.GladiatorRadius) * 1.3f : 0.5f;
+            if (palette.BlockSparkFx != null) _blockSparkFx = MakeFx(palette.BlockSparkFx, "BlockSparkFx", 0.6f, chest);
+            if (palette.DustFx != null) _dustFx = MakeFx(palette.DustFx, "DustFx", 0.8f, 0f);
             if (palette.AbilityFx == null) return;
 
             foreach (AbilityKey key in System.Enum.GetValues(typeof(AbilityKey)))

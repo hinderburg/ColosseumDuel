@@ -512,6 +512,11 @@ namespace ColosseumDuel.Gameplay
             HitStop(HitStopFor(blow));
             ViewFor(side).PlayHitFlash(blow.Blocked);
 
+            // A guard that met the blow throws sparks; a man thrown by it raises dust as he comes
+            // down - a moment later, when the figure has followed the simulation to where he landed.
+            if (blow.Blocked) ViewFor(side).PlayBlockSparks();
+            if (thrown) StartCoroutine(PlayDustAfter(0.12f, side));
+
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             if (victim != null) Arena.PlayBlood(victim.Pos);
@@ -526,6 +531,17 @@ namespace ColosseumDuel.Gameplay
             {
                 _deathCamera.Shake(ShakeStrengthFor(blow), along);
             }
+        }
+
+        private System.Collections.IEnumerator PlayDustAfter(float delay, PlayerSide side)
+        {
+            float waited = 0f;
+            while (waited < delay)
+            {
+                yield return null;
+                waited += Time.unscaledDeltaTime;
+            }
+            ViewFor(side)?.PlayDust();
         }
 
         private System.Collections.IEnumerator PlayBlowEffectsAfter(float delay, Blow blow)

@@ -52,6 +52,10 @@ namespace ColosseumDuel.EditorTools
             "Assets/Epic Toon FX/Prefabs/Combat/Magic/Buff/MagicBuffGreen.prefab";
         private const string HornFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Magic/Buff/MagicBuffYellow.prefab";
+        private const string BlockSparkFxPath =
+            "Assets/Epic Toon FX/Prefabs/Environment/Sparks/SparkExplosionYellow.prefab";
+        private const string DustFxPath =
+            "Assets/Epic Toon FX/Prefabs/Environment/Dust/DustDirtyPoof.prefab";
 
         /// <summary>
         /// What each ability plays on the man while it lasts. Looping effects for the ones that last,
@@ -625,6 +629,11 @@ namespace ColosseumDuel.EditorTools
 
             palette.AppleFx = AssetDatabase.LoadAssetAtPath<GameObject>(AppleFxPath);
             palette.HornFx = AssetDatabase.LoadAssetAtPath<GameObject>(HornFxPath);
+            palette.BlockSparkFx = AssetDatabase.LoadAssetAtPath<GameObject>(BlockSparkFxPath);
+            palette.DustFx = AssetDatabase.LoadAssetAtPath<GameObject>(DustFxPath);
+            if (palette.BlockSparkFx == null || palette.DustFx == null)
+                Debug.LogWarning("[Colosseum] Effect prefabs for the guard's sparks or the landing dust not found - " +
+                                 "blows will play without them. Import Epic Toon FX to get them.");
             if (palette.AppleFx == null || palette.HornFx == null)
                 Debug.LogWarning("[Colosseum] Effect prefabs for the apple or the horn not found - taking them " +
                                  "up will play without one. Import Epic Toon FX to get them.");
