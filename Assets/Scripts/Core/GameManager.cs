@@ -196,7 +196,10 @@ namespace ColosseumDuel.Core
         private void BeginClashPick()
         {
             SetPhase(MatchPhase.Pick);
-            if (State.Bot.NeedsPick) AutoPick(PlayerSide.Bot);
+
+            // The bot chooses when the player does - see SubmitPick - and only on its own when the
+            // player has nobody to choose, his man having won the clash.
+            if (State.Bot.NeedsPick && !State.P1.NeedsPick) AutoPick(PlayerSide.Bot);
         }
 
         public bool SubmitPick(PlayerSide side, GladiatorId id)
@@ -229,6 +232,15 @@ namespace ColosseumDuel.Core
             chosen.ResetForNewClash();
             player.Active = chosen;
             player.SentNewMan = true;
+
+            // The bot answers the moment the player commits, never before. Its choice is then as blind
+            // as his, and nothing of it is on the arena or in its squad bar while he is still deciding -
+            // which is how it has to be against another player, and the bot stands in for one.
+            if (side == PlayerSide.P1 && State.Bot.NeedsPick)
+            {
+                AutoPick(PlayerSide.Bot);
+                return true;
+            }
 
             if (!State.P1.NeedsPick && !State.Bot.NeedsPick)
                 BeginBoonPick();

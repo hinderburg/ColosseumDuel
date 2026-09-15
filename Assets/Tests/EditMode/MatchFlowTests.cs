@@ -50,12 +50,30 @@ namespace ColosseumDuel.Tests
         // ------------------------------------------------------------------
 
         [Test]
-        public void AMatchOpensInThePickPhase_AndTheBotPicksOnItsOwn()
+        public void AMatchOpensInThePickPhase_AndTheBotChoosesOnlyWhenThePlayerDoes()
         {
             var m = NewMatch();
             Assert.AreEqual(MatchPhase.Pick, m.State.Phase);
-            Assert.IsNotNull(m.State.Bot.Active, "the bot should have picked immediately");
             Assert.IsNull(m.State.P1.Active, "the player still has to choose");
+            Assert.IsNull(m.State.Bot.Active, "the bot's choice must not be made - or seen - before the player's");
+
+            m.SubmitPick(PlayerSide.P1, GladiatorId.Brutius);
+            Assert.IsNotNull(m.State.Bot.Active, "the bot chooses the moment the player does");
+            Assert.AreEqual(MatchPhase.Reveal, m.State.Phase);
+        }
+
+        /// <summary>Against another player the other side may well choose first, and its choice has to hold.</summary>
+        [Test]
+        public void APickTheOtherSideSubmitsFirst_Stands()
+        {
+            var m = NewMatch();
+            var chosen = m.State.Bot.Roster[2];
+            Assert.IsTrue(m.SubmitPick(PlayerSide.Bot, 2));
+            Assert.AreEqual(MatchPhase.Pick, m.State.Phase, "still waiting on the player");
+
+            m.SubmitPick(PlayerSide.P1, GladiatorId.Brutius);
+            Assert.AreSame(chosen, m.State.Bot.Active);
+            Assert.AreEqual(MatchPhase.Reveal, m.State.Phase);
         }
 
         [Test]
