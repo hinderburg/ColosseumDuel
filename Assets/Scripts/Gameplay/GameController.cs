@@ -490,8 +490,10 @@ namespace ColosseumDuel.Gameplay
             if (thrown) ViewFor(side).PlayKnockback();
             else ViewFor(side).PlayHit();
 
-            // The world stops on the blow for a moment, so it is felt before anything moves on.
+            // The world stops on the blow for a moment, so it is felt before anything moves on - and
+            // the man it landed on flashes, white or steel for a guard, for exactly that moment.
             HitStop(HitStopFor(blow));
+            ViewFor(side).PlayHitFlash(blow.Blocked);
 
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.

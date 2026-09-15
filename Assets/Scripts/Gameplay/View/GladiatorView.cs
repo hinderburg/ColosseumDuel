@@ -1472,22 +1472,41 @@ namespace ColosseumDuel.Gameplay.View
         private const float BleedFlashTime = 0.55f;
 
         private static readonly Color BleedColor = new Color(0.75f, 0.05f, 0.05f);
-        private float _bleedFlashLeft;
+
+        /// <summary>Seconds the flash of a blow lasts: on at once and gone, the length of the impact itself.</summary>
+        private const float HitFlashTime = 0.09f;
+
+        /// <summary>What a blow flashes him: white; steel-blue when his guard met it.</summary>
+        private static readonly Color HitFlashColor = new Color(1f, 0.97f, 0.92f);
+        private static readonly Color BlockFlashColor = new Color(0.72f, 0.84f, 1f);
+
+        private float _flashLeft, _flashTime, _flashStrength;
+        private Color _flashColor;
+        private bool _flashSnaps;
         private MaterialPropertyBlock _figureProperties;
 
-        /// <summary>A wound just cost this gladiator health at the top of a round.</summary>
-        public void PlayBleed()
-        {
-            _bleedFlashLeft = BleedFlashTime;
-        }
+        /// <summary>A wound just cost this gladiator health at the top of a round: a soft red pulse.</summary>
+        public void PlayBleed() => Flash(BleedColor, BleedFlashTime, 0.75f, snaps: false);
+
+        /// <summary>A blow just landed on him: a hard flash, white - or steel, when his guard met it.</summary>
+        public void PlayHitFlash(bool blocked) => Flash(blocked ? BlockFlashColor : HitFlashColor, HitFlashTime, 1f, snaps: true);
 
         /// <summary>
-        /// Washes the figure towards red and back.
+        /// Washes the figure towards a colour and back: pulsing, or snapping on and fading.
         ///
-        /// Through a property block rather than by touching the material: the three archetype
-        /// materials are shared assets, and tinting one would turn both sides' Brutius red at once -
-        /// including the one who is not bleeding.
+        /// Through a property block rather than by touching the material: the archetype materials
+        /// are shared assets, and tinting one would turn both sides' Brutius red at once - including
+        /// the one who is not bleeding.
         /// </summary>
+        private void Flash(Color color, float seconds, float strength, bool snaps)
+        {
+            _flashColor = color;
+            _flashTime = seconds;
+            _flashLeft = seconds;
+            _flashStrength = strength;
+            _flashSnaps = snaps;
+        }
+
         private void AdvanceBleedFlash(float dt)
         {
             if (_shownFigure == null) return;
@@ -1497,7 +1516,7 @@ namespace ColosseumDuel.Gameplay.View
                 if (GladiatorDef.All[i].Id == _shownFigure.Value) renderer = _figureRenderers[i];
             if (renderer == null) return;
 
-            if (_bleedFlashLeft <= 0f)
+            if (_flashLeft <= 0f)
             {
                 if (_figureProperties != null)
                 {
@@ -1507,15 +1526,17 @@ namespace ColosseumDuel.Gameplay.View
                 return;
             }
 
-            _bleedFlashLeft = Mathf.Max(0f, _bleedFlashLeft - dt);
+            _flashLeft = Mathf.Max(0f, _flashLeft - dt);
 
-            // In and back out over the life of the flash, so it pulses once rather than snapping on
-            // and fading - a snap at this size reads as a rendering glitch.
-            float t = Mathf.Sin((1f - _bleedFlashLeft / BleedFlashTime) * Mathf.PI);
+            // A bleed pulses - in and back out over its life, so it never snaps, which at that size
+            // reads as a rendering glitch. A blow snaps: full on the frame it lands and fading, which
+            // is what an impact is.
+            float life = _flashLeft / _flashTime;
+            float t = _flashSnaps ? life : Mathf.Sin((1f - life) * Mathf.PI);
             var baseColor = _palette != null ? _palette.ArchetypeColor(_shownFigure.Value) : Color.white;
 
             _figureProperties = _figureProperties ?? new MaterialPropertyBlock();
-            _figureProperties.SetColor(BaseColorId, Color.Lerp(baseColor, BleedColor, t * 0.75f));
+            _figureProperties.SetColor(BaseColorId, Color.Lerp(baseColor, _flashColor, t * _flashStrength));
             renderer.SetPropertyBlock(_figureProperties);
         }
 
