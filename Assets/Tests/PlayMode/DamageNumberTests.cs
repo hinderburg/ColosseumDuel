@@ -111,6 +111,39 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// A number says how heavy the blow was by its size, a blow from the side or behind is larger
+        /// and marked, a blow a guard met is grey and smaller, and a bleed tick is small.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ANumberIsSizedByTheBlow_MarkedForAFlank_AndGreyedForAGuard()
+        {
+            _numbers.Show(Vector2.zero, 10f, DamageNumbersView.Source.Blow);
+            yield return null;
+            var light = Showing().Last();
+            _numbers.Show(Vector2.zero, 40f, DamageNumbersView.Source.Blow);
+            yield return null;
+            var heavy = Showing().Last();
+            Assert.Greater(heavy.fontSize, light.fontSize, "a heavier blow should be drawn larger");
+
+            _numbers.Show(Vector2.zero, 10f, DamageNumbersView.Source.Blow, DamageNumbersView.Emphasis.Flank);
+            yield return null;
+            var flank = Showing().Last();
+            Assert.Greater(flank.fontSize, light.fontSize, "a blow from the side or behind should be larger");
+            StringAssert.EndsWith("!", flank.text, "and marked");
+
+            _numbers.Show(Vector2.zero, 10f, DamageNumbersView.Source.Blow, DamageNumbersView.Emphasis.Blocked);
+            yield return null;
+            var blocked = Showing().Last();
+            Assert.Less(blocked.fontSize, light.fontSize, "a guarded blow should be smaller");
+            Assert.AreEqual(blocked.color.r, blocked.color.g, 0.05f, "and grey, not red");
+            Assert.AreNotEqual(light.color, blocked.color);
+
+            _numbers.Show(Vector2.zero, 10f, DamageNumbersView.Source.Bleed);
+            yield return null;
+            Assert.Less(Showing().Last().fontSize, light.fontSize, "a bleed tick should be small");
+        }
+
+        /// <summary>
         /// A real exchange puts a number up, through the game's own event.
         ///
         /// The half that actually breaks is the wiring, not the view: Show works whether or not

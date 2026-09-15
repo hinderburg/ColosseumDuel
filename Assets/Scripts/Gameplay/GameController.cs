@@ -515,7 +515,9 @@ namespace ColosseumDuel.Gameplay
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             if (victim != null) Arena.PlayBlood(victim.Pos);
-            ShowDamage(side, blow.Damage, DamageNumbersView.Source.Blow);
+            ShowDamage(side, blow.Damage, DamageNumbersView.Source.Blow,
+                blow.Blocked ? DamageNumbersView.Emphasis.Blocked
+                : blow.Flanking ? DamageNumbersView.Emphasis.Flank : DamageNumbersView.Emphasis.None);
 
             // And a knock on the camera, so a blow is felt and not only seen - by the weight of the
             // blow and along it. Only for blows: a trap and a bleed go through their own events and
@@ -657,13 +659,14 @@ namespace ColosseumDuel.Gameplay
         /// Start, and which of the two components starts first is not something either of them
         /// gets to decide.
         /// </summary>
-        private void ShowDamage(PlayerSide side, float amount, DamageNumbersView.Source source)
+        private void ShowDamage(PlayerSide side, float amount, DamageNumbersView.Source source,
+            DamageNumbersView.Emphasis emphasis = DamageNumbersView.Emphasis.None)
         {
             if (_damageNumbers == null) _damageNumbers = FindFirstObjectByType<DamageNumbersView>();
             if (_damageNumbers == null) return;
 
             var victim = Manager.State.Get(side).Active;
-            if (victim != null) _damageNumbers.Show(victim.Pos, amount, source);
+            if (victim != null) _damageNumbers.Show(victim.Pos, amount, source, emphasis);
         }
 
         private DamageNumbersView _damageNumbers;

@@ -62,6 +62,40 @@ namespace ColosseumDuel.Gameplay.Hud
         private static readonly Color SpikesColor = new Color(0.98f, 0.42f, 0.14f);
         private static readonly Color HealColor = new Color(0.36f, 0.86f, 0.30f);
 
+        /// <summary>A blow a guard met: grey, the colour of steel on steel, and not red at all.</summary>
+        private static readonly Color BlockedColor = new Color(0.72f, 0.74f, 0.80f);
+
+        /// <summary>What about a blow is worth saying beyond its number.</summary>
+        public enum Emphasis
+        {
+            None,
+
+            /// <summary>From the side or behind: the blows worth more, drawn larger and marked.</summary>
+            Flank,
+
+            /// <summary>Met by a guard: drawn grey and smaller.</summary>
+            Blocked,
+        }
+
+        /// <summary>
+        /// How big a number is drawn. A blow by its weight - a scratch at 22, forty points at 44 -
+        /// larger again from the side or behind and smaller when a guard met it; a bleed tick small,
+        /// the spikes and the apple in between.
+        /// </summary>
+        public static int SizeOf(Source source, float amount, Emphasis emphasis)
+        {
+            switch (source)
+            {
+                case Source.Bleed: return 18;
+                case Source.Spikes: return 22;
+                case Source.Heal: return 26;
+            }
+            float size = 22f + 22f * Mathf.Clamp01(amount / 40f);
+            if (emphasis == Emphasis.Flank) size *= 1.2f;
+            if (emphasis == Emphasis.Blocked) size *= 0.85f;
+            return Mathf.RoundToInt(size);
+        }
+
         private sealed class Number
         {
             public Text Label;
@@ -88,7 +122,9 @@ namespace ColosseumDuel.Gameplay.Hud
             {
                 var label = HudFactory.CreateLabel($"Damage_{i}", root, "", 26);
                 label.raycastTarget = false;
-                label.rectTransform.sizeDelta = new Vector2(120f, 34f);
+                label.rectTransform.sizeDelta = new Vector2(160f, 60f);
+                label.horizontalOverflow = HorizontalWrapMode.Overflow;
+                label.verticalOverflow = VerticalWrapMode.Overflow;
                 label.gameObject.SetActive(false);
                 view._numbers.Add(new Number { Label = label });
             }
@@ -103,7 +139,7 @@ namespace ColosseumDuel.Gameplay.Hud
         /// sprinting away reads as a label attached to him, and what it is actually reporting is
         /// something that happened at a place, a moment ago.
         /// </summary>
-        public void Show(Vector2 virtualPos, float amount, Source source)
+        public void Show(Vector2 virtualPos, float amount, Source source, Emphasis emphasis = Emphasis.None)
         {
             if (_arena == null || amount <= 0.5f) return;
 
@@ -126,9 +162,10 @@ namespace ColosseumDuel.Gameplay.Hud
             slot.From = local;
             slot.Life = RiseSeconds;
             slot.Left = RiseSeconds;
-            slot.Label.text = (source == Source.Heal ? "+" : "") + Mathf.Max(1, Mathf.RoundToInt(amount));
-            slot.Label.color = ColorOf(source);
-            slot.Label.fontSize = source == Source.Blow ? 30 : 22;
+            slot.Label.text = (source == Source.Heal ? "+" : "") + Mathf.Max(1, Mathf.RoundToInt(amount))
+                              + (emphasis == Emphasis.Flank ? "!" : "");
+            slot.Label.color = emphasis == Emphasis.Blocked ? BlockedColor : ColorOf(source);
+            slot.Label.fontSize = SizeOf(source, amount, emphasis);
             slot.Label.rectTransform.anchoredPosition = local;
             slot.Label.gameObject.SetActive(true);
         }
