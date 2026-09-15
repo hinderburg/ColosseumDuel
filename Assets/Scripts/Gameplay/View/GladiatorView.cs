@@ -1038,6 +1038,7 @@ namespace ColosseumDuel.Gameplay.View
             _entranceStarted = Time.unscaledTime;
             _entranceSeconds = Mathf.Max(0.01f, seconds);
             _animatorResetPending = true;
+            _hasLastShown = false;
 
             _swingScheduled = false;
             _swingHoldLeft = 0f;
@@ -1081,19 +1082,24 @@ namespace ColosseumDuel.Gameplay.View
             // animation is for; the next clash replaces him with whoever is picked.
             bool visible = g != null;
             if (gameObject.activeSelf != visible) gameObject.SetActive(visible);
-            if (!visible) return;
+            if (!visible)
+            {
+                _hasLastShown = false;
+                return;
+            }
 
             ShowFigureFor(g.Def.Id);
             ResetAnimatorIfPending();
 
-            // Walking out at the start of a clash: drawn between the wall and his mark, with the step
-            // he is taking fed to the run blend - so he runs out rather than sliding - while the
-            // simulation has him on his mark already.
+            // Walking out at the start of a clash: drawn between the wall and his mark while the
+            // simulation has him on his mark already. The legs are driven by where he is drawn -
+            // see TrackShownMotion - so he runs out rather than sliding.
             var mark = _arena.ToWorld(g.Pos);
             float entrance = EntranceProgress();
             bool entering = entrance < 1f && g.Alive;
-            var step = entering ? (mark - _entranceFrom) / _entranceSeconds : Vector3.zero;
-            SyncAnimator(g, entering ? new Vector2(step.x, step.z) / _arena.VirtualToWorld : g.Vel);
+            var shown = entering ? Vector3.Lerp(_entranceFrom, mark, entrance) : mark;
+            TrackShownMotion(shown);
+            SyncAnimator(g);
 
             if (ShownDead(g))
             {
@@ -1107,7 +1113,7 @@ namespace ColosseumDuel.Gameplay.View
             }
 
             if (!_bars.gameObject.activeSelf) _bars.gameObject.SetActive(true);
-            transform.localPosition = entering ? Vector3.Lerp(_entranceFrom, mark, entrance) : mark;
+            transform.localPosition = shown;
 
             var forward = new Vector3(g.Facing.x, 0f, g.Facing.y);
             if (forward.sqrMagnitude > 0.0001f)
@@ -1258,19 +1264,136 @@ namespace ColosseumDuel.Gameplay.View
         /// expressed in - the simulation's own units are a different scale entirely, and mixing the
         /// two would put a walking gladiator into a sprint or leave a sprinting one standing still.
         /// </summary>
-        private void SyncAnimator(GladiatorInstance g, Vector2 vel)
+        private void SyncAnimator(GladiatorInstance g)
         {
             if (_animator == null) return;
 
             _animator.SetBool(AnimatorParams.DeadId, ShownDead(g));
             if (ShownDead(g)) return;
 
-            _animator.SetFloat(AnimatorParams.SpeedId, vel.magnitude * _arena.VirtualToWorld);
+            // How he is seen to move, not the velocity the simulation holds: a run into a column has
+            // velocity and no movement, and the recoil off a collision is a slow drift - both of
+            // which drove the legs at a sprint while the man went nowhere.
+            var ground = new Vector2(_shownVelocity.x, _shownVelocity.z);
+            float speed = ground.magnitude;
+
+            _animator.SetFloat(AnimatorParams.SpeedId, speed);
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
             _animator.SetBool(AnimatorParams.TwoHandedId, GearSizes.TwoHanded(g.Weapon));
 
-            SyncRunDirection(g, vel);
+            SyncRunDirection(g, ground);
+            _animator.SetFloat(AnimatorParams.RunRateId, RunRate(g, ground, speed));
         }
+
+        // ------------------------------------------------------------------
+        // the legs matched to the ground
+        // ------------------------------------------------------------------
+
+        /// <summary>How quickly the measured speed follows the figure, in seconds of world time.</summary>
+        private const float MotionSmoothing = 0.08f;
+
+        /// <summary>
+        /// A move bigger than this in one frame, in virtual units, is a jump - a new clash, a new man
+        /// set down on his mark - not a run, and is not measured as one.
+        /// </summary>
+        private const float TeleportDistance = 200f;
+
+        /// <summary>The run cycle's rate is kept inside these, so a crawl or a hitch cannot freeze or blur the legs.</summary>
+        private const float MinRunRate = 0.35f;
+        private const float MaxRunRate = 3f;
+
+        /// <summary>The one rate the run played at before it was matched to the ground - kept for a palette without the clip speeds.</summary>
+        private const float FallbackRunRate = 1.45f;
+
+        /// <summary>
+        /// What the computed rate is multiplied by to actually plant the foot. One, measured: the
+        /// calibration sweep in GladiatorFigureTests found the planted foot sliding least at one for
+        /// the slowest man and between one and 1.2 for the fastest - so the clip's root travel is the
+        /// ground its feet cover, once the figure is scaled by his height. Here to be turned if the
+        /// run cycle or the figures ever change and the sweep says otherwise.
+        /// </summary>
+        private const float StrideMatch = 1f;
+
+        private Vector3 _lastShown;
+        private bool _hasLastShown;
+        private Vector3 _shownVelocity;
+
+        /// <summary>How fast he is seen to cross the sand, in world units a second of world time. For tests.</summary>
+        public float ShownSpeed => new Vector2(_shownVelocity.x, _shownVelocity.z).magnitude;
+
+        /// <summary>
+        /// How fast he is drawn moving, from where he is drawn this frame against the last.
+        ///
+        /// Per second of world time - the scaled clock the animator plays on - so the rate worked out
+        /// from it matches the legs to the ground whatever the world's speed: a knockout's slow
+        /// motion slows the figure and the legs alike. Smoothed a little, because the simulation
+        /// steps in substeps and a frame's worth of it is uneven.
+        /// </summary>
+        private void TrackShownMotion(Vector3 shown)
+        {
+            float dt = Time.deltaTime;
+            var moved = shown - _lastShown;
+            moved.y = 0f;
+            bool jumped = !_hasLastShown || moved.magnitude > _arena.ScaleLength(TeleportDistance);
+            _lastShown = shown;
+            _hasLastShown = true;
+
+            if (jumped)
+            {
+                _shownVelocity = Vector3.zero;
+                return;
+            }
+            if (dt <= 0f) return;
+
+            var now = moved / dt;
+            _shownVelocity = Vector3.Lerp(_shownVelocity, now, 1f - Mathf.Exp(-dt / MotionSmoothing));
+
+            // Smoothing only ever approaches nought; a man standing still is standing still. Only when
+            // he is not moving this frame either: at a high frame rate - and in planning's slow motion
+            // - one frame adds a sliver of his speed, and cutting slivers away kept a moving man at
+            // nought for good.
+            if (now.sqrMagnitude < RestSpeed * RestSpeed && _shownVelocity.sqrMagnitude < RestSpeed * RestSpeed)
+                _shownVelocity = Vector3.zero;
+        }
+
+        /// <summary>Below this, in world units a second, the smoothed speed is taken for none at all.</summary>
+        private const float RestSpeed = 0.05f;
+
+        /// <summary>
+        /// The rate the run cycle has to play at for his feet to keep pace with the ground: how fast
+        /// he is moving over how fast the cycle carries a man at its own rate.
+        ///
+        /// The cycle's own speed depends on which of the four the blend is mostly playing - a run
+        /// backwards covers less ground a stride than a charge - so it is weighted by his direction
+        /// the way the blend weights the clips. It is measured in the avatar's units, which the
+        /// animator grows by the avatar's size and the figure by his build, so both go on it.
+        /// </summary>
+        private float RunRate(GladiatorInstance g, Vector2 ground, float speed)
+        {
+            var clips = _palette != null ? _palette.RunClipSpeeds : Vector4.zero;
+            if (speed <= 0.0001f || clips == Vector4.zero) return FallbackRunRate;
+
+            var direction = ground / speed;
+            var facing = g.Facing.sqrMagnitude > 0.0001f ? g.Facing.normalized : Vector2.up;
+            float ahead = Vector2.Dot(direction, facing);
+            float across = direction.x * facing.y - direction.y * facing.x;
+            float a = Mathf.Abs(ahead);
+            float s = Mathf.Abs(across);
+            float clipSpeed = (a * (ahead >= 0f ? clips.x : clips.y) + s * (across >= 0f ? clips.w : clips.z))
+                              / Mathf.Max(0.0001f, a + s);
+
+            // His height, not his width: a stride is as long as the leg, and the broad archetype is
+            // broad, not long in the leg.
+            float worldClipSpeed = clipSpeed * _animator.humanScale * _animator.transform.lossyScale.y;
+            if (worldClipSpeed <= 0.0001f) return FallbackRunRate;
+            return Mathf.Clamp(speed / worldClipSpeed * StrideMatch * StrideTuning, MinRunRate, MaxRunRate);
+        }
+
+        /// <summary>
+        /// A multiplier on the matched rate, for the explicit calibration sweep in the tests to turn.
+        /// Leave it at one: the calibrated correction lives in <see cref="StrideMatch"/>.
+        /// </summary>
+        public static float StrideTuning = 1f;
 
         /// <summary>
         /// Which way he is running, in his own frame, for the run blend.

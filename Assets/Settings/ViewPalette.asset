@@ -131,6 +131,7 @@ MonoBehaviour:
   - {fileID: 4924172732080405724, guid: 97d0dae46aa0f3e45ad0602025e50ec6, type: 3}
   - {fileID: 2850411983291817232, guid: fe54cd2d3a7cede4bb6a01cd61f82a2b, type: 3}
   - {fileID: 580499523267204791, guid: 711084c5f73a0fe48abc8b8b7e3faca3, type: 3}
+  RunClipSpeeds: {x: 4.0057645, y: 3.7620714, z: 3.977578, w: 3.9112098}
   ArchetypeBodies:
   - {fileID: 2100000, guid: 38e71fad12e695c4b9ff149deea431fa, type: 2}
   - {fileID: 2100000, guid: 79c9e177fed072e418d56768efedb6b0, type: 2}

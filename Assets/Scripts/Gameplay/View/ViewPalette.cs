@@ -285,6 +285,13 @@ namespace ColosseumDuel.Gameplay.View
         [Header("Gladiator figures")]
         public GameObject[] GladiatorFigures;
 
+        /// <summary>
+        /// How fast each run cycle carries a man at its own rate, in the avatar's units a second -
+        /// forward, back, left, right. Read off the clips by the bootstrap; zero without them. See
+        /// GladiatorView.RunRate for what it is for.
+        /// </summary>
+        public Vector4 RunClipSpeeds;
+
         /// <summary>One opaque body material per archetype, indexed by GladiatorId.</summary>
         public Material[] ArchetypeBodies;
 

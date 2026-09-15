@@ -36,9 +36,6 @@ namespace ColosseumDuel.EditorTools
         private const string PackDir =
             "Assets/ExplosiveLLC/RPG Character Mecanim Animation Pack FREE/Animations";
 
-        /// <summary>How much faster than authored the run cycles play. See where it is applied.</summary>
-        private const float RunPlaybackSpeed = 1.45f;
-
         /// <summary>The stance held through the planning phase, picked by eye and named directly.</summary>
         private const string ReadyStanceFbx = "Assets/DoubleL/FBX Unity/Actions/Action/Action_A_5_2.fbx";
 
@@ -96,6 +93,15 @@ namespace ColosseumDuel.EditorTools
             controller.AddParameter(AnimatorParams.Knockback, AnimatorControllerParameterType.Trigger);
             controller.AddParameter(AnimatorParams.ReadyStance, AnimatorControllerParameterType.Bool);
 
+            // One unless told otherwise: a float parameter defaults to nothing, and a run state
+            // whose rate is nothing stands frozen mid-stride.
+            controller.AddParameter(new AnimatorControllerParameter
+            {
+                name = AnimatorParams.RunRate,
+                type = AnimatorControllerParameterType.Float,
+                defaultFloat = 1f,
+            });
+
             var machine = controller.layers[0].stateMachine;
 
             var idleState = machine.AddState("Idle");
@@ -104,13 +110,16 @@ namespace ColosseumDuel.EditorTools
 
             var runState = BuildRun(controller, idle);
 
-            // Played faster than it was authored.
+            // Played at the rate the ground is going past under him, set by the view every frame.
             //
-            // The cycles were made for a character crossing ground at a walking pace; a gladiator
-            // crosses a third of the arena in one second, and at the clip's own rate his feet were
-            // visibly slower than the ground going past under them. Playback rate rather than a
-            // different clip, because the pack has one run and this is what the knob is for.
-            runState.speed = RunPlaybackSpeed;
+            // It was one fixed rate, a little under one and a half times authored - right for no man
+            // in particular. The run speeds differ by half between the slowest archetype and the
+            // fastest, Rampage and Testudo push them further apart, and a recoil off a collision is a
+            // slow drift: at one rate for all of it the planted foot slid along the sand at most of
+            // his own speed, and he looked to be running on the spot.
+            runState.speed = 1f;
+            runState.speedParameter = AnimatorParams.RunRate;
+            runState.speedParameterActive = true;
 
             var blockState = machine.AddState("Block");
             blockState.motion = Clip("OneHand_Up_Shield_Block_Idle");
@@ -238,6 +247,61 @@ namespace ColosseumDuel.EditorTools
             AddDirection(tree, "OneHand_Up_Run_L_InPlace", new Vector2(-1f, 0f), idle);
             AddDirection(tree, "OneHand_Up_Run_R_InPlace", new Vector2(1f, 0f), idle);
             return state;
+        }
+
+        /// <summary>
+        /// How fast each of the four run cycles carries a man over the ground at its own rate, in the
+        /// avatar's units a second: forward, back, left, right.
+        ///
+        /// Read off the root-motion twins of the in-place cycles - the same takes with the travel
+        /// left in - which is the one place that speed is written down. The view divides how fast he
+        /// is really moving by this to get the rate the cycle has to play at. Zero when the clips are
+        /// not there, and the view then falls back to the fixed rate the run used to play at.
+        /// </summary>
+        public static Vector4 RunClipSpeeds()
+        {
+            var speeds = new Vector4(
+                GroundSpeed("OneHand_Up_Run_F"), GroundSpeed("OneHand_Up_Run_B"),
+                GroundSpeed("OneHand_Up_Run_L"), GroundSpeed("OneHand_Up_Run_R"));
+            if (speeds.x <= 0f || speeds.y <= 0f || speeds.z <= 0f || speeds.w <= 0f)
+            {
+                Debug.LogWarning($"[Colosseum] The run cycles' ground speeds could not be read ({speeds}) - " +
+                                 "the run will play at one fixed rate, whatever his speed.");
+                return Vector4.zero;
+            }
+
+            Debug.Log($"[Colosseum] Run cycle ground speeds, forward/back/left/right: {speeds}");
+            return speeds;
+        }
+
+        /// <summary>
+        /// How far the clip carries its root over the ground, over how long it lasts.
+        ///
+        /// Off the root's own curves - RootT.x and RootT.z, the humanoid root's travel across the
+        /// ground, in the avatar's units. AnimationClip.averageSpeed is the obvious property and it
+        /// read nought for these clips; the curves are what it would have been computed from.
+        /// </summary>
+        private static float GroundSpeed(string clipName)
+        {
+            var clip = Clip(clipName);
+            if (clip == null || clip.length <= 0.0001f) return 0f;
+
+            float Travel(string property)
+            {
+                foreach (var binding in AnimationUtility.GetCurveBindings(clip))
+                {
+                    if (binding.propertyName != property) continue;
+                    var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                    return curve != null ? curve.Evaluate(clip.length) - curve.Evaluate(0f) : 0f;
+                }
+                return 0f;
+            }
+
+            float fromCurves = new Vector2(Travel("RootT.x"), Travel("RootT.z")).magnitude / clip.length;
+            if (fromCurves > 0.0001f) return fromCurves;
+
+            var average = clip.averageSpeed;
+            return new Vector2(average.x, average.z).magnitude;
         }
 
         private static void AddDirection(BlendTree tree, string clipName, Vector2 at, AnimationClip fallback)

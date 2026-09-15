@@ -398,10 +398,24 @@ namespace ColosseumDuel.Tests
             _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.up, 1f, false);
             _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Action, 5f);
-            yield return null;
+
+            // A moment into the run: the speed the legs are driven by is smoothed over a few frames.
+            yield return RunWorldSeconds(0.15f);
 
             Assert.Greater(animator.GetFloat(AnimatorParams.Speed), AnimatorParams.RunThreshold,
                 "a gladiator at full sprint should be past the run threshold");
+        }
+
+        /// <summary>Moves him by hand at this velocity, in virtual units a second of world time, for this long.</summary>
+        private static IEnumerator MoveFor(GladiatorInstance g, Vector2 velocity, float worldSeconds)
+        {
+            float spent = 0f;
+            while (spent < worldSeconds)
+            {
+                yield return null;
+                g.Pos += velocity * Time.deltaTime;
+                spent += Time.deltaTime;
+            }
         }
 
         /// <summary>
@@ -525,10 +539,12 @@ namespace ColosseumDuel.Tests
             var bot = _controller.Manager.State.Bot.Active;
 
             // He faces the opponent, who is straight up the arena from him, and runs the other way.
+            // Actually moved, frame by frame: the legs follow where he is drawn going, not a velocity
+            // that moves him nowhere - that was what made him run on the spot.
             player.Pos = new Vector2(0f, -60f);
+            player.Facing = Vector2.up;
             bot.Pos = new Vector2(0f, 60f);
-            player.Vel = new Vector2(0f, -120f);
-            yield return RunWorldSeconds(0.25f);
+            yield return MoveFor(player, new Vector2(0f, -120f), 0.25f);
 
             Assert.Less(animator.GetFloat(AnimatorParams.MoveZ), -0.6f,
                 "running away from the man he faces should read as backwards");
@@ -537,8 +553,7 @@ namespace ColosseumDuel.Tests
 
             // Now across his own front, which is the case a single speed value cannot express at
             // all: same magnitude, same facing, a different cycle.
-            player.Vel = new Vector2(120f, 0f);
-            yield return RunWorldSeconds(0.25f);
+            yield return MoveFor(player, new Vector2(120f, 0f), 0.25f);
 
             Assert.Greater(animator.GetFloat(AnimatorParams.MoveX), 0.6f,
                 "running to his own right should read as a right-hand strafe");
@@ -935,6 +950,10 @@ namespace ColosseumDuel.Tests
                     $"the {name}'s gladiator is already on his mark - he should be walking out to it");
             }
 
+            // A little way into the walk out: the speed the legs are driven by is smoothed over a few
+            // frames, and the walk lasts a second and a half.
+            yield return RunSeconds(0.3f);
+            Assert.AreEqual(MatchPhase.Reveal, state.Phase, "the clash should still be being announced");
             var animator = FindIn("Player", $"Figure_{GladiatorId.Brutius}")?.GetComponentInChildren<Animator>(true);
             if (animator != null && animator.runtimeAnimatorController != null)
                 Assert.Greater(animator.GetFloat(AnimatorParams.SpeedId), AnimatorParams.RunThreshold,
@@ -995,6 +1014,160 @@ namespace ColosseumDuel.Tests
             foreach (var source in sources)
                 Assert.AreEqual("etfx_shoot_magic", source.clip != null ? source.clip.name : null,
                     "the blessing should sound like a magic shot");
+        }
+
+        /// <summary>
+        /// The foot on the ground stays on the ground while he runs: the run cycle is played at the
+        /// rate his body is actually covering the sand, so the planted foot does not slide along
+        /// under him - which is what running on the spot looks like, and what a cycle played at one
+        /// fixed rate for every man and every speed did.
+        ///
+        /// Measured, not eyeballed: the lower of his two feet is the planted one, and its speed over
+        /// the ground is taken as a share of his body's. A run matched to the ground keeps that share
+        /// small; a cycle too slow or too fast for the ground makes it large. The slowest man and the
+        /// fastest, because a fixed rate can only ever be right for one speed.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePlantedFootStaysPutWhileTheSlowestManRuns()
+        {
+            yield return MeasureFootSlip(GladiatorId.Brutius);
+            AssertFootStaysPut(GladiatorId.Brutius);
+        }
+
+        [UnityTest]
+        public IEnumerator ThePlantedFootStaysPutWhileTheFastestManRuns()
+        {
+            yield return MeasureFootSlip(GladiatorId.Hilius);
+            AssertFootStaysPut(GladiatorId.Hilius);
+        }
+
+        /// <summary>The planted foot's speed over the ground as a share of his body's, from the last measurement.</summary>
+        private float _footSlip = -1f;
+
+        /// <summary>
+        /// How much of his body's speed the planted foot may carry. Not near nought: this measure
+        /// bottoms out at about half even for a run matched as well as the calibration sweep can
+        /// match it - a foot rolls from heel to toe while it is down, and the frames round touchdown
+        /// count as down. Matched, the two men measure 0.5 to 0.6; at the one fixed rate the run
+        /// used to play at, Brutius measured 1.07 and Hilius 0.76.
+        /// </summary>
+        private const float MaxFootSlip = 0.68f;
+
+        private void AssertFootStaysPut(GladiatorId id)
+        {
+            if (_footSlip < 0f) Assert.Ignore("No animated figure here - there is no foot to measure.");
+            Debug.Log($"[FootSlip] {id}: the planted foot moves at {_footSlip:0.00} of his speed");
+            Assert.Less(_footSlip, MaxFootSlip,
+                $"{id}'s planted foot slides along at {_footSlip:0.00} of his speed - he is running on the spot");
+        }
+
+        private IEnumerator MeasureFootSlip(GladiatorId id)
+        {
+            _footSlip = -1f;
+            _controller.SubmitPlayerPick(id);
+            yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Planning, GameConstants.RevealTime + 1f);
+            yield return MeasureOneRun(id);
+        }
+
+        /// <summary>
+        /// Not a check, a tuning instrument: plays the same run at a spread of multipliers on the
+        /// matched rate and logs how far the planted foot slides at each, for the slowest man and the
+        /// fastest. The multiplier where it slides least is what GladiatorView.StrideMatch is set to.
+        /// </summary>
+        [UnityTest, Explicit("a calibration sweep - run it by name when the run cycle or the figures change")]
+        public IEnumerator RunRateCalibrationSweep()
+        {
+            var multipliers = new[] { 0.6f, 0.8f, 1.0f, 1.2f, 1.4f, 1.7f, 2.0f };
+            foreach (var id in new[] { GladiatorId.Brutius, GladiatorId.Hilius })
+            {
+                yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
+                yield return null;
+                _controller = Object.FindFirstObjectByType<GameController>();
+                _controller.SubmitPlayerPick(id);
+
+                var line = new System.Text.StringBuilder($"[StrideSweep] {id}:");
+                foreach (float k in multipliers)
+                {
+                    GladiatorView.StrideTuning = k;
+                    yield return RunUntil(() => _controller.Manager.State.Phase == MatchPhase.Planning, GameConstants.RevealTime + GameConstants.ActionTime + 2f);
+                    yield return MeasureOneRun(id);
+                    line.Append($"  x{k:0.0}={_footSlip:0.00}");
+                }
+                GladiatorView.StrideTuning = 1f;
+                Debug.Log(line.ToString());
+            }
+        }
+
+        /// <summary>
+        /// One long straight run up the open middle, the opponent held at the far end, measured: how
+        /// fast the planted foot moves over the ground as a share of how fast his body does.
+        ///
+        /// The planted foot is the lowest of his toes and ankles, and only frames where it is
+        /// actually down count - near the lowest it gets over the run. An ankle rolls forward over
+        /// a planted foot and both feet are off the ground in a run's flight, and counting either as
+        /// sliding buried the difference between a matched cycle and a mismatched one.
+        /// </summary>
+        private IEnumerator MeasureOneRun(GladiatorId id)
+        {
+            _footSlip = -1f;
+            var animator = FindIn("Player", $"Figure_{id}")?.GetComponentInChildren<Animator>(true);
+            if (animator == null || animator.runtimeAnimatorController == null || !animator.isHuman) yield break;
+            var contacts = new[]
+                {
+                    HumanBodyBones.LeftToes, HumanBodyBones.RightToes, HumanBodyBones.LeftFoot, HumanBodyBones.RightFoot
+                }
+                .Select(animator.GetBoneTransform).Where(t => t != null).ToArray();
+            if (contacts.Length < 2) yield break;
+
+            var state = _controller.Manager.State;
+            state.P1.Active.Pos = new Vector2(0f, -300f);
+            state.P1.Active.Facing = Vector2.up;
+            state.Bot.Active.Pos = new Vector2(0f, 420f);
+            state.Bot.Active.EnsnaredRoundsLeft = 2;
+            Assert.IsTrue(_controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.up, 1f, false));
+            yield return RunUntil(() => state.Phase == MatchPhase.Action, GameConstants.PlanningTime + 1f);
+
+            // Into the stride before measuring: the first steps are the blend out of the stance.
+            yield return RunSeconds(0.3f);
+
+            var gladiatorView = View("Player");
+            var view = gladiatorView.transform;
+            var lastBody = view.position;
+            var last = contacts.Select(t => t.position).ToArray();
+            var samples = new List<(float height, float body, float foot)>();
+            float rate = 0f;
+            float until = Time.realtimeSinceStartup + 0.9f;
+            while (Time.realtimeSinceStartup < until && state.Phase == MatchPhase.Action)
+            {
+                yield return null;
+                float dt = Time.deltaTime;
+                if (dt <= 0f) continue;
+
+                int lowest = 0;
+                for (int i = 1; i < contacts.Length; i++)
+                    if (contacts[i].position.y < contacts[lowest].position.y) lowest = i;
+
+                float bodySpeed = Flat(view.position - lastBody).magnitude / dt;
+                float footSpeed = Flat(contacts[lowest].position - last[lowest]).magnitude / dt;
+                if (bodySpeed > AnimatorParams.RunThreshold * 2f)
+                {
+                    samples.Add((contacts[lowest].position.y - view.position.y, bodySpeed, footSpeed));
+                    rate += animator.GetFloat(AnimatorParams.RunRateId);
+                }
+
+                lastBody = view.position;
+                for (int i = 0; i < contacts.Length; i++) last[i] = contacts[i].position;
+            }
+
+            Assert.Greater(samples.Count, 5, "he hardly ran - nothing to measure");
+            float low = samples.Min(s => s.height);
+            float high = samples.Max(s => s.height);
+            var down = samples.Where(s => s.height <= low + (high - low) * 0.3f).ToList();
+            _footSlip = down.Sum(s => s.foot) / down.Sum(s => s.body);
+
+            Debug.Log($"[FootSlip] {id}: body {samples.Average(s => s.body):0.00}/s, run rate {rate / samples.Count:0.00}, " +
+                      $"{down.Count} of {samples.Count} frames down, clip speeds {_controller.Arena.Palette.RunClipSpeeds}, " +
+                      $"human scale {animator.humanScale:0.000}, figure scale {animator.transform.lossyScale.y:0.000}");
         }
 
         private GladiatorView View(string name)

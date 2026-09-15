@@ -742,6 +742,8 @@ namespace ColosseumDuel.EditorTools
                 palette.GladiatorFigures = null;
             }
 
+            palette.RunClipSpeeds = GladiatorAnimation.RunClipSpeeds();
+
             EditorUtility.SetDirty(palette);
             AssetDatabase.SaveAssets();
             Debug.Log($"[Colosseum] View palette rebuilt at {PalettePath}.");

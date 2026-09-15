@@ -39,8 +39,17 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public const string ReadyStance = "ReadyStance";
 
+        /// <summary>
+        /// The rate the run cycle plays at, 1 being the rate it was authored at. Set every frame from
+        /// how fast he is actually crossing the sand, so his feet keep up with the ground under
+        /// them - played at one fixed rate, a slow man skated and a fast one ran on the spot.
+        /// </summary>
+        public const string RunRate = "RunRate";
+
         /// <summary>Speed, in world units per second, above which the run cycle plays.</summary>
         public const float RunThreshold = 0.35f;
+
+        public static readonly int RunRateId = Animator.StringToHash(RunRate);
 
         public static readonly int SpeedId = Animator.StringToHash(Speed);
         public static readonly int DefendingId = Animator.StringToHash(Defending);
