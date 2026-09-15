@@ -1053,7 +1053,7 @@ namespace ColosseumDuel.Gameplay.View
             _sinceSwingStarted = 0f;
 
             // And the weapon writes its ribbon for the length of the swing, quicker for a quicker weapon.
-            _trailLeft = TrailWriteSeconds / AttackSpeed(_shownWeapon);
+            _trailLeft = TrailWriteSeconds / AttackSpeed(_shownWeapon ?? WeaponKind.None);
         }
 
         /// <summary>
