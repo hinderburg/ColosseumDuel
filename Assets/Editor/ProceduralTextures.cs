@@ -616,6 +616,50 @@ namespace ColosseumDuel.EditorTools
         }
 
         /// <summary>
+        /// The fade the strike wedge is drawn with: white, nearly clear where it leaves the man and
+        /// thickening towards the edge of his reach, with a brighter band along the edge itself - a
+        /// light cast outwards rather than a patch of paint. Laid along the wedge's V, which runs
+        /// from its inner edge to its outer one, so it is a strip one way and a ramp the other.
+        /// </summary>
+        public static Texture2D EnsureRadialFade(string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (existing != null) return existing;
+
+            const int width = 4;
+            const int height = 64;
+            var pixels = new Color32[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                float v = y / (float)(height - 1);
+                float alpha = Mathf.Lerp(0.04f, 0.34f, v * v);
+                if (v > 0.9f) alpha = Mathf.Lerp(alpha, 0.72f, (v - 0.9f) / 0.1f);
+                var color = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+                for (int x = 0; x < width; x++) pixels[y * width + x] = color;
+            }
+
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Default;
+            importer.wrapMode = TextureWrapMode.Clamp;   // a ramp, not a pattern: the ends must not wrap into each other
+            importer.filterMode = FilterMode.Bilinear;
+            importer.alphaIsTransparency = true;
+            importer.mipmapEnabled = false;
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        /// <summary>
         /// A white circle, or a ring when innerFraction is above zero, as a sprite.
         ///
         /// Needed as an actual sprite because the radial rage gauge uses Image.Type.Filled, and

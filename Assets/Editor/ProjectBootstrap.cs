@@ -507,7 +507,12 @@ namespace ColosseumDuel.EditorTools
 
             // The ground his weapon covers, drawn on the sand. Faint enough to read as light on the
             // floor rather than as paint, because the fight has to stay legible through it.
-            palette.StrikeZone = TransparentUnlit("StrikeZone", new Color(0.88f, 0.20f, 0.18f, 0.44f));
+            // White and fading out towards the man rather than a flat red: the fade carries the
+            // see-through, so the colour itself is full white.
+            palette.StrikeZone = TransparentUnlit("StrikeZone", Color.white);
+            palette.StrikeZone.SetTexture("_BaseMap", ProceduralTextures.EnsureRadialFade($"{TexturesDir}/StrikeZoneFade.png"));
+            EditorUtility.SetDirty(palette.StrikeZone);
+            palette.ReachRing = TransparentUnlit("ReachRing", new Color(1f, 1f, 1f, 0.5f));
             palette.Burst = TransparentUnlit("Burst", Color.white);
 
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with

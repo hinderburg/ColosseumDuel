@@ -267,7 +267,10 @@ namespace ColosseumDuel.Gameplay
             // The zones belong to the decision being made, so they go up and down with the phase
             // that makes it. The bot gets none: they are the player's options, and drawing the
             // opponent's would hand over the half of the guess the blind planning phase is for.
-            if (ControlZone != null) ControlZone.Sync(state.P1.Active, planning);
+            // The circle of his reach stays up while the orders are carried out as well: where his
+            // blow lands is worth reading while he runs, not only while he is deciding where to.
+            if (ControlZone != null)
+                ControlZone.Sync(state.P1.Active, planning, planning || state.Phase == MatchPhase.Action);
 
             Arena.Sync(state);
 

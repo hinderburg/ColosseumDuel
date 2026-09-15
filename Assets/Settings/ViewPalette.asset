@@ -27,6 +27,7 @@ MonoBehaviour:
   TrajectoryFill: {fileID: 2100000, guid: dbe338dfb03f73d4c9ba9160ba59a7fe, type: 2}
   PullLine: {fileID: 2100000, guid: 58cbe8c21ef617d4999c325afbb14218, type: 2}
   StrikeZone: {fileID: 2100000, guid: ddf16c6194393a949b3c037af35167a1, type: 2}
+  ReachRing: {fileID: 2100000, guid: da7861d5ae116df428519b598e10f080, type: 2}
   ColumnModel: {fileID: 255444171964612244, guid: f953dd42b31bfc94898bdc486560e6a5, type: 3}
   ColumnStone: {fileID: 2100000, guid: fdfac83acd772d74b86b272e4beb52fe, type: 2}
   CrateWood: {fileID: 2100000, guid: dec71de96cd3b274a97ad09c522da9a8, type: 2}

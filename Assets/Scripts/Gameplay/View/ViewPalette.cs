@@ -43,8 +43,15 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>Solid white line: the pull itself, from the gladiator back to the pointer.</summary>
         public Material PullLine;
 
-        /// <summary>The red wedge on the sand: the ground his weapon covers, and so who he can hit.</summary>
+        /// <summary>
+        /// The wedge on the sand: the ground his weapon covers, and so who he can hit. White and see-
+        /// through, fading in from the man towards the edge of his reach - see the fade texture the
+        /// bootstrap gives it.
+        /// </summary>
         public Material StrikeZone;
+
+        /// <summary>The dashed white circle round him at the length of his reach.</summary>
+        public Material ReachRing;
 
         /// <summary>
         /// The pillar the columns on the sand are built from. Low Poly Trim Sheet, so absent in a

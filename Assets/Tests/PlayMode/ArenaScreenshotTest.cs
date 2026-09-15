@@ -322,12 +322,15 @@ namespace ColosseumDuel.Tests
 
             foreach (var weapon in WeaponDef.All)
             {
-                controller.RestartMatch();
-                yield return null;
-
                 // Each weapon on the archetype trained in it, at his own build: anyone else holding
                 // it is drawn inside the red untrained shell, which is a different thing to look at.
-                controller.SubmitPlayerPick(OwnerOf(weapon.Kind));
+                // He is put in the squad first - there are six archetypes and a squad of three, and a
+                // pick of a man not in it picks nobody.
+                var owner = OwnerOf(weapon.Kind);
+                controller.SetSquad(new[] { owner, owner, owner });
+                yield return null;
+
+                controller.SubmitPlayerPick(owner);
                 yield return RunSeconds(GameConstants.RevealTime + 0.2f);
 
                 var player = controller.Manager.State.P1.Active;

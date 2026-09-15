@@ -98,6 +98,51 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// A dashed white circle round him at the length of his reach, up while he is being given his
+        /// orders and while he carries them out - where his blow lands is worth reading in both - and
+        /// kept on him as he runs. The wedge still goes down when the run starts.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheReachCircleIsUpThroughPlanningAndActionAtTheLengthOfHisReach()
+        {
+            yield return ReachPlanning();
+
+            var zone = _controller.ControlZone;
+            var player = _controller.Manager.State.P1.Active;
+            Assert.IsTrue(zone.IsRingShowing, "the circle should be up while he is given his orders");
+
+            var ring = Layer("ReachRing");
+            var vertices = ring.GetComponent<MeshFilter>().sharedMesh.vertices;
+            float reach = _controller.Arena.ScaleLength(player.Reach);
+            Assert.AreEqual(reach, vertices.Average(v => new Vector2(v.x, v.z).magnitude), 0.01f,
+                "the circle should be drawn at the length of his reach");
+            Assert.GreaterOrEqual(zone.RingDashes, 12, "the circle should be a dashed line");
+
+            _controller.SubmitPlayerMove(Vector2.up, 1f);
+            yield return RunSeconds(GameConstants.PlanningTime + 0.3f);
+
+            Assert.AreEqual(MatchPhase.Action, _controller.Manager.State.Phase);
+            Assert.IsTrue(zone.IsRingShowing, "and it should stay up while he runs");
+            Assert.IsFalse(zone.IsShowing, "the wedge is still for the planning phase only");
+
+            var centre = Layer("ReachRingRoot").position;
+            var him = _controller.Arena.ToWorld(player.Pos);
+            Assert.Less(Vector2.Distance(new Vector2(centre.x, centre.z), new Vector2(him.x, him.z)), 0.05f,
+                "the circle should go with him");
+        }
+
+        /// <summary>The wedge is white and fades in towards the edge of his reach, not a flat red.</summary>
+        [Test]
+        public void TheWedgeIsWhiteAndFades()
+        {
+            var material = _controller.Arena.Palette.StrikeZone;
+            Assert.AreEqual(1f, material.color.r, 0.01f, "the wedge should be white");
+            Assert.AreEqual(1f, material.color.g, 0.01f, "the wedge should be white");
+            Assert.AreEqual(1f, material.color.b, 0.01f, "the wedge should be white");
+            Assert.IsNotNull(material.GetTexture("_BaseMap"), "the wedge should carry its fade");
+        }
+
+        /// <summary>
         /// Lunge reaches half as far again, and the wedge says so: while it is armed for the round
         /// about to be played - which is when it is being decided on - and while it is working. It
         /// was drawn the weapon's length through both.
