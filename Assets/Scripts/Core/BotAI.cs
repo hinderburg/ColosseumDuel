@@ -45,6 +45,14 @@ namespace ColosseumDuel.Core
             bool wantsAbility = me.CanActivateAbility && rng.NextDouble() < 0.8; // aggressive: use it almost whenever ready
             decision.UseAbility = wantsAbility;
 
+            // With the other man's rage full he is about to use his ability, and most of what the
+            // abilities do is worse for somebody charging in: guard, more often than not.
+            if (opp.CanActivateAbility && rng.NextDouble() < GuardAgainstReadyAbilityChance)
+            {
+                decision.Action = ActionType.Defend;
+                return decision;
+            }
+
             if (!seekPickup && rng.NextDouble() < 0.10)
             {
                 // occasional defensive play
@@ -54,6 +62,13 @@ namespace ColosseumDuel.Core
 
             decision.Action = ActionType.Move;
             Vector2 target = seekPickup ? pickup.Value : opp.Pos;
+
+            // Some of the time, not at him but past him: a point beside and behind him, clear of his
+            // body on the way, where his guard is not and a blow is worth more. No blow this round -
+            // the run ends looking past him - but the next one comes at his back.
+            if (!seekPickup && rng.NextDouble() < FlankChance)
+                target = FlankPoint(me, opp, rng);
+
             Vector2 dir = (target - me.Pos);
             if (dir.sqrMagnitude < 0.0001f) dir = Vector2.up;
             decision.AimDirection = dir.normalized;
@@ -66,6 +81,22 @@ namespace ColosseumDuel.Core
             float wanted = dir.magnitude + GameConstants.GladiatorRadius * 2f;
             decision.Power = reach > 0.0001f ? Mathf.Min(rolled, wanted / reach) : rolled;
             return decision;
+        }
+
+        /// <summary>How often it guards when the other man's ability is ready, and how often a run goes round him.</summary>
+        private const float GuardAgainstReadyAbilityChance = 0.6f, FlankChance = 0.3f;
+
+        /// <summary>Where a flanking run ends, in body radii: this far to one side of him, and this far behind.</summary>
+        private const float FlankSide = 3f, FlankDepth = 2f;
+
+        private static Vector2 FlankPoint(GladiatorInstance me, GladiatorInstance opp, System.Random rng)
+        {
+            var toHim = opp.Pos - me.Pos;
+            if (toHim.sqrMagnitude < 0.0001f) toHim = Vector2.up;
+            var side = new Vector2(-toHim.y, toHim.x).normalized * (rng.NextDouble() < 0.5 ? 1f : -1f);
+            var behind = opp.Facing.sqrMagnitude > 0.0001f ? -opp.Facing.normalized : toHim.normalized;
+            return opp.Pos + side * (GameConstants.GladiatorRadius * FlankSide)
+                           + behind * (GameConstants.GladiatorRadius * FlankDepth);
         }
 
         private static Vector2? NearestWorthHaving(GladiatorInstance me, IEnumerable<ArenaPickup> pickups)

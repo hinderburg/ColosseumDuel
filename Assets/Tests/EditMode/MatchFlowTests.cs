@@ -854,9 +854,11 @@ namespace ColosseumDuel.Tests
                 if (decision.Action != ActionType.Move) continue;
                 moves++;
 
+                // Through the man, or through the point beside and behind him a flanking run goes for
+                // - which is at most five radii further off (see BotAI.FlankPoint) - and no further.
                 float run = decision.Power * me.DashReach();
-                Assert.LessOrEqual(run, 120f + GameConstants.GladiatorRadius * 2f + 0.01f,
-                    $"the bot ordered a run of {run:0} at a man 120 away");
+                Assert.LessOrEqual(run, 120f + GameConstants.GladiatorRadius * 7f + 0.01f,
+                    $"the bot ordered a run of {run:0} at a man 120 away, or round him");
             }
 
             Assert.Greater(moves, 10, "the bot hardly moved, so this proves nothing");
