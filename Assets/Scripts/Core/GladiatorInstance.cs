@@ -493,11 +493,34 @@ namespace ColosseumDuel.Core
             if (Hp <= 0f) Alive = false;
         }
 
+        /// <summary>
+        /// What a clash winner carries into the next clash: his health and his rage, and whatever of
+        /// his own is still running - the rounds left on his blessing and on his ability, with the
+        /// lock that runs beside the ability. Everything the other man did to him is over with the
+        /// man who did it: the net, the stagger, the bleed, a Shackles lock. And nothing of the plan.
+        /// </summary>
+        public void CarryIntoNewClash()
+        {
+            StopRunning();
+            PlannedAction = ActionType.None;
+            PlannedPath.Clear();
+            AbilityArmed = false;
+            EnsnaredRoundsLeft = 0;
+            StaggeredRoundsLeft = 0;
+            BleedRoundsLeft = 0;
+            BleedPerRound = 0f;
+            AttacksRemainingThisRound = AttacksPerRound;
+            EquipTrainedWeapon();
+
+            // The lock is his own only while his ability runs; without one it is Shackles', or the
+            // tail of an ability already spent, and neither outlives the clash.
+            if (!Buff.IsActive) AbilityLockedRounds = 0;
+        }
+
         public void ResetForNewClash()
         {
-            // Everything but his health and his rage. Called for a man when he is picked, and for both
-            // men at the start of every clash - so a clash winner goes into the next one with the HP
-            // and rage he ended on (not healed, not emptied) and nothing else carried over.
+            // Everything but his health and his rage: what a man is picked with. A clash winner is not
+            // reset but carried over - see CarryIntoNewClash.
             StopRunning();
             PlannedAction = ActionType.None;
             PlannedPath.Clear();

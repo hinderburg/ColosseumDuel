@@ -1036,11 +1036,12 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
-        /// A clash winner keeps what he earned - his health and his rage - and nothing else: whatever
-        /// was running on him when the other man fell is over when the next clash begins.
+        /// A clash winner keeps what is his - his health, his rage, and the rounds left on his
+        /// blessing and his running ability - and loses what the other man did to him: the net, the
+        /// stagger, the bleed. Nothing of the plan survives either.
         /// </summary>
         [Test]
-        public void AClashWinnerKeepsHisHealthAndRage_AndNothingElse()
+        public void AClashWinnerKeepsHisHealthRageAndRunningCharges_AndLosesWhatWasDoneToHim()
         {
             var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
@@ -1078,13 +1079,44 @@ namespace ColosseumDuel.Tests
 
             Assert.AreEqual(hpAtClashEnd, p1.Hp, Tol, "his health goes with him");
             Assert.AreEqual(0.6f, p1.Rage, Tol, "and so does his rage");
-            Assert.IsFalse(p1.Buff.IsActive, "his ability ended with the clash");
-            Assert.AreEqual(0, p1.AbilityLockedRounds, "and so did its lock");
-            Assert.IsFalse(p1.AbilityArmed);
-            Assert.IsFalse(p1.WeaponBuffed, "the blessing ended with the clash");
+            Assert.IsTrue(p1.Buff.IsActive && p1.Buff.Key == AbilityKey.Earthshaker, "his running ability goes with him");
+            Assert.AreEqual(2, p1.Buff.RoundsLeft, "with the rounds it had left");
+            Assert.AreEqual(2, p1.AbilityLockedRounds, "and the lock that runs beside it");
+            Assert.IsTrue(p1.WeaponBuffed, "the blessing goes with him");
+            Assert.AreEqual(GameConstants.WeaponBuffRounds + 1, p1.WeaponBuffRoundsLeft, "with the rounds it had left");
+            Assert.IsFalse(p1.AbilityArmed, "nothing of the plan survives");
             Assert.IsFalse(p1.IsBleeding, "his wounds closed");
             Assert.IsFalse(p1.IsEnsnared, "the net is off him");
             Assert.IsFalse(p1.IsStaggered);
+        }
+
+        /// <summary>A lock the other man put on him - Shackles - is over with the clash; only a lock beside his own running ability stays.</summary>
+        [Test]
+        public void AShacklesLockOnAClashWinner_EndsWithTheClash()
+        {
+            var m = StartedClash();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            bot.Hp = 1f;
+            p1.Pos = new Vector2(-40f, 0f);
+            bot.Pos = new Vector2(40f, 0f);
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Action);
+            Assert.AreEqual(MatchPhase.ClashEnd, m.State.Phase);
+
+            p1.Buff = default;
+            p1.Shackle();
+            Assert.Greater(p1.AbilityLockedRounds, 0);
+
+            RunUntil(m, s => s.Phase == MatchPhase.Reveal || s.Phase == MatchPhase.MatchEnd, 30f);
+            Assert.AreEqual(MatchPhase.Reveal, m.State.Phase);
+            Assert.AreEqual(0, p1.AbilityLockedRounds, "the shackles came off with the man who put them on");
         }
 
         [Test]
