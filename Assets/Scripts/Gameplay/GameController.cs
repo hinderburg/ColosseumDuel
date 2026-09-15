@@ -51,6 +51,9 @@ namespace ColosseumDuel.Gameplay
         /// <summary>The red strike wedge drawn in front of the player while he is given his orders.</summary>
         public ControlZoneView ControlZone { get; private set; }
 
+        /// <summary>The opponent's zone: only its reach circle is shown, and only in the action phase.</summary>
+        public ControlZoneView BotZone { get; private set; }
+
         private GladiatorView _playerView;
         private GladiatorView _botView;
 
@@ -250,6 +253,11 @@ namespace ColosseumDuel.Gameplay
             ControlZone = gameObject.AddComponent<ControlZoneView>();
             ControlZone.Bind(Arena);
 
+            // The opponent's, of which only the circle of his reach is ever shown - and only while
+            // he runs. Planning stays blind; why a blow reached is visible as it does.
+            BotZone = gameObject.AddComponent<ControlZoneView>();
+            BotZone.Bind(Arena, "Bot");
+
             foreach (PickupKind kind in Enum.GetValues(typeof(PickupKind)))
                 _pickupViews.Add(PickupView.Create(kind, viewRoot, Arena));
         }
@@ -360,7 +368,15 @@ namespace ColosseumDuel.Gameplay
             // The circle of his reach stays up while the orders are carried out as well: where his
             // blow lands is worth reading while he runs, not only while he is deciding where to.
             if (ControlZone != null)
+            {
                 ControlZone.Sync(state.P1.Active, planning, planning || state.Phase == MatchPhase.Action);
+
+                // And the opponent's sides, with the one the player's run would end in lit - so which
+                // of him a blow arrives at is read, not guessed.
+                ControlZone.SyncOpponentSectors(state.Bot.Active, RunEnd(state.P1.Active), planning);
+            }
+            if (BotZone != null)
+                BotZone.Sync(state.Bot.Active, false, state.Phase == MatchPhase.Action);
 
             Arena.Sync(state);
 
@@ -376,6 +392,14 @@ namespace ColosseumDuel.Gameplay
                 callouts.SyncBoons(PlayerSide.P1, state.P1.Boons.Except(_boonsToAnnounce[0]), BoonPicture);
                 callouts.SyncBoons(PlayerSide.Bot, state.Bot.Boons.Except(_boonsToAnnounce[1]), BoonPicture);
             }
+        }
+
+        /// <summary>Where his run, as ordered so far, ends - or where he stands if he has ordered none.</summary>
+        private static Vector2 RunEnd(GladiatorInstance g)
+        {
+            if (g == null) return Vector2.zero;
+            if (g.PlannedAction != ActionType.Move) return g.Pos;
+            return g.PlannedPath.Count > 0 ? g.PlannedPath[g.PlannedPath.Count - 1] : g.PlannedTarget;
         }
 
         private void OnPhaseChanged(MatchState state)

@@ -55,18 +55,23 @@ namespace ColosseumDuel.Gameplay.View
         /// <summary>How many dashes the circle is drawn in. For tests.</summary>
         public int RingDashes { get; private set; }
 
-        public void Bind(ArenaView arena)
+        /// <summary>
+        /// Builds the wedge and the circle under the arena. <paramref name="prefix"/> goes on every
+        /// object's name, so a second zone - the opponent's, which shows only its circle - is
+        /// tellable from the player's in the scene and in the tests.
+        /// </summary>
+        public void Bind(ArenaView arena, string prefix = "")
         {
             _arena = arena;
             if (_root != null) return;
 
             var palette = arena != null ? arena.Palette : null;
 
-            var root = new GameObject("ControlZone");
+            var root = new GameObject(prefix + "ControlZone");
             root.transform.SetParent(arena != null ? arena.transform : transform, false);
             _root = root.transform;
 
-            var go = new GameObject("StrikeZone");
+            var go = new GameObject(prefix + "StrikeZone");
             go.transform.SetParent(_root, false);
             go.transform.localPosition = new Vector3(0f, StrikeZoneHeight, 0f);
 
@@ -78,11 +83,11 @@ namespace ColosseumDuel.Gameplay.View
 
             // Its own root, not the wedge's: the wedge is turned to where he looks, and dashes turned
             // with him would crawl round the circle every time he did.
-            var ringRoot = new GameObject("ReachRingRoot");
+            var ringRoot = new GameObject(prefix + "ReachRingRoot");
             ringRoot.transform.SetParent(arena != null ? arena.transform : transform, false);
             _ringRoot = ringRoot.transform;
 
-            var ring = new GameObject("ReachRing");
+            var ring = new GameObject(prefix + "ReachRing");
             ring.transform.SetParent(_ringRoot, false);
             ring.transform.localPosition = new Vector3(0f, RingHeight, 0f);
             _ring = ring.AddComponent<MeshFilter>();
@@ -92,8 +97,113 @@ namespace ColosseumDuel.Gameplay.View
             _ringRenderer.receiveShadows = false;
             _ringRenderer.enabled = false;
 
+            BuildSectors(prefix, palette);
             SetVisible(false);
         }
+
+        // ------------------------------------------------------------------
+        // the other man's sides
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Four arcs round the opponent, one a quarter, in the colours of his sectors: his front
+        /// red, his sides yellow, his back green - turned with him, and the one the player's run
+        /// would end in lit up. Which side of him a blow lands on decides what it is worth (see
+        /// GameConstants.BackAttackMult), and this is that rule drawn where the decision is made.
+        /// It gives nothing away: which way he is looking is on the model already.
+        /// </summary>
+        private const float SectorInner = 1.35f, SectorOuter = 1.65f;   // in body radii
+        private const float SectorHeight = RingHeight + 0.002f;
+        private const float SectorDimAlpha = 0.3f, SectorLitAlpha = 0.85f;
+
+        private static readonly Color FrontColor = new Color(1f, 0.35f, 0.30f);
+        private static readonly Color SideColor = new Color(1f, 0.80f, 0.25f);
+        private static readonly Color BackColor = new Color(0.40f, 1f, 0.40f);
+
+        private Transform _sectorRoot;
+
+        /// <summary>Front, right, back, left - the order the children are turned in, a quarter turn each.</summary>
+        private readonly MeshRenderer[] _sectorArcs = new MeshRenderer[4];
+        private readonly MaterialPropertyBlock[] _sectorProperties = new MaterialPropertyBlock[4];
+        private float _builtSectorRadius = -1f;
+
+        /// <summary>Which of the opponent's sectors is lit - the one the run would end in. Null when none are drawn.</summary>
+        public HitSector? LitSector { get; private set; }
+
+        public bool AreSectorsShowing => _sectorRoot != null && _sectorRoot.gameObject.activeSelf;
+
+        private void BuildSectors(string prefix, ViewPalette palette)
+        {
+            var root = new GameObject(prefix + "OpponentSectors");
+            root.transform.SetParent(_arena != null ? _arena.transform : transform, false);
+            _sectorRoot = root.transform;
+
+            string[] names = { "Front", "Right", "Back", "Left" };
+            for (int i = 0; i < 4; i++)
+            {
+                var arc = new GameObject(prefix + "SectorArc_" + names[i]);
+                arc.transform.SetParent(_sectorRoot, false);
+                arc.transform.localPosition = new Vector3(0f, SectorHeight, 0f);
+                arc.transform.localRotation = Quaternion.Euler(0f, 90f * i, 0f);
+                arc.AddComponent<MeshFilter>();
+                var renderer = arc.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = palette != null ? palette.ReachRing : null;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                _sectorArcs[i] = renderer;
+                _sectorProperties[i] = new MaterialPropertyBlock();
+            }
+            _sectorRoot.gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Draws the opponent's sectors, with the one <paramref name="from"/> falls in lit - where
+        /// the player's run ends, or where he stands if he is not running. Hides them when there is
+        /// nobody to draw them round.
+        /// </summary>
+        public void SyncOpponentSectors(GladiatorInstance opponent, Vector2 from, bool visible)
+        {
+            if (_sectorRoot == null || _arena == null) return;
+
+            bool show = visible && opponent != null && opponent.Alive;
+            if (_sectorRoot.gameObject.activeSelf != show) _sectorRoot.gameObject.SetActive(show);
+            if (!show)
+            {
+                LitSector = null;
+                return;
+            }
+
+            float radius = _arena.ScaleLength(GameConstants.GladiatorRadius);
+            if (!Mathf.Approximately(radius, _builtSectorRadius))
+            {
+                foreach (var arc in _sectorArcs)
+                    arc.GetComponent<MeshFilter>().sharedMesh =
+                        ViewPrimitives.CreateAnnulusSector(radius * SectorInner, radius * SectorOuter, 90f, 24);
+                _builtSectorRadius = radius;
+            }
+
+            _sectorRoot.position = _arena.ToWorld(opponent.Pos);
+            _sectorRoot.rotation = Quaternion.LookRotation(ToWorldDirection(opponent.Facing), Vector3.up);
+
+            // Which quarter the point is in, counted the way the children are turned: a quarter turn
+            // about the world's up is a clockwise quarter on the sand, so the child at +90 is on his
+            // right and the one at 270 on his left.
+            var facing = opponent.Facing.sqrMagnitude > 0.0001f ? opponent.Facing.normalized : Vector2.up;
+            var toPoint = from - opponent.Pos;
+            float angle = toPoint.sqrMagnitude > 0.0001f ? Vector2.SignedAngle(facing, toPoint) : 0f;
+            int lit = angle > -45f && angle <= 45f ? 0 : angle > 45f && angle <= 135f ? 3 : angle > -135f && angle <= -45f ? 1 : 2;
+            LitSector = lit == 0 ? HitSector.Front : lit == 2 ? HitSector.Back : HitSector.Side;
+
+            for (int i = 0; i < 4; i++)
+            {
+                var color = i == 0 ? FrontColor : i == 2 ? BackColor : SideColor;
+                color.a = i == lit ? SectorLitAlpha : SectorDimAlpha;
+                _sectorProperties[i].SetColor(BaseColorId, color);
+                _sectorArcs[i].SetPropertyBlock(_sectorProperties[i]);
+            }
+        }
+
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         /// <summary>
         /// Shows the wedge for this gladiator, or hides it when there is nobody to show it for.

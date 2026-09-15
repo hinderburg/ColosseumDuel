@@ -131,6 +131,52 @@ namespace ColosseumDuel.Tests
                 "the circle should go with him");
         }
 
+        /// <summary>
+        /// The opponent's sectors are drawn round him while the player plans, turned with him, and
+        /// the one the player's run would end in is lit - the front from where he stands at the
+        /// start, the back once he is behind him.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheOpponentsSidesAreDrawnWhilePlanning_AndTheOneTheRunEndsInIsLit()
+        {
+            yield return ReachPlanning();
+            var zone = _controller.ControlZone;
+            var state = _controller.Manager.State;
+
+            Assert.IsTrue(zone.AreSectorsShowing, "the opponent's sectors should be drawn while planning");
+            Assert.AreEqual(HitSector.Front, zone.LitSector, "he stands in front of the opponent at the start");
+            Assert.AreEqual(4, Layer("OpponentSectors").childCount, "four quarters");
+
+            // Behind him: past him along the way he is looking.
+            var bot = state.Bot.Active;
+            state.P1.Active.Pos = bot.Pos + bot.Facing.normalized * -80f;
+            yield return null;
+            Assert.AreEqual(HitSector.Back, zone.LitSector, "now behind him");
+
+            _controller.SubmitPlayerMove(Vector2.up, 1f);
+            yield return RunSeconds(GameConstants.PlanningTime + 0.3f);
+            Assert.AreEqual(MatchPhase.Action, state.Phase);
+            Assert.IsFalse(zone.AreSectorsShowing, "the sectors belong to the decision, and go with the phase");
+        }
+
+        /// <summary>The opponent's reach circle shows while he runs and never while the player plans.</summary>
+        [UnityTest]
+        public IEnumerator TheOpponentsReachCircleShowsInTheActionPhaseOnly()
+        {
+            yield return ReachPlanning();
+            var botZone = _controller.BotZone;
+            Assert.IsNotNull(botZone);
+            Assert.IsFalse(botZone.IsRingShowing, "planning is blind: no circle round the opponent");
+            Assert.IsFalse(botZone.IsShowing, "and never his wedge");
+
+            _controller.SubmitPlayerMove(Vector2.up, 1f);
+            yield return RunSeconds(GameConstants.PlanningTime + 0.3f);
+            Assert.AreEqual(MatchPhase.Action, _controller.Manager.State.Phase);
+            Assert.IsTrue(botZone.IsRingShowing, "his circle should be up while he runs");
+            Assert.IsFalse(botZone.IsShowing, "his wedge is never drawn");
+            Assert.IsNotNull(Layer("BotReachRing"));
+        }
+
         /// <summary>The wedge is reddish and fades in towards the edge of his reach, not a flat fill.</summary>
         [Test]
         public void TheWedgeIsReddishAndFades()
