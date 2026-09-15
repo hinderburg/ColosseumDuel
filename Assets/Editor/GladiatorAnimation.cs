@@ -101,6 +101,12 @@ namespace ColosseumDuel.EditorTools
                 type = AnimatorControllerParameterType.Float,
                 defaultFloat = 1f,
             });
+            controller.AddParameter(new AnimatorControllerParameter
+            {
+                name = AnimatorParams.AttackRate,
+                type = AnimatorControllerParameterType.Float,
+                defaultFloat = 1f,
+            });
 
             var machine = controller.layers[0].stateMachine;
 
@@ -143,6 +149,13 @@ namespace ColosseumDuel.EditorTools
             var heavyAttackState = machine.AddState("AttackHeavy");
             heavyAttackState.motion = PackClip("2Hand-Sword", "2Hand-Sword-Attack1")
                                       ?? attackState.motion;
+
+            // Each swing at its own weapon's pace, set by the view: a lighter blow is a quicker one.
+            foreach (var swing in new[] { attackState, heavyAttackState })
+            {
+                swing.speedParameter = AnimatorParams.AttackRate;
+                swing.speedParameterActive = true;
+            }
 
             var hitState = machine.AddState("Hit");
             hitState.motion = Clip("Hit_F_1_InPlace");

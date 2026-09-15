@@ -1170,6 +1170,44 @@ namespace ColosseumDuel.Tests
                       $"human scale {animator.humanScale:0.000}, figure scale {animator.transform.lossyScale.y:0.000}");
         }
 
+        /// <summary>
+        /// A lighter blow is a quicker swing: the mace's a quarter faster than authored and still the
+        /// longest, the twin swords' three fifths faster, the rest in between in order of how hard
+        /// they hit - and the lead a swing is started with shrinks with it, so the blow still lands
+        /// when the weapon gets there.
+        /// </summary>
+        [Test]
+        public void ALighterBlowIsAQuickerSwing()
+        {
+            Assert.AreEqual(1.25f, GladiatorView.AttackSpeed(WeaponKind.TwoHandedMace), 0.001f, "the mace");
+            Assert.AreEqual(1.6f, GladiatorView.AttackSpeed(WeaponKind.DualSwords), 0.001f, "the twin swords");
+
+            var byDamage = WeaponDef.All.OrderByDescending(w => w.DamageMultiplier).ToList();
+            for (int i = 1; i < byDamage.Count; i++)
+                Assert.GreaterOrEqual(GladiatorView.AttackSpeed(byDamage[i].Kind), GladiatorView.AttackSpeed(byDamage[i - 1].Kind),
+                    $"{byDamage[i].Name} hits lighter than {byDamage[i - 1].Name} and should swing no slower");
+
+            float mace = GladiatorView.SwingLead(WeaponKind.TwoHandedMace);
+            foreach (var weapon in WeaponDef.All)
+                Assert.LessOrEqual(GladiatorView.SwingLead(weapon.Kind), mace + 0.0001f,
+                    $"the mace's swing should be the longest, and {weapon.Name}'s is longer");
+        }
+
+        /// <summary>The swing in his hands plays at that weapon's pace.</summary>
+        [UnityTest]
+        public IEnumerator HisSwingPlaysAtHisWeaponsPace()
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Barbarius);
+            yield return RunSeconds(GameConstants.RevealTime + 0.2f);
+
+            var animator = FindIn("Player", $"Figure_{GladiatorId.Barbarius}")?.GetComponentInChildren<Animator>(true);
+            if (animator == null || animator.runtimeAnimatorController == null)
+                Assert.Ignore("No animator - the model pack is not imported here.");
+
+            Assert.AreEqual(GladiatorView.AttackSpeed(WeaponKind.DualSwords), animator.GetFloat(AnimatorParams.AttackRateId), 0.001f,
+                "the twin swords should swing at their own pace");
+        }
+
         private GladiatorView View(string name)
             => _controller.GetComponentsInChildren<GladiatorView>(true).First(v => v.name == name);
 

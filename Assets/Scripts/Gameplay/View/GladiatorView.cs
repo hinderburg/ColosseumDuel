@@ -800,8 +800,38 @@ namespace ColosseumDuel.Gameplay.View
         /// clips rather than measured off the frame the weapon crosses the target, so they are
         /// adjustable numbers and not derived ones - this is the knob to turn if a blow starts
         /// landing early or late.
+        ///
+        /// Those numbers are for the clips at the rate they were authored at. Each swing now plays
+        /// faster, at its weapon's own pace, so the time to the blow is the authored lead over that
+        /// pace - the prediction starts a quicker swing that much later.
         /// </summary>
-        public static float SwingLead(WeaponKind weapon)
+        public static float SwingLead(WeaponKind weapon) => AuthoredSwingLead(weapon) / AttackSpeed(weapon);
+
+        /// <summary>
+        /// How much faster than authored a swing plays, by the weapon: a quarter faster for the
+        /// heaviest blow - the two-handed mace, still the longest swing of all - and three fifths
+        /// faster for the lightest, the twin swords, with every weapon between placed by how hard it
+        /// hits. A lighter blow is a quicker one. Bare hands, lighter than anything, go at the
+        /// lightest weapon's pace.
+        /// </summary>
+        public static float AttackSpeed(WeaponKind weapon)
+        {
+            float heaviest = float.MinValue, lightest = float.MaxValue;
+            foreach (var def in WeaponDef.All)
+            {
+                heaviest = Mathf.Max(heaviest, def.DamageMultiplier);
+                lightest = Mathf.Min(lightest, def.DamageMultiplier);
+            }
+            if (heaviest - lightest < 0.0001f) return HeaviestSwingSpeed;
+
+            float t = Mathf.InverseLerp(heaviest, lightest, WeaponDef.Get(weapon).DamageMultiplier);
+            return Mathf.Lerp(HeaviestSwingSpeed, LightestSwingSpeed, t);
+        }
+
+        public const float HeaviestSwingSpeed = 1.25f;
+        public const float LightestSwingSpeed = 1.6f;
+
+        private static float AuthoredSwingLead(WeaponKind weapon)
         {
             switch (weapon)
             {
@@ -1280,6 +1310,7 @@ namespace ColosseumDuel.Gameplay.View
             _animator.SetFloat(AnimatorParams.SpeedId, speed);
             _animator.SetBool(AnimatorParams.DefendingId, g.IsDefending);
             _animator.SetBool(AnimatorParams.TwoHandedId, GearSizes.TwoHanded(g.Weapon));
+            _animator.SetFloat(AnimatorParams.AttackRateId, AttackSpeed(g.Weapon));
 
             SyncRunDirection(g, ground);
             _animator.SetFloat(AnimatorParams.RunRateId, RunRate(g, ground, speed));

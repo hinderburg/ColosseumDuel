@@ -46,6 +46,14 @@ namespace ColosseumDuel.Gameplay.View
         /// </summary>
         public const string RunRate = "RunRate";
 
+        /// <summary>
+        /// The rate a swing plays at, 1 being the rate it was authored at. Set from the weapon in his
+        /// hands: a lighter blow is a quicker swing. See GladiatorView.AttackSpeed.
+        /// </summary>
+        public const string AttackRate = "AttackRate";
+
+        public static readonly int AttackRateId = Animator.StringToHash(AttackRate);
+
         /// <summary>Speed, in world units per second, above which the run cycle plays.</summary>
         public const float RunThreshold = 0.35f;
 
