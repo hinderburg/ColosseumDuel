@@ -91,7 +91,7 @@ namespace ColosseumDuel.Core
         /// Takes up the blessing: the rest of this round and the three after it. Taken again while it
         /// is still running, it starts the count over rather than stacking.
         /// </summary>
-        public void BlessWeapon() => WeaponBuffRoundsLeft = GameConstants.WeaponBuffRounds + 1;
+        public void BlessWeapon(int extraRounds = 0) => WeaponBuffRoundsLeft = GameConstants.WeaponBuffRounds + 1 + extraRounds;
 
         /// <summary>The apple: health back, up to his own and no further. Returns what it actually gave.</summary>
         public float Heal(float amount)
@@ -106,10 +106,10 @@ namespace ColosseumDuel.Core
         /// it, which is about rage coming back from the fight, and the horn is not the fight. Returns
         /// what it actually put on.
         /// </summary>
-        public float BlowHorn()
+        public float BlowHorn(float amount = GameConstants.HornRage)
         {
             float before = Rage;
-            Rage = Mathf.Min(GameConstants.RageMax, Rage + GameConstants.HornRage);
+            Rage = Mathf.Min(GameConstants.RageMax, Rage + amount);
             return Rage - before;
         }
 
@@ -248,12 +248,30 @@ namespace ColosseumDuel.Core
         public bool Has(AbilityKey key) => Buff.IsActive && Buff.Key == key;
 
         /// <summary>
+        /// The boons his side has taken - the side's own set, shared by every man of it, so one taken
+        /// while he is on the bench is his when he steps out. Empty for a side that takes none.
+        /// </summary>
+        public System.Collections.Generic.HashSet<BoonKey> TeamBoons = NoBoons;
+
+        private static readonly System.Collections.Generic.HashSet<BoonKey> NoBoons =
+            new System.Collections.Generic.HashSet<BoonKey>();
+
+        public bool HasBoon(BoonKey key) => TeamBoons.Contains(key);
+
+        /// <summary>What his side's boons do to how far he runs: Fleet Foot.</summary>
+        private float BoonSpeedMult => HasBoon(BoonKey.FleetFoot) ? GameConstants.FleetFootSpeedMult : 1f;
+
+        /// <summary>What his side's boons do to how far his weapon reaches: Long Reach.</summary>
+        private float BoonReachMult => HasBoon(BoonKey.LongReach) ? GameConstants.LongReachMult : 1f;
+
+        /// <summary>
         /// How far his blows reach right now: his weapon's, lengthened while Lunge or Trident Throw
         /// is up. Everything that asks whether he can strike asks this rather than the weapon.
         /// </summary>
         public float Reach => WeaponDef.Reach
                               * (Has(AbilityKey.Lunge) ? GameConstants.LungeReachMult : 1f)
-                              * (Has(AbilityKey.TridentThrow) ? GameConstants.TridentThrowReachMult : 1f);
+                              * (Has(AbilityKey.TridentThrow) ? GameConstants.TridentThrowReachMult : 1f)
+                              * BoonReachMult;
 
         /// <summary>
         /// The planning-time twin of Reach, as PlannedSpeed is of his speed: with Lunge or Trident
@@ -264,7 +282,7 @@ namespace ColosseumDuel.Core
         public float PlannedWeaponReach()
         {
             if (!AbilityArmed || Has(Ability)) return Reach;
-            return WeaponDef.Reach * ReachMultiplierOf(Ability);
+            return WeaponDef.Reach * ReachMultiplierOf(Ability) * BoonReachMult;
         }
 
         private static float ReachMultiplierOf(AbilityKey key)
@@ -355,7 +373,7 @@ namespace ColosseumDuel.Core
         public float EffectiveSpeed()
         {
             if (IsRooted) return 0f;
-            return Def.Speed * SpeedMultiplierOf(Buff.IsActive ? Buff.Key : (AbilityKey?)null);
+            return Def.Speed * SpeedMultiplierOf(Buff.IsActive ? Buff.Key : (AbilityKey?)null) * BoonSpeedMult;
         }
 
         /// <summary>What an ability does to his speed while it runs: Rampage speeds him, Testudo slows him.</summary>
@@ -383,7 +401,7 @@ namespace ColosseumDuel.Core
             // Armed and not already running, it will be by the time he moves: Rampage's run is drawn
             // half as long again, Testudo's half as long.
             if (IsRooted || !AbilityArmed || Has(Ability)) return EffectiveSpeed();
-            return Def.Speed * SpeedMultiplierOf(Ability);
+            return Def.Speed * SpeedMultiplierOf(Ability) * BoonSpeedMult;
         }
 
         /// <summary>

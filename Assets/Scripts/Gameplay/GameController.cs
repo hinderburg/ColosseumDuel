@@ -117,8 +117,46 @@ namespace ColosseumDuel.Gameplay
             var botAbilities = bot.ToDictionary(d => d.Id,
                 d => d.Abilities[UnityEngine.Random.Range(0, d.Abilities.Count)]);
 
-            Manager.StartMatch(Squad.Select(GladiatorDef.Get), bot, tutorial, AbilityChoices, botAbilities);
+            // And five boons at random, for the same reason. Neither side gets any while boons are off.
+            List<BoonKey> botBoons = null;
+            if (OfferBoons)
+                botBoons = BoonDef.All.Select(d => d.Key).OrderBy(_ => UnityEngine.Random.value)
+                    .Take(BoonDef.LoadoutSize).ToList();
+
+            Manager.StartMatch(Squad.Select(GladiatorDef.Get), bot, tutorial, AbilityChoices, botAbilities,
+                OfferBoons ? BoonLoadout : null, botBoons);
         }
+
+        /// <summary>
+        /// Whether matches offer boons. On in the game. Off by default in a batch run - which every test
+        /// run is - because the choice is a pause of up to ten seconds between the pick and the clash,
+        /// and the tests written before boons walk straight from one to the other; the boon tests turn
+        /// it on for themselves. Set the override to force it either way.
+        /// </summary>
+        public static bool? OfferBoonsOverride;
+
+        public static bool OfferBoons => OfferBoonsOverride ?? !Application.isBatchMode;
+
+        /// <summary>The five boons the player brings into every match, chosen on the menu's boon screen.</summary>
+        public readonly List<BoonKey> BoonLoadout = BoonDef.DefaultLoadout();
+
+        /// <summary>
+        /// Replaces the five and starts the match behind the menu again, so the next one draws from
+        /// them. Refuses anything but five different boons.
+        /// </summary>
+        public bool SetBoonLoadout(IReadOnlyList<BoonKey> loadout)
+        {
+            if (loadout == null || loadout.Count != BoonDef.LoadoutSize || loadout.Distinct().Count() != loadout.Count)
+                return false;
+
+            BoonLoadout.Clear();
+            BoonLoadout.AddRange(loadout);
+            RestartMatch();
+            return true;
+        }
+
+        /// <summary>Takes one of the three boons on offer to the player.</summary>
+        public bool SubmitPlayerBoon(BoonKey key) => Manager != null && Manager.SubmitBoon(PlayerSide.P1, key);
 
         /// <summary>
         /// The ability the player has chosen for each archetype - on the roster screen, one of his

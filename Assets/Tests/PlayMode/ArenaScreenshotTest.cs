@@ -25,12 +25,17 @@ namespace ColosseumDuel.Tests
         private const int Width = 576;
         private const int Height = 1024;
 
+        [TearDown]
+        public void BoonsBackToTheirDefault() => GameController.OfferBoonsOverride = null;
+
         [UnityTest]
         public IEnumerator ArenaRendersAFrame()
         {
             if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
                 Assert.Ignore("No graphics device (running with -nographics); nothing to render.");
 
+            // Boons on, as in the game, so the frames include the choice of one.
+            GameController.OfferBoonsOverride = true;
             yield return SceneManager.LoadSceneAsync(ScenePath, LoadSceneMode.Single);
             yield return null;
 
@@ -64,11 +69,25 @@ namespace ColosseumDuel.Tests
             menu.CloseAbilityWindow();
             yield return null;
 
+            // The menu's boon screen: the five taken into every match.
+            menu.ReturnToMainMenu();
+            menu.OpenBoonScreen();
+            yield return null;
+            yield return Capture(SuffixPath("-boonloadout"));
+            menu.CloseBoonScreen();
+
             menu.StartMatch();
             yield return null;
             yield return Capture(SuffixPath("-pick"));
 
             controller.SubmitPlayerPick(GladiatorId.Brutius);
+
+            // The three boons offered as he steps out - and one taken, for the clash to be announced.
+            yield return null;
+            Assert.AreEqual(MatchPhase.BoonPick, controller.Manager.State.Phase);
+            yield return RunSeconds(2.2f);
+            yield return Capture(SuffixPath("-boonpick"));
+            controller.SubmitPlayerBoon(controller.Manager.State.P1.BoonOffer[0]);
 
             // The clash being announced, with the two of them partway out from the wall.
             yield return RunSeconds(GladiatorView.EntranceSeconds * 0.45f);

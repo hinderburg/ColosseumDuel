@@ -4,11 +4,25 @@ namespace ColosseumDuel.Core
     {
         Start,      // pre-match overlay
         Pick,       // players choosing who enters the arena for this clash
+        BoonPick,   // a side that has sent a new man in chooses one boon of three for the rest of the match
         Reveal,     // picks revealed simultaneously
         Planning,   // players choose Move / Defend (+ optional Ability) for the coming round
         Action,     // chosen actions execute
         ClashEnd,   // one of the two active gladiators just died
         MatchEnd    // one player has zero gladiators left
+    }
+
+    /// <summary>A boon a side takes for the rest of the match, on every man of it. See BoonDef.</summary>
+    public enum BoonKey
+    {
+        SharpenedSteel,
+        IronHide,
+        FleetFoot,
+        LongReach,
+        BattleSpirit,
+        Flanker,
+        Stalwart,
+        Quartermaster
     }
 
     /// <summary>What lies on the sand to be run over. See ArenaPickup.</summary>

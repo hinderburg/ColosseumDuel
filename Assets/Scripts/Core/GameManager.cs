@@ -102,6 +102,12 @@ namespace ColosseumDuel.Core
                 return;
             }
 
+            if (State.Phase == MatchPhase.BoonPick && State.P1.NeedsBoonPick)
+            {
+                AutoBoon(PlayerSide.P1);
+                return;
+            }
+
             var me = State.P1.Active;
             if (State.Phase == MatchPhase.Planning && me != null && me.Alive && me.PlannedAction == ActionType.None)
             {
@@ -120,7 +126,9 @@ namespace ColosseumDuel.Core
         public void StartMatch(IEnumerable<GladiatorDef> p1Squad, IEnumerable<GladiatorDef> botSquad,
                                bool tutorial = false,
                                IReadOnlyDictionary<GladiatorId, AbilityKey> p1Abilities = null,
-                               IReadOnlyDictionary<GladiatorId, AbilityKey> botAbilities = null)
+                               IReadOnlyDictionary<GladiatorId, AbilityKey> botAbilities = null,
+                               IReadOnlyList<BoonKey> p1Boons = null,
+                               IReadOnlyList<BoonKey> botBoons = null)
         {
             State.Tutorial = tutorial;
             State.TutorialTapPoint = Vector2.zero;
@@ -129,6 +137,8 @@ namespace ColosseumDuel.Core
             State.Bot.Roster = botSquad.Select(d => new GladiatorInstance(d)).ToList();
             ChooseAbilities(State.P1.Roster, p1Abilities);
             ChooseAbilities(State.Bot.Roster, botAbilities);
+            SetUpBoons(State.P1, p1Boons);
+            SetUpBoons(State.Bot, botBoons);
 
             // Both sides put back to "nobody chosen yet". Without this a restart kept the previous
             // match's fighter as the active one: NeedsPick reads Active == null, so the pick screen
@@ -147,6 +157,19 @@ namespace ColosseumDuel.Core
             State.WinnerSide = null;
 
             BeginClashPick();
+        }
+
+        /// <summary>
+        /// Clears the last match's boons and gives the side the five it brings - or none at all, and
+        /// no choosing either, without them. Every man of the side reads the one set.
+        /// </summary>
+        private static void SetUpBoons(PlayerState side, IReadOnlyList<BoonKey> loadout)
+        {
+            side.Boons.Clear();
+            side.BoonOffer = null;
+            side.SentNewMan = false;
+            side.BoonLoadout = loadout != null ? loadout.Distinct().Take(BoonDef.LoadoutSize).ToList() : null;
+            foreach (var g in side.Roster) g.TeamBoons = side.Boons;
         }
 
         /// <summary>Gives each man the ability chosen for his archetype, if it is one of his three.</summary>
@@ -205,11 +228,83 @@ namespace ColosseumDuel.Core
 
             chosen.ResetForNewClash();
             player.Active = chosen;
+            player.SentNewMan = true;
 
             if (!State.P1.NeedsPick && !State.Bot.NeedsPick)
-                ConfirmPicksAndReveal();
+                BeginBoonPick();
 
             return true;
+        }
+
+        // ------------------------------------------------------------------
+        // boon pick
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Between the pick and the clash: every side that has just sent a new man in is offered
+        /// three of its boons. The bot takes one at once, and so does the player on auto; otherwise
+        /// the match waits on the player - up to BoonPickTime - before the clash is announced.
+        /// </summary>
+        private void BeginBoonPick()
+        {
+            OfferBoons(State.P1);
+            OfferBoons(State.Bot);
+
+            if (State.Bot.NeedsBoonPick) AutoBoon(PlayerSide.Bot);
+            if (State.P1.NeedsBoonPick && _p1Auto) AutoBoon(PlayerSide.P1);
+
+            if (State.P1.NeedsBoonPick)
+            {
+                SetPhase(MatchPhase.BoonPick);
+                return;
+            }
+            ConfirmPicksAndReveal();
+        }
+
+        /// <summary>
+        /// Deals a side its offer, if a new man of it has come in and it has boons left to take: three
+        /// at random from those of its five it does not have yet.
+        /// </summary>
+        private void OfferBoons(PlayerState side)
+        {
+            bool earned = side.SentNewMan;
+            side.SentNewMan = false;
+            if (!earned || side.BoonLoadout == null) return;
+
+            var left = side.BoonLoadout.Where(k => !side.Boons.Contains(k)).ToList();
+            if (left.Count == 0) return;
+
+            for (int i = left.Count - 1; i > 0; i--)
+            {
+                int j = _rng.Next(i + 1);
+                (left[i], left[j]) = (left[j], left[i]);
+            }
+            side.BoonOffer = left.Take(BoonDef.OfferSize).ToList();
+        }
+
+        /// <summary>
+        /// Takes one of the boons on offer. Refuses one that is not on offer. The clash is announced
+        /// the moment nobody is left choosing.
+        /// </summary>
+        public bool SubmitBoon(PlayerSide side, BoonKey key)
+        {
+            var player = State.Get(side);
+            if (player.BoonOffer == null || !player.BoonOffer.Contains(key)) return false;
+
+            player.Boons.Add(key);
+            player.BoonOffer = null;
+
+            if (State.Phase == MatchPhase.BoonPick && !State.P1.NeedsBoonPick && !State.Bot.NeedsBoonPick)
+                ConfirmPicksAndReveal();
+            return true;
+        }
+
+        /// <summary>One of the offer at random: the bot's choice, and the player's once his time is up.</summary>
+        private void AutoBoon(PlayerSide side)
+        {
+            var offer = State.Get(side).BoonOffer;
+            if (offer == null || offer.Count == 0) return;
+            SubmitBoon(side, offer[_rng.Next(offer.Count)]);
         }
 
         /// <summary>The bot's pick, for either side: the bot's own, or the player's on auto.</summary>
@@ -229,6 +324,11 @@ namespace ColosseumDuel.Core
             State.Clash++;
             State.Round = 0;
             PlaceFightersForClash();
+
+            // Battle Spirit: every man of the side steps out with a start on his rage.
+            foreach (var side in new[] { State.P1, State.Bot })
+                if (side.Active != null && side.Active.HasBoon(BoonKey.BattleSpirit))
+                    side.Active.Rage = Mathf.Max(side.Active.Rage, GameConstants.BattleSpiritRage);
 
             // A bare arena every clash: anything left lying from the last one would hand the new
             // clash's opening to whoever was set down nearer it.
@@ -505,6 +605,12 @@ namespace ColosseumDuel.Core
 
             switch (State.Phase)
             {
+                case MatchPhase.BoonPick:
+                    State.PhaseTimer += dt;
+                    if (State.PhaseTimer >= GameConstants.BoonPickTime)
+                        AutoBoon(PlayerSide.P1);
+                    break;
+
                 case MatchPhase.Reveal:
                     State.PhaseTimer += dt;
                     if (State.PhaseTimer >= GameConstants.RevealTime)

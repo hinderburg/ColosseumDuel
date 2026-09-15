@@ -52,6 +52,9 @@ namespace ColosseumDuel.Gameplay.Hud
         private GameController _controller;
         private ViewPalette _palette;
 
+        /// <summary>The boon screen, over the main one.</summary>
+        private BoonLoadoutView _boons;
+
         private GameObject _mainPanel;
         private GameObject _rosterPanel;
         private GameObject _abilityWindow;
@@ -154,6 +157,9 @@ namespace ColosseumDuel.Gameplay.Hud
 
             view.BuildMain(root);
             view.BuildRoster(root);
+
+            // Last, so it draws over the main screen it is opened from.
+            view._boons = BoonLoadoutView.Create(root, controller);
             return view;
         }
 
@@ -217,6 +223,11 @@ namespace ColosseumDuel.Gameplay.Hud
                 "Choose gladiators", 22);
             Centre((RectTransform)choose.transform, new Vector2(300f, 58f), -216f);
             choose.onClick.AddListener(OpenRosterScreen);
+
+            // The five boons taken into every match.
+            var boons = HudFactory.CreateButton("ChooseBoons", panel.transform, "Boons", 22);
+            Centre((RectTransform)boons.transform, new Vector2(300f, 58f), -284f);
+            boons.onClick.AddListener(OpenBoonScreen);
 
             // Which build this is. The link stays the same from one build to the next and a browser
             // will happily serve the last one from its cache, so the menu says which one is open.
@@ -531,6 +542,12 @@ namespace ColosseumDuel.Gameplay.Hud
 
         /// <summary>Drops the curtain: the match underneath has been waiting on its pick screen.</summary>
         public void StartMatch() => Current = Screen.Closed;
+
+        /// <summary>Opens the boon screen over the main one.</summary>
+        public void OpenBoonScreen() => _boons?.Open();
+
+        /// <summary>Closes the boon screen without changing the five.</summary>
+        public void CloseBoonScreen() => _boons?.Close();
 
         /// <summary>
         /// Raises the curtain again, from inside a match.

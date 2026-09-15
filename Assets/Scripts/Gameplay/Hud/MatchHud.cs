@@ -32,6 +32,7 @@ namespace ColosseumDuel.Gameplay.Hud
         private ActionButtonsView _actionButtons;
 
         private GameObject _overlay;
+        private BoonPickView _boonPick;
         private Image _overlayPanel;
         private Image _revealBand;
         private Text _overlayTitle;
@@ -96,6 +97,7 @@ namespace ColosseumDuel.Gameplay.Hud
             BuildTopBar(root);
             BuildBottomBar(root);
             BuildOverlay(root);
+            _boonPick = BoonPickView.Create(root, Controller);
 
             // Over the arena and under the menu: the numbers belong to the fight, not to the
             // screens in front of it.
@@ -421,6 +423,7 @@ namespace ColosseumDuel.Gameplay.Hud
             SyncPlanningVignette(state);
             _tutorial.Sync(state);
             SyncOverlay(menuUp ? null : state);
+            _boonPick.Sync(menuUp ? null : state);
 
             SetActive(_playerCorner, !menuUp);
             SetActive(_botCorner, !menuUp);

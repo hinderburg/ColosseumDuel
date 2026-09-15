@@ -14,6 +14,23 @@ namespace ColosseumDuel.Core
         public bool HasAnyAlive => Roster.Any(g => g.Alive);
 
         /// <summary>
+        /// The boons this side has taken this match - on every man of it for the rest of the match.
+        /// The one set every man of the side reads, so a boon taken reaches the men on the bench too.
+        /// </summary>
+        public readonly HashSet<BoonKey> Boons = new HashSet<BoonKey>();
+
+        /// <summary>The five this side draws its offers from; null for a side that takes no boons.</summary>
+        public List<BoonKey> BoonLoadout;
+
+        /// <summary>The boons on offer right now, one to be chosen; null when no choice is waiting.</summary>
+        public List<BoonKey> BoonOffer;
+
+        public bool NeedsBoonPick => BoonOffer != null;
+
+        /// <summary>Whether a new man of this side was sent in at the last pick - which is what earns an offer.</summary>
+        public bool SentNewMan;
+
+        /// <summary>
         /// Seconds into the coming action phase at which this side's first blow lands, or negative
         /// if it never does. Written when the phase starts and read by the view.
         ///

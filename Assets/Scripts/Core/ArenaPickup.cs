@@ -186,13 +186,13 @@ namespace ColosseumDuel.Core
             switch (Kind)
             {
                 case PickupKind.Apple:
-                    amount = g.Heal(g.Def.MaxHp * GameConstants.AppleHealFraction);
+                    amount = g.Heal(g.Def.MaxHp * (g.HasBoon(BoonKey.Quartermaster) ? GameConstants.QuartermasterAppleHealFraction : GameConstants.AppleHealFraction));
                     break;
                 case PickupKind.Horn:
-                    amount = g.BlowHorn();
+                    amount = g.BlowHorn(g.HasBoon(BoonKey.Quartermaster) ? GameConstants.QuartermasterHornRage : GameConstants.HornRage);
                     break;
                 default:
-                    g.BlessWeapon();
+                    g.BlessWeapon(g.HasBoon(BoonKey.Quartermaster) ? GameConstants.QuartermasterBlessingExtraRounds : 0);
                     break;
             }
 

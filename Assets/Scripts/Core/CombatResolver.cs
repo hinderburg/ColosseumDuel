@@ -18,6 +18,7 @@ namespace ColosseumDuel.Core
         public static float ComputeAttackDamage(GladiatorInstance attacker)
         {
             float damage = attacker.Def.Damage * attacker.WeaponDef.DamageMultiplier;
+            if (attacker.HasBoon(BoonKey.SharpenedSteel)) damage *= GameConstants.SharpenedSteelDamageMult;
             if (attacker.WeaponBuffed) damage *= GameConstants.WeaponBuffDamageMult;
             if (attacker.Has(AbilityKey.Berserk)) damage *= GameConstants.BerserkDamageMult;
             if (attacker.Has(AbilityKey.Rampage)) damage *= GameConstants.RampageDamageMult;
@@ -30,7 +31,9 @@ namespace ColosseumDuel.Core
         public static float ApplyMitigation(GladiatorInstance defender, float rawDamage)
         {
             float mult = defender.WeaponDef.IncomingDamageMultiplier; // the shield, if he has one
-            if (defender.IsDefending) mult *= GameConstants.DefendDamageMult;
+            if (defender.IsDefending)
+                mult *= defender.HasBoon(BoonKey.Stalwart) ? GameConstants.StalwartDefendMult : GameConstants.DefendDamageMult;
+            if (defender.HasBoon(BoonKey.IronHide)) mult *= GameConstants.IronHideTakenMult;
             if (defender.Has(AbilityKey.StoneSkin)) mult *= GameConstants.StoneSkinTakenMult;
             if (defender.Has(AbilityKey.Testudo)) mult *= GameConstants.TestudoTakenMult;
             if (defender.Has(AbilityKey.Berserk)) mult *= GameConstants.BerserkTakenMult;
@@ -82,6 +85,7 @@ namespace ColosseumDuel.Core
                 return 0f;
 
             float raw = ComputeAttackDamage(attacker) * SectorMultiplier(sector);
+            if (sector != HitSector.Front && attacker.HasBoon(BoonKey.Flanker)) raw *= GameConstants.FlankerDamageMult;
             float final = ApplyMitigation(defender, raw);
 
             defender.TakeDamage(final);
