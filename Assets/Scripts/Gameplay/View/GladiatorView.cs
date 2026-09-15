@@ -775,7 +775,8 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         /// <summary>A blow just landed on this gladiator: squash the model and ring the impact.</summary>
-        public void PlayHit() => TakeBlow(AnimatorParams.HitId);
+        /// <summary>A blow landed on him. <paramref name="along"/> is the way it went, in world space, for the lean.</summary>
+        public void PlayHit(Vector3 along = default) => TakeBlow(AnimatorParams.HitId, along);
 
         /// <summary>
         /// A blow that threw him back rather than one he only felt.
@@ -784,7 +785,7 @@ namespace ColosseumDuel.Gameplay.View
         /// taking a blow is the same - only the clip differs. Two copies of this method drifted
         /// apart the moment one of them was fixed.
         /// </summary>
-        public void PlayKnockback() => TakeBlow(AnimatorParams.KnockbackId);
+        public void PlayKnockback(Vector3 along = default) => TakeBlow(AnimatorParams.KnockbackId, along);
 
         /// <summary>
         /// How long a swing takes to reach the target, per weapon, in seconds.
@@ -890,10 +891,21 @@ namespace ColosseumDuel.Gameplay.View
             if (_animator != null) _animator.SetBool(AnimatorParams.ReadyStanceId, ready);
         }
 
-        private void TakeBlow(int trigger)
+        /// <summary>How far the model is shoved along a blow at the peak of the reaction: a quarter of a body.</summary>
+        private const float LeanShare = 0.25f;
+
+        /// <summary>The way the last blow went, in this view's own space; zero when it had no direction.</summary>
+        private Vector3 _lean;
+
+        private void TakeBlow(int trigger, Vector3 along = default)
         {
             _blowTrigger = trigger;
             _hitPunchLeft = HitPunchTime;
+
+            // Flattened onto the sand and turned into this view's space - the model is turned to his
+            // heading inside it, so a world direction has to come in past that turn.
+            along.y = 0f;
+            _lean = along.sqrMagnitude > 0.0001f ? transform.InverseTransformDirection(along.normalized) : Vector3.zero;
             StartBurst(_arena.ScaleLength(GameConstants.GladiatorRadius) * 2.6f, 0.30f, Color.white);
 
             // The squash stays alongside the recoil animation rather than being replaced by it. The
@@ -1553,12 +1565,17 @@ namespace ColosseumDuel.Gameplay.View
             {
                 _hitPunchLeft = Mathf.Max(0f, _hitPunchLeft - dt);
                 float t = _hitPunchLeft / HitPunchTime;          // 1 at impact, 0 when recovered
-                float punch = Mathf.Sin(t * Mathf.PI) * 0.28f;   // in and back out
+                float wave = Mathf.Sin(t * Mathf.PI);            // in and back out
+                float punch = wave * 0.28f;
                 _model.localScale = new Vector3(1f + punch, 1f - punch * 0.6f, 1f + punch);
+
+                // And shoved along the blow and back, so where it came from reads on any weapon.
+                _model.localPosition = _lean * (wave * LeanShare * _arena.ScaleLength(GameConstants.GladiatorRadius));
             }
-            else if (_model.localScale != Vector3.one)
+            else if (_model.localScale != Vector3.one || _model.localPosition != Vector3.zero)
             {
                 _model.localScale = Vector3.one;
+                _model.localPosition = Vector3.zero;
             }
 
             if (_burstLeft <= 0f)

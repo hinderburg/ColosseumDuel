@@ -494,13 +494,18 @@ namespace ColosseumDuel.Gameplay
         private void PlayBlowEffects(Blow blow)
         {
             var side = blow.Victim;
+            var victim = Manager.State.Get(side).Active;
+
+            // The way the blow went, in the world: from the man who struck to the man struck. The
+            // reaction leans along it and the camera is knocked along it.
+            var along = victim != null ? Arena.ToWorld(victim.Pos) - Arena.ToWorld(blow.From) : Vector3.zero;
 
             // Whether the blow throws him is a property of the weapon that landed it. A flinch
             // played over a body already sliding backwards reads as the ground moving, not the man.
             // A guard that held against the throw takes the plain hit.
             bool thrown = WeaponDef.Get(blow.Weapon).Knockback > 0f && !blow.Blocked;
-            if (thrown) ViewFor(side).PlayKnockback();
-            else ViewFor(side).PlayHit();
+            if (thrown) ViewFor(side).PlayKnockback(along);
+            else ViewFor(side).PlayHit(along);
 
             // The world stops on the blow for a moment, so it is felt before anything moves on - and
             // the man it landed on flashes, white or steel for a guard, for exactly that moment.
@@ -509,7 +514,6 @@ namespace ColosseumDuel.Gameplay
 
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
-            var victim = Manager.State.Get(side).Active;
             if (victim != null) Arena.PlayBlood(victim.Pos);
             ShowDamage(side, blow.Damage, DamageNumbersView.Source.Blow);
 
@@ -518,8 +522,7 @@ namespace ColosseumDuel.Gameplay
             // leave the frame alone.
             if (_deathCamera != null)
             {
-                var kick = victim != null ? Arena.ToWorld(victim.Pos) - Arena.ToWorld(blow.From) : Vector3.zero;
-                _deathCamera.Shake(ShakeStrengthFor(blow), kick);
+                _deathCamera.Shake(ShakeStrengthFor(blow), along);
             }
         }
 
