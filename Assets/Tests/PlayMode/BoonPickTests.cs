@@ -102,11 +102,15 @@ namespace ColosseumDuel.Tests
             var shelf = callouts.ShelfFor(PlayerSide.P1);
             var first = shelf.GetComponentsInChildren<Image>(true).First(i => i.name == "Boon_0");
             Assert.IsTrue(first.enabled && first.sprite != null, "the shelf should show the painting");
-            Assert.Less(shelf.position.y, Screen.height * 0.3f, "the player's shelf belongs low, by his squad");
+            Assert.Less(shelf.position.y, Screen.height * 0.15f, "the player's shelf belongs in his squad's row");
+            Assert.Greater(shelf.position.x, Screen.width * 0.6f, "to the right of the auto toggle");
 
             Assert.AreEqual(1, State.Bot.Boons.Count, "the bot took one too");
             yield return RunUntil(() => callouts.IsShelved(PlayerSide.Bot, State.Bot.Boons.First()), 1f);
             Assert.IsTrue(callouts.IsShelved(PlayerSide.Bot, State.Bot.Boons.First()), "and it should be on the bot's shelf");
+            var botShelf = callouts.ShelfFor(PlayerSide.Bot);
+            Assert.Greater(botShelf.position.y, Screen.height * 0.85f, "the bot's shelf belongs in its squad's row");
+            Assert.Less(botShelf.position.x, Screen.width * 0.4f, "to the right of the menu button, left of its squad");
         }
 
         private static IEnumerator RunUntil(System.Func<bool> done, float maxSeconds)

@@ -14,11 +14,13 @@ namespace ColosseumDuel.Gameplay.Hud
     /// with what it does beside it and the rounds it has left counting down.
     ///
     /// Each side has a strip by its own squad - the player's in the band between the arena and his
-    /// squad, the opponent's under his - and each strip has three places: the blessing on the left,
-    /// the ability in the middle, and on the right a shelf with the pictures of the boons the side
-    /// has taken, which stays up for the whole match. Something still working is something the
-    /// player has to keep in mind, and a name that went up over a man once and faded is not
-    /// remembered two rounds later.
+    /// squad, the opponent's under his - and each strip has two places: the blessing on the left and
+    /// the ability on the right. Something still working is something the player has to keep in
+    /// mind, and a name that went up over a man once and faded is not remembered two rounds later.
+    ///
+    /// The boons a side has taken are pictures on a shelf beside its squad - the opponent's next to
+    /// the menu button, the player's next to the auto toggle - up for the whole match: they belong
+    /// to the squad, not to the man on the sand, and that is where the squad is.
     ///
     /// Both sides, because the moment the bot's Bulwark goes up is the moment the player has to stop
     /// charging it head on - and a ring on the sand in a colour he has not learned says nothing.
@@ -80,15 +82,18 @@ namespace ColosseumDuel.Gameplay.Hud
 
         private static readonly Color DockBackColor = new Color(0.04f, 0.04f, 0.06f, 0.62f);
 
-        /// <summary>
-        /// How the strip is divided, as shares of its width: the blessing and the ability get a place
-        /// each and the boon shelf the rest - three pictures' worth, which is as many boons as a side
-        /// can take in a match of three men.
-        /// </summary>
-        private const float BlessingShare = 0.36f, AbilityShare = 0.36f;
+        /// <summary>How the strip is divided, as shares of its width: half each.</summary>
+        private const float BlessingShare = 0.5f, AbilityShare = 0.5f;
 
-        /// <summary>The pictures on the shelf, and the room round them.</summary>
-        private const float ShelfPictureWidth = 40f, ShelfPictureHeight = 27f, ShelfPadding = 6f;
+        /// <summary>
+        /// The pictures on the shelf, and the room round them. Three pictures' worth, which is as
+        /// many boons as a side can take in a match of three men; sized to fit between the menu
+        /// button and the opponent's squad, and the shelf as tall as the buttons it sits beside.
+        /// </summary>
+        private const float ShelfPictureWidth = 34f, ShelfPictureHeight = 23f, ShelfPadding = 5f, ShelfHeight = 38f;
+
+        /// <summary>The menu button and the auto toggle, which the shelves sit beside (see MatchHud).</summary>
+        private const float MenuButtonRight = 10f + 78f, AutoToggleRight = 10f + 342f + 4f + 64f, AutoToggleCentre = 10f + 54f;
 
         /// <summary>The picture on a callout, beside the name: the boon's painting, for the boons.</summary>
         private const float CalloutArtWidth = 66f, CalloutArtHeight = 44f;
@@ -270,8 +275,7 @@ namespace ColosseumDuel.Gameplay.Hud
             HudFactory.Stretch(timer.rectTransform);
             Outline(timer, 1f);
 
-            // Both set to shrink to fit: the place is a third of the screen wide now that the boons
-            // have the rest, and the longest descriptions ran to three lines at their full size.
+            // Both set to shrink to fit, so the longest descriptions never run past the plate.
             var name = HudFactory.CreateLabel("Name", rect, "", DockNameSize, TextAnchor.MiddleLeft);
             name.fontStyle = FontStyle.Bold;
             name.resizeTextForBestFit = true;
@@ -300,12 +304,29 @@ namespace ColosseumDuel.Gameplay.Hud
         }
 
         /// <summary>
-        /// The shelf: the boons' pictures in a row, on the right of the strip. Three places, which is
-        /// as many boons as a side can take; one picture per boon, in the order they were taken.
+        /// The shelf: the boons' pictures in a row beside the side's squad - the opponent's to the
+        /// right of the menu button, in his squad's row; the player's to the right of the auto
+        /// toggle, in his. Three places, which is as many boons as a side can take; one picture per
+        /// boon, in the order they were taken.
         /// </summary>
         private static Shelf BuildShelf(RectTransform root, PlayerSide side)
         {
-            var rect = StripPlace(root, $"Shelf_{side}", side, BlessingShare + AbilityShare, 1f, out var group);
+            bool top = side == PlayerSide.Bot;
+            var rect = HudFactory.CreateRect($"Shelf_{side}", root);
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, top ? 1f : 0f);
+            rect.pivot = new Vector2(0f, top ? 1f : 0.5f);
+            rect.sizeDelta = new Vector2(BoonDef.OfferSize * (ShelfPictureWidth + ShelfPadding) + ShelfPadding, ShelfHeight);
+            rect.anchoredPosition = top
+                ? new Vector2(MenuButtonRight + 6f, -10f)
+                : new Vector2(AutoToggleRight + 6f, AutoToggleCentre);
+
+            var group = rect.gameObject.AddComponent<CanvasGroup>();
+            group.blocksRaycasts = false;
+            group.interactable = false;
+
+            var back = HudFactory.CreatePanel("Back", rect, DockBackColor);
+            back.raycastTarget = false;
+            HudFactory.Stretch(back.rectTransform);
 
             var pictures = new Image[BoonDef.OfferSize];
             for (int i = 0; i < pictures.Length; i++)
