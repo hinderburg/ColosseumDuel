@@ -74,6 +74,15 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 5e5ee2fd936b0c8459073a35435a41f6, type: 3}
   - {fileID: 21300000, guid: 1d027ece898220340a526a33c47fcb41, type: 3}
   AbilityIconsArePictures: 1
+  BoonIcons:
+  - {fileID: 21300000, guid: c8ed9c143ffedc446acb66c701c299f9, type: 3}
+  - {fileID: 21300000, guid: 2b3c6bfabdceaf544989756a55a4d54a, type: 3}
+  - {fileID: 21300000, guid: 73a6fc92ac3d0264d96aa2ece469d64a, type: 3}
+  - {fileID: 21300000, guid: 67f3291a3d9683c479f7d16d481d927f, type: 3}
+  - {fileID: 21300000, guid: ed29dcf4ff97bfc4ca34f28d388e7013, type: 3}
+  - {fileID: 21300000, guid: cbc127a139af6bd429d94a5fe28e49dc, type: 3}
+  - {fileID: 21300000, guid: dd199425b1d01fe4fb382ab720f79644, type: 3}
+  - {fileID: 21300000, guid: 8501b3e044e47c14698416e5852b2eab, type: 3}
   ArchetypeColors:
   - {r: 0.4126481, g: 0.30002418, b: 0.64342517, a: 1}
   - {r: 0.982971, g: 0.4779909, b: 0.16305146, a: 1}

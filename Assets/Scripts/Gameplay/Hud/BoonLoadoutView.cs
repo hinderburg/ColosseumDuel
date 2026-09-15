@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ColosseumDuel.Core;
+using ColosseumDuel.Gameplay.View;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -32,7 +33,7 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>What the screen is holding, which is not the loadout until Done. For tests.</summary>
         public IReadOnlyList<BoonKey> Draft => _draft;
 
-        public static BoonLoadoutView Create(Transform parent, GameController controller)
+        public static BoonLoadoutView Create(Transform parent, GameController controller, ViewPalette palette = null)
         {
             var root = HudFactory.CreateRect("BoonLoadoutRoot", parent);
             HudFactory.Stretch(root);
@@ -62,8 +63,10 @@ namespace ColosseumDuel.Gameplay.Hud
             subtitle.horizontalOverflow = HorizontalWrapMode.Wrap;
             Place(subtitle.rectTransform, new Vector2(500f, 64f), new Vector2(0f, 382f));
 
-            // Two columns of four.
-            const float cardWidth = 256f, cardHeight = 118f, gap = 12f;
+            // Two columns of four. Each card: the painting top left, the name beside it, the text
+            // along the bottom - the card sheet's own layout, turned on its side to fit two across.
+            const float cardWidth = 256f, cardHeight = 136f, gap = 12f;
+            const float artWidth = 100f, artHeight = artWidth / 1.52f;
             for (int i = 0; i < BoonDef.All.Count; i++)
             {
                 var def = BoonDef.All[i];
@@ -81,39 +84,53 @@ namespace ColosseumDuel.Gameplay.Hud
                 Place((RectTransform)card.transform, new Vector2(cardWidth, cardHeight), position);
                 card.onClick.AddListener(() => view.Toggle(key));
 
-                var name = HudFactory.CreateLabel("Name", card.transform, def.Name, 19, TextAnchor.UpperLeft, Gold);
+                var picture = palette != null ? palette.BoonIconFor(key) : null;
+                var art = HudFactory.CreatePanel("Art", card.transform, Color.white);
+                art.raycastTarget = false;
+                art.preserveAspect = true;
+                art.rectTransform.anchorMin = art.rectTransform.anchorMax = new Vector2(0f, 1f);
+                art.rectTransform.pivot = new Vector2(0f, 1f);
+                art.rectTransform.sizeDelta = new Vector2(artWidth, artHeight);
+                art.rectTransform.anchoredPosition = new Vector2(10f, -10f);
+                HudFactory.UseSprite(art, picture);
+                art.enabled = picture != null;
+
+                var name = HudFactory.CreateLabel("Name", card.transform, def.Name, 17, TextAnchor.MiddleLeft, Gold);
                 name.fontStyle = FontStyle.Bold;
-                name.rectTransform.anchorMin = Vector2.zero;
-                name.rectTransform.anchorMax = Vector2.one;
-                name.rectTransform.offsetMin = new Vector2(12f, 0f);
-                name.rectTransform.offsetMax = new Vector2(-54f, -10f);
+                name.horizontalOverflow = HorizontalWrapMode.Wrap;
+                name.rectTransform.anchorMin = new Vector2(0f, 1f);
+                name.rectTransform.anchorMax = new Vector2(1f, 1f);
+                name.rectTransform.pivot = new Vector2(0.5f, 1f);
+                name.rectTransform.offsetMin = new Vector2(10f + artWidth + 10f, -10f - artHeight);
+                name.rectTransform.offsetMax = new Vector2(-12f, -10f);
 
                 var text = HudFactory.CreateLabel("Text", card.transform,
                     char.ToUpperInvariant(def.Description[0]) + def.Description.Substring(1), 14, TextAnchor.UpperLeft);
                 text.horizontalOverflow = HorizontalWrapMode.Wrap;
                 text.rectTransform.anchorMin = Vector2.zero;
                 text.rectTransform.anchorMax = Vector2.one;
-                text.rectTransform.offsetMin = new Vector2(12f, 8f);
-                text.rectTransform.offsetMax = new Vector2(-12f, -40f);
+                text.rectTransform.offsetMin = new Vector2(12f, 6f);
+                text.rectTransform.offsetMax = new Vector2(-12f, -10f - artHeight - 8f);
 
                 // A word rather than a tick: the WebGL build has only the built-in font, and no
-                // system fonts behind it to find a glyph it lacks.
-                var mark = HudFactory.CreateLabel("Mark", card.transform, "", 12, TextAnchor.UpperRight, Gold);
+                // system fonts behind it to find a glyph it lacks. In the bottom corner, out of the
+                // name's way - every description ends on a short last line.
+                var mark = HudFactory.CreateLabel("Mark", card.transform, "", 12, TextAnchor.LowerRight, Gold);
                 mark.fontStyle = FontStyle.Bold;
                 mark.rectTransform.anchorMin = Vector2.zero;
                 mark.rectTransform.anchorMax = Vector2.one;
-                mark.rectTransform.offsetMin = new Vector2(0f, 0f);
-                mark.rectTransform.offsetMax = new Vector2(-10f, -8f);
+                mark.rectTransform.offsetMin = new Vector2(0f, 6f);
+                mark.rectTransform.offsetMax = new Vector2(-10f, 0f);
 
                 view._outlines.Add(outline);
                 view._marks.Add(mark);
             }
 
             view._counter = HudFactory.CreateLabel("BoonCounter", panel.transform, "", 20);
-            Place(view._counter.rectTransform, new Vector2(300f, 34f), new Vector2(0f, -278f));
+            Place(view._counter.rectTransform, new Vector2(300f, 34f), new Vector2(0f, -318f));
 
             view._done = HudFactory.CreateButton("BoonsDone", panel.transform, "Done", 24);
-            Place((RectTransform)view._done.transform, new Vector2(260f, 64f), new Vector2(0f, -340f));
+            Place((RectTransform)view._done.transform, new Vector2(260f, 64f), new Vector2(0f, -380f));
             view._done.onClick.AddListener(view.Done);
 
             view._panel.SetActive(false);

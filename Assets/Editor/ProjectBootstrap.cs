@@ -575,6 +575,17 @@ namespace ColosseumDuel.EditorTools
                 palette.AbilityIcons[(int)key] = art != null ? art : IconPack.Sprite(IconPack.ForAbility(key));
             }
 
+            // The boon paintings cut from the card sheet when it is in the project; none otherwise.
+            var boonArt = BoonIconSheet.Ensure();
+            var boons = (BoonKey[])Enum.GetValues(typeof(BoonKey));
+            palette.BoonIcons = new Sprite[boons.Length];
+            foreach (var key in boons)
+            {
+                Sprite art = null;
+                if (boonArt != null) boonArt.TryGetValue(key, out art);
+                palette.BoonIcons[(int)key] = art;
+            }
+
             palette.WeaponIcons = new Sprite[WeaponDef.All.Count];
             for (int i = 0; i < WeaponDef.All.Count; i++)
             {

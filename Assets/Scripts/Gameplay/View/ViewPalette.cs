@@ -172,6 +172,18 @@ namespace ColosseumDuel.Gameplay.View
         }
 
         /// <summary>
+        /// One painting per boon, indexed by BoonKey, cut from the card sheet by the bootstrap. Drawn
+        /// as painted. Null entries - no sheet in the project - leave the card to its name and text.
+        /// </summary>
+        public Sprite[] BoonIcons;
+
+        public Sprite BoonIconFor(ColosseumDuel.Core.BoonKey key)
+        {
+            int index = (int)key;
+            return BoonIcons != null && index >= 0 && index < BoonIcons.Length ? BoonIcons[index] : null;
+        }
+
+        /// <summary>
         /// Each archetype's colour, indexed by GladiatorId: the colour his portrait is painted on,
         /// read off the sheet by the bootstrap. Filled even without the sheet, from the colours the
         /// portraits were described as having.

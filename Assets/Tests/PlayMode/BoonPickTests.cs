@@ -59,6 +59,8 @@ namespace ColosseumDuel.Tests
             {
                 Assert.IsTrue(Find($"BoonCard_{i}").activeInHierarchy, $"card {i} is not showing");
                 Assert.AreEqual(BoonDef.Get(offer[i]).Name, Find($"BoonName_{i}").GetComponent<Text>().text);
+                Assert.IsNotNull(Find($"BoonArt_{i}").GetComponent<Image>().sprite,
+                    $"card {i} has no painting - the card sheet is cut by the bootstrap into the palette");
             }
             Assert.AreEqual(GameConstants.BoonPickTime, float.Parse(Find("BoonTimer").GetComponent<Text>().text), 1f,
                 "the clock should start from ten");
@@ -83,6 +85,9 @@ namespace ColosseumDuel.Tests
             Assert.IsTrue(Find("BoonLoadout").activeInHierarchy, "the boon screen should be open");
             Assert.AreEqual(BoonDef.All.Count, BoonDef.All.Count(d => FindButton($"BoonChoice_{d.Key}") != null),
                 "every boon should be on it");
+            foreach (var d in BoonDef.All)
+                Assert.IsNotNull(FindButton($"BoonChoice_{d.Key}").transform.Find("Art").GetComponent<Image>().sprite,
+                    $"{d.Key} has no painting on its card");
 
             var done = FindButton("BoonsDone");
             Assert.IsTrue(done.interactable, "the five he brings now are a whole loadout");

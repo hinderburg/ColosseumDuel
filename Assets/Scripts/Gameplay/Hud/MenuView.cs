@@ -159,7 +159,7 @@ namespace ColosseumDuel.Gameplay.Hud
             view.BuildRoster(root);
 
             // Last, so it draws over the main screen it is opened from.
-            view._boons = BoonLoadoutView.Create(root, controller);
+            view._boons = BoonLoadoutView.Create(root, controller, palette);
             return view;
         }
 

@@ -97,7 +97,8 @@ namespace ColosseumDuel.Gameplay.Hud
             BuildTopBar(root);
             BuildBottomBar(root);
             BuildOverlay(root);
-            _boonPick = BoonPickView.Create(root, Controller);
+            _boonPick = BoonPickView.Create(root, Controller,
+                Controller != null && Controller.Arena != null ? Controller.Arena.Palette : null);
 
             // Over the arena and under the menu: the numbers belong to the fight, not to the
             // screens in front of it.
