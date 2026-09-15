@@ -70,7 +70,9 @@ namespace ColosseumDuel.Gameplay.Hud
         /// <summary>He is down: KO over the point he fell at, in his side's colour, and the frame flashes.</summary>
         public void Show(Vector2 virtualPos, PlayerSide side)
         {
+            // Lit on this frame, not the next: the flash is the impact, and an impact a frame late is a flicker.
             _flashLeft = FlashSeconds;
+            _flash.color = new Color(1f, 1f, 1f, FlashAlpha);
             _flash.enabled = true;
 
             if (_arena == null || _arena.ArenaCamera == null) return;
