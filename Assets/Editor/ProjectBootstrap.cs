@@ -518,6 +518,7 @@ namespace ColosseumDuel.EditorTools
             EditorUtility.SetDirty(palette.StrikeZone);
             palette.ReachRing = TransparentUnlit("ReachRing", new Color(1f, 1f, 1f, 0.5f));
             palette.Burst = TransparentUnlit("Burst", Color.white);
+            palette.WeaponTrail = TransparentParticles("WeaponTrail", Color.white);
 
             // Inter (SIL OFL 1.1, shipped with the Editor and copied into Assets/Fonts along with
             // its licence). Unity's built-in font has no Cyrillic glyphs, so it draws nothing at all
@@ -1123,9 +1124,24 @@ namespace ColosseumDuel.EditorTools
         /// properties plus a keyword plus a render queue, and getting one of them wrong leaves the
         /// material silently opaque. This is the full incantation.
         /// </summary>
+        /// <summary>
+        /// The particles shader, transparent: the one that reads vertex colour, which a trail and a
+        /// particle system both write and the plain unlit shader throws away.
+        /// </summary>
+        private static Material TransparentParticles(string name, Color color)
+        {
+            var mat = EnsureMaterial(name, color, "Universal Render Pipeline/Particles/Unlit", "Particles/Standard Unlit");
+            return MakeTransparent(mat);
+        }
+
         private static Material TransparentUnlit(string name, Color color)
         {
             var mat = Unlit(name, color);
+            return MakeTransparent(mat);
+        }
+
+        private static Material MakeTransparent(Material mat)
+        {
             mat.SetFloat("_Surface", 1f); // 0 opaque, 1 transparent
             mat.SetFloat("_Blend", 0f);   // alpha blend
             mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);

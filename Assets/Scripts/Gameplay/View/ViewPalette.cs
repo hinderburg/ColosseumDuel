@@ -239,6 +239,21 @@ namespace ColosseumDuel.Gameplay.View
         public GameObject BloodHit;
 
         /// <summary>
+        /// The ribbon a weapon leaves through a swing: white fading to nothing. A particles shader,
+        /// because the plain unlit one ignores the colour a trail writes into its vertices.
+        /// </summary>
+        public Material WeaponTrail;
+
+        /// <summary>Sparks at the chest when a guard meets a blow. Epic Toon FX; absent in a clean clone.</summary>
+        public GameObject BlockSparkFx;
+
+        /// <summary>Dust at the feet as a man thrown by a mace or a scutum comes down. Same caveat.</summary>
+        public GameObject DustFx;
+
+        /// <summary>The sting a knockout lands with. From Epic Toon FX, like the blessing's.</summary>
+        public AudioClip KnockoutSound;
+
+        /// <summary>
         /// Pieces of the modular stone kit the arena is dressed with. All four are null in a clean
         /// clone, and ArenaView falls back to painted blocks with no gallery.
         /// </summary>

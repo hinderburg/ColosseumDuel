@@ -415,15 +415,15 @@ namespace ColosseumDuel.Gameplay.View
             var main = new GameObject("HeldWeapon");
             main.transform.SetParent(_model, false);
             _mainHand = main.transform;
-            _mainSword = Grip(palette.SwordModel, _mainHand, "Sword");
+            _mainSword = Grip(palette.SwordModel, _mainHand, "Sword", trails: true);
             _mainMace = palette.MaceModel != null
-                ? Grip(palette.MaceModel, _mainHand, "Mace", GearSizes.GripAlong(WeaponKind.TwoHandedMace))
+                ? Grip(palette.MaceModel, _mainHand, "Mace", GearSizes.GripAlong(WeaponKind.TwoHandedMace), trails: true)
                 : null;
             _mainSpear = palette.SpearModel != null
-                ? Grip(palette.SpearModel, _mainHand, "Spear", GearSizes.GripAlong(WeaponKind.SpearAndShield))
+                ? Grip(palette.SpearModel, _mainHand, "Spear", GearSizes.GripAlong(WeaponKind.SpearAndShield), trails: true)
                 : null;
             _mainTrident = palette.TridentModel != null
-                ? Grip(palette.TridentModel, _mainHand, "Trident", GearSizes.GripAlong(WeaponKind.Trident))
+                ? Grip(palette.TridentModel, _mainHand, "Trident", GearSizes.GripAlong(WeaponKind.Trident), trails: true)
                 : null;
             _mainHand.gameObject.SetActive(false);
 
@@ -475,11 +475,12 @@ namespace ColosseumDuel.Gameplay.View
         /// shell is needed is a hitch exactly when the player is watching.
         /// </summary>
         private Transform Grip(GameObject model, Transform holder, string name,
-            float? alongLength = null)
+            float? alongLength = null, bool trails = false)
         {
             var instance = Instantiate(model, holder).transform;
             instance.name = name;
             instance.localPosition = new Vector3(0f, alongLength ?? GripAlongBlade, 0f);
+            if (trails) AddTrail(instance);
             GearSizes.Tint(instance.gameObject, GearSizes.CarriedTint);
 
             var untrained = _palette != null ? _palette.GearUntrained : null;
@@ -498,6 +499,70 @@ namespace ColosseumDuel.Gameplay.View
 
             instance.gameObject.SetActive(false);
             return instance;
+        }
+
+        /// <summary>How long the ribbon a weapon leaves lasts behind it, and how wide it starts, in world units.</summary>
+        private const float TrailSeconds = 0.18f, TrailWidth = 0.12f;
+
+        /// <summary>How long after a swing starts the weapon keeps writing its ribbon, at the authored swing speed.</summary>
+        private const float TrailWriteSeconds = 0.45f;
+
+        private readonly System.Collections.Generic.List<TrailRenderer> _trails =
+            new System.Collections.Generic.List<TrailRenderer>();
+
+        private float _trailLeft;
+
+        /// <summary>
+        /// A ribbon off the tip of a weapon, written only while it swings, so the arc of the blow
+        /// reads - most of all on the spear and the trident, whose blow is a line rather than a
+        /// swing. The tip is the far end of the model along the blade, read off its mesh. It takes
+        /// the weapon's tint with it, so a blessed weapon leaves a red ribbon.
+        /// </summary>
+        private void AddTrail(Transform piece)
+        {
+            var material = _palette != null ? _palette.WeaponTrail : null;
+            if (material == null) return;
+
+            float tip = 0f;
+            foreach (var filter in piece.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (filter.sharedMesh == null) continue;
+                var b = filter.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                    tip = Mathf.Max(tip, piece.InverseTransformPoint(filter.transform.TransformPoint(corner)).y);
+                }
+            }
+
+            var go = new GameObject("WeaponTrail");
+            go.transform.SetParent(piece, false);
+            go.transform.localPosition = new Vector3(0f, tip, 0f);
+
+            var trail = go.AddComponent<TrailRenderer>();
+            trail.sharedMaterial = material;
+            trail.time = TrailSeconds;
+            trail.minVertexDistance = 0.02f;
+            trail.widthCurve = AnimationCurve.Linear(0f, TrailWidth, 1f, 0f);
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0.85f, 0f), new GradientAlphaKey(0f, 1f) });
+            trail.colorGradient = gradient;
+            trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            trail.receiveShadows = false;
+            trail.emitting = false;
+            _trails.Add(trail);
+        }
+
+        /// <summary>The ribbons write while a swing is playing and stop when it has.</summary>
+        private void AdvanceTrails(float dt)
+        {
+            if (_trails.Count == 0) return;
+            _trailLeft = Mathf.Max(0f, _trailLeft - dt);
+            bool on = _trailLeft > 0f;
+            foreach (var trail in _trails)
+                if (trail.emitting != on) trail.emitting = on;
         }
 
         /// <summary>Every red shell, shown together whenever he is carrying the wrong weapon.</summary>
@@ -969,6 +1034,9 @@ namespace ColosseumDuel.Gameplay.View
             if (_animator != null) _animator.SetTrigger(AnimatorParams.AttackId);
             _swingHoldLeft = SwingHoldsOffTheRecoil;
             _sinceSwingStarted = 0f;
+
+            // And the weapon writes its ribbon for the length of the swing, quicker for a quicker weapon.
+            _trailLeft = TrailWriteSeconds / AttackSpeed(_shownWeapon);
         }
 
         /// <summary>
@@ -1091,6 +1159,14 @@ namespace ColosseumDuel.Gameplay.View
             _deathShownFrom = 0f;
             _hitPunchLeft = 0f;
             _burstLeft = 0f;
+
+            // A ribbon left from the last clash would be drawn from where he was set down.
+            _trailLeft = 0f;
+            foreach (var trail in _trails)
+            {
+                trail.emitting = false;
+                trail.Clear();
+            }
         }
 
         /// <summary>How far through the walk out he is, 0 to 1; 1 when he is not walking out.</summary>
@@ -1555,6 +1631,7 @@ namespace ColosseumDuel.Gameplay.View
         private void AdvanceEffects(float dt)
         {
             AdvanceBleedFlash(dt);
+            AdvanceTrails(dt);
             AdvanceSwingHold(dt);
             AdvanceScheduledSwing(dt);
             if (_sinceSwingStarted < float.MaxValue) _sinceSwingStarted += dt;
