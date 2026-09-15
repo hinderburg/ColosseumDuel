@@ -1454,6 +1454,18 @@ height: min(var(--app-height), calc(100vw * 1024 / 576));
 
 87 EditMode + 115 PlayMode, 0 падений.
 
+### [2026-09-15 20:29] Блок спереди: +25% ярости и никакого отбрасывания
+
+Запрос (п. 17): блок должен ощущаться — контр-опция против булавы и скутума и причина не бежать каждый раунд.
+
+Блок, встретивший удар **спереди** (сектор Front, не Backstab): `BlockedFrontThisRound`, за раунд даёт
+`RageBonusOnBlock` = 0.25 **вместо** 0.15 за полученный урон (`ResolveRoundRage`); и отбрасывание не
+применяется (`GameManager.Shove` выходит, если цель защищается и удар спереди). Удар в бок или спину блок
+не встречает — множители сторон и отбрасывание как прежде. Оглушение от Earthshaker блок не снимает —
+это эффект абилки, а не удара.
+
+Тесты: `RageAndAbilityTests.BlockingABlowFromTheFront…`, `…ItIsTheGuardMeetingTheBlowHeadOnThatCounts…`,
+`MatchFlowTests.AGuardSetAgainstAMaceFromTheFront_IsNotThrown` (обе стороны). GDD §5.1.
 ### [2026-09-15 20:20] Бег за фазу: Speed × 35 вместо × 45
 
 Запрос (п. 16): уменьшить SpeedScale до 35, пока так.

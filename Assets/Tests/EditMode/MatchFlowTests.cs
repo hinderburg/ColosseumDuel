@@ -698,11 +698,11 @@ namespace ColosseumDuel.Tests
         /// moved on purpose, and moving any of them silently changes every run in the game.
         /// </summary>
         [Test]
-        public void EachArchetypeRunsThreeTimesItsOldDash()
+        public void EachArchetypeRunsHisSpeedTimesTheScale()
         {
-            Assert.AreEqual(585f, new GladiatorInstance(GladiatorDef.Brutius).DashReach(), 0.01f, "Brutius, speed 13");
-            Assert.AreEqual(675f, new GladiatorInstance(GladiatorDef.Barbarius).DashReach(), 0.01f, "Barbarius, speed 15");
-            Assert.AreEqual(900f, new GladiatorInstance(GladiatorDef.Hilius).DashReach(), 0.01f, "Hilius, speed 20");
+            Assert.AreEqual(13f * GameConstants.SpeedScale, new GladiatorInstance(GladiatorDef.Brutius).DashReach(), 0.01f, "Brutius, speed 13");
+            Assert.AreEqual(15f * GameConstants.SpeedScale, new GladiatorInstance(GladiatorDef.Barbarius).DashReach(), 0.01f, "Barbarius, speed 15");
+            Assert.AreEqual(20f * GameConstants.SpeedScale, new GladiatorInstance(GladiatorDef.Hilius).DashReach(), 0.01f, "Hilius, speed 20");
         }
 
         /// <summary>
@@ -1088,6 +1088,47 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(p1.IsBleeding, "his wounds closed");
             Assert.IsFalse(p1.IsEnsnared, "the net is off him");
             Assert.IsFalse(p1.IsStaggered);
+        }
+
+        /// <summary>
+        /// A mace throws the man it hits - unless his guard was set against it from the front, in
+        /// which case he stands where he is. Both men are Brutius with a mace here.
+        /// </summary>
+        [TestCase(true)]
+        [TestCase(false)]
+        public void AGuardSetAgainstAMaceFromTheFront_IsNotThrown(bool facingTheBlow)
+        {
+            var m = StartedClash();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+            Assert.AreEqual(WeaponKind.TwoHandedMace, bot.Weapon, "this test wants a mace on the bot");
+
+            // Within the mace's reach, well clear of a collision, nobody running.
+            p1.Pos = new Vector2(-50f, 0f);
+            bot.Pos = new Vector2(50f, 0f);
+            p1.Facing = facingTheBlow ? Vector2.right : Vector2.left;
+            bot.Facing = Vector2.left;
+            p1.Hp = 1000f;
+
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            // Read partway through the phase: the flags are the round's, and the next round clears them.
+            for (int i = 0; i < 60 && m.State.Phase == MatchPhase.Action; i++) m.Tick(Dt);
+
+            Assert.IsTrue(p1.TookDamageThisRound, "the mace should have landed");
+            if (facingTheBlow)
+            {
+                Assert.AreEqual(-50f, p1.Pos.x, 0.5f, "his guard met the blow and held him where he stood");
+                Assert.IsTrue(p1.BlockedFrontThisRound);
+            }
+            else
+            {
+                Assert.Less(p1.Pos.x, -50f - GameConstants.MaceKnockback * 0.9f, "struck in the back, he was thrown");
+                Assert.IsFalse(p1.BlockedFrontThisRound);
+            }
         }
 
         /// <summary>A lock the other man put on him - Shackles - is over with the clash; only a lock beside his own running ability stays.</summary>

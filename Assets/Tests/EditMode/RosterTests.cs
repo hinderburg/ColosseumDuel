@@ -116,7 +116,7 @@ namespace ColosseumDuel.Tests
             me.Buff = new ActiveBuff { Key = AbilityKey.Earthshaker, RoundsLeft = 1 };
             FaceOff(me, them, 60f);
 
-            SubmitStand(m);
+            SubmitStandAgainstACharge(m);
             RunIntoAction(m, 0.2f);
 
             Assert.IsTrue(them.IsStaggered, "the man the blow landed on should be rooted");
@@ -248,7 +248,7 @@ namespace ColosseumDuel.Tests
             me.Buff = new ActiveBuff { Key = AbilityKey.ShieldBash, RoundsLeft = 2 };
             FaceOff(me, them, 50f);
 
-            SubmitStand(m);
+            SubmitStandAgainstACharge(m);
             RunIntoAction(m, 0.2f);
 
             Assert.Greater(Vector2.Distance(me.Pos, them.Pos),
@@ -403,6 +403,14 @@ namespace ColosseumDuel.Tests
             them.Pos = new Vector2(0f, gap * 0.5f);
             me.Facing = Vector2.up;
             them.Facing = Vector2.down;
+        }
+
+        /// <summary>He stands his ground; the other man comes at him rather than guarding - a guard set
+        /// against a blow from the front is not thrown (see GameManager.Shove).</summary>
+        private static void SubmitStandAgainstACharge(GameManager m)
+        {
+            Assert.IsTrue(m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false));
+            Assert.IsTrue(m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.down, 0.02f, false));
         }
 
         private static void SubmitStand(GameManager m)

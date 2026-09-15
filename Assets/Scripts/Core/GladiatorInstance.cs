@@ -465,6 +465,7 @@ namespace ColosseumDuel.Core
             AbilityArmed = false;
             DealtDamageThisRound = false;
             TookDamageThisRound = false;
+            BlockedFrontThisRound = false;
             if (AbilityLockedRounds > 0) AbilityLockedRounds--;
             if (WeaponBuffRoundsLeft > 0) WeaponBuffRoundsLeft--;
             if (EnsnaredRoundsLeft > 0) EnsnaredRoundsLeft--;
@@ -479,11 +480,18 @@ namespace ColosseumDuel.Core
         }
 
         /// <summary>Passive + reactive rage gain, applied at the end of an action phase.</summary>
+        /// <summary>
+        /// Whether his guard met a blow from the front this round. Worth more rage than taking the
+        /// blow, and it is what stops a mace throwing him - see GameManager.Shove.
+        /// </summary>
+        public bool BlockedFrontThisRound;
+
         public void ResolveRoundRage()
         {
             AddRage(GameConstants.RagePerRoundPassive);
             if (DealtDamageThisRound) AddRage(GameConstants.RageBonusOnDealDamage);
-            if (TookDamageThisRound) AddRage(GameConstants.RageBonusOnTakeDamage);
+            if (BlockedFrontThisRound) AddRage(GameConstants.RageBonusOnBlock);
+            else if (TookDamageThisRound) AddRage(GameConstants.RageBonusOnTakeDamage);
         }
 
         public void TakeDamage(float amount)

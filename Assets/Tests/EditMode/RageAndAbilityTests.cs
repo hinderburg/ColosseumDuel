@@ -1,5 +1,6 @@
 using ColosseumDuel.Core;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace ColosseumDuel.Tests
 {
@@ -30,6 +31,38 @@ namespace ColosseumDuel.Tests
             g.ResolveRoundRage();
             Assert.AreEqual(GameConstants.RagePerRoundPassive + GameConstants.RageBonusOnDealDamage
                             + GameConstants.RageBonusOnTakeDamage, g.Rage, Tol, "passive + dealt + taken");
+        }
+
+        /// <summary>A guard that met the blow from the front earns more than taking the blow did, and in place of it.</summary>
+        [Test]
+        public void BlockingABlowFromTheFront_EarnsMoreRageThanTakingIt_InPlaceOfIt()
+        {
+            var g = Fresh();
+            g.BeginRound();
+            g.TookDamageThisRound = true;
+            g.BlockedFrontThisRound = true;
+            g.ResolveRoundRage();
+            Assert.AreEqual(GameConstants.RagePerRoundPassive + GameConstants.RageBonusOnBlock, g.Rage, Tol,
+                "passive + block, and not the take bonus on top");
+            Assert.Greater(GameConstants.RageBonusOnBlock, GameConstants.RageBonusOnTakeDamage);
+
+            g.BeginRound();
+            Assert.IsFalse(g.BlockedFrontThisRound, "the block is the round's, not the man's");
+        }
+
+        [Test]
+        public void ItIsTheGuardMeetingTheBlowHeadOnThatCounts_NotAGuardStruckFromBehind()
+        {
+            var striker = new GladiatorInstance(GladiatorDef.Hilius) { Pos = new Vector2(0f, 30f) };
+            var guard = new GladiatorInstance(GladiatorDef.Brutius) { Pos = Vector2.zero, Facing = Vector2.up };
+            guard.PlannedAction = ActionType.Defend;
+            CombatResolver.DealDamage(striker, guard);
+            Assert.IsTrue(guard.BlockedFrontThisRound, "struck from the front, guarding");
+
+            var behind = new GladiatorInstance(GladiatorDef.Brutius) { Pos = Vector2.zero, Facing = Vector2.down };
+            behind.PlannedAction = ActionType.Defend;
+            CombatResolver.DealDamage(striker, behind);
+            Assert.IsFalse(behind.BlockedFrontThisRound, "struck in the back, the guard was not in the way");
         }
 
         [Test]

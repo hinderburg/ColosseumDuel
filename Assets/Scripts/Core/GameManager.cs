@@ -1212,6 +1212,12 @@ namespace ColosseumDuel.Core
                              * (attacker.Has(AbilityKey.ShieldBash) ? GameConstants.ShieldBashKnockbackMult : 1f);
             if (distance <= 0f || !target.Alive) return;
 
+            // A guard set against the blow holds him where he stands: the one answer to a mace that
+            // does not involve running from it. From the side or behind the guard is not in the way.
+            bool guarded = target.IsDefending && !attacker.Has(AbilityKey.Backstab)
+                           && target.SectorHitFrom(attacker.Pos) == HitSector.Front;
+            if (guarded) return;
+
             var away = target.Pos - attacker.Pos;
             if (away.sqrMagnitude < 0.0001f) away = Vector2.up;
 

@@ -153,6 +153,9 @@ namespace ColosseumDuel.Core
         // half of the fight or later. Two rounds of blows fill it now, so it fires in the third.
         public const float RageBonusOnDealDamage = 0.25f;
         public const float RageBonusOnTakeDamage = 0.15f;
+        // In place of the take bonus, for a man whose guard met a blow from the front: standing and
+        // taking it is a choice, and the guard is what makes standing worth choosing over running.
+        public const float RageBonusOnBlock = 0.25f;
         public const float RageMax = 1.0f;
         public const int AbilityLockRounds = 1; // rounds rage cannot charge after activating an ability
 

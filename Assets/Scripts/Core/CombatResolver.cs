@@ -79,6 +79,9 @@ namespace ColosseumDuel.Core
             // blow from behind goes round a shield wall rather than into it.
             var sector = attacker.Has(AbilityKey.Backstab) ? HitSector.Back : defender.SectorHitFrom(attacker.Pos);
 
+            // A guard that met the blow head on: what the block is for, and paid for in rage.
+            if (sector == HitSector.Front && defender.IsDefending) defender.BlockedFrontThisRound = true;
+
             // Bulwark: a blow into the front of the shield wall lands on nothing - no damage, no
             // wound, and no credit to the man who swung it.
             if (sector == HitSector.Front && defender.Has(AbilityKey.Bulwark))
