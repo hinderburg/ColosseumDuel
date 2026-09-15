@@ -33,6 +33,13 @@ namespace ColosseumDuel.Core
         public event Action<PlayerSide, float> Damaged;
 
         /// <summary>
+        /// A blow landed, with everything about it - who, with what, from which side, guarded or
+        /// not, how much, and whether it was the end of him. Raised right after Damaged for the
+        /// same blow; the presentation reads this one.
+        /// </summary>
+        public event Action<Blow> BlowLanded;
+
+        /// <summary>
         /// A gladiator took something up off the sand: which it was, and what it gave him - the health
         /// the apple put back, the rage the horn put on, nothing for the blessing.
         /// </summary>
@@ -1126,8 +1133,10 @@ namespace ColosseumDuel.Core
             if (!braced.Alive || !runner.Alive || !braced.Has(AbilityKey.Brace)) return;
             if (!runner.IsRunning || braced.SectorHitFrom(runner.Pos) != HitSector.Front) return;
 
-            float dealt = CombatResolver.DealDamage(braced, runner);
+            float dealt = CombatResolver.DealDamage(braced, runner, out _, out var sector);
             Damaged?.Invoke(runnerSide, dealt);
+            BlowLanded?.Invoke(new Blow(runnerSide, runnerSide == PlayerSide.P1 ? PlayerSide.Bot : PlayerSide.P1,
+                dealt, runner.Def.MaxHp, sector, false, braced.Weapon, braced.Pos, !runner.Alive));
             runner.StopRunning();
         }
 
@@ -1195,24 +1204,33 @@ namespace ColosseumDuel.Core
                 // evaluated - so nobody watching would mean nobody taking damage.
                 // A Riposte sends part of a blow back at the man who struck it; that is reported as
                 // him being struck, since it is.
-                if (aSwings)
-                {
-                    float dealt = CombatResolver.DealDamage(a, b, out float returned);
-                    Damaged?.Invoke(PlayerSide.Bot, dealt);
-                    if (returned > 0f) Damaged?.Invoke(PlayerSide.P1, returned);
-                }
-                if (bSwings)
-                {
-                    float dealt = CombatResolver.DealDamage(b, a, out float returned);
-                    Damaged?.Invoke(PlayerSide.P1, dealt);
-                    if (returned > 0f) Damaged?.Invoke(PlayerSide.Bot, returned);
-                }
+                if (aSwings) Strike(a, PlayerSide.P1, b, PlayerSide.Bot);
+                if (bSwings) Strike(b, PlayerSide.Bot, a, PlayerSide.P1);
 
                 // After the exchange, not between the two halves of it: shoving the defender out of
                 // reach mid-exchange would rob him of the return blow he is owed for standing there.
                 if (aSwings) Shove(a, b);
                 if (bSwings) Shove(b, a);
             }
+        }
+
+        /// <summary>
+        /// One man's blow on the other, announced twice over: Damaged with who lost how much, and
+        /// BlowLanded with the whole of it. A Riposte sends part of the blow back at the striker,
+        /// and that is announced as him being struck, since he is.
+        /// </summary>
+        private void Strike(GladiatorInstance striker, PlayerSide strikerSide,
+            GladiatorInstance victim, PlayerSide victimSide)
+        {
+            float dealt = CombatResolver.DealDamage(striker, victim, out float returned, out var sector);
+            Damaged?.Invoke(victimSide, dealt);
+            BlowLanded?.Invoke(new Blow(victimSide, strikerSide, dealt, victim.Def.MaxHp, sector,
+                sector == HitSector.Front && victim.IsDefending, striker.Weapon, striker.Pos, !victim.Alive));
+
+            if (returned <= 0f) return;
+            Damaged?.Invoke(strikerSide, returned);
+            BlowLanded?.Invoke(new Blow(strikerSide, victimSide, returned, striker.Def.MaxHp, HitSector.Front,
+                false, victim.Weapon, victim.Pos, !striker.Alive, returned: true));
         }
 
         /// <summary>

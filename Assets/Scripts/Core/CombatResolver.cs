@@ -72,12 +72,17 @@ namespace ColosseumDuel.Core
         /// of the blow, and every place a blow can happen would otherwise have to remember to do it.
         /// </summary>
         public static float DealDamage(GladiatorInstance attacker, GladiatorInstance defender, out float returned)
+            => DealDamage(attacker, defender, out returned, out _);
+
+        /// <summary>The same, also handing back which side of him it landed on - what the blow is shown as.</summary>
+        public static float DealDamage(GladiatorInstance attacker, GladiatorInstance defender, out float returned,
+            out HitSector sector)
         {
             returned = 0f;
 
             // Backstab: wherever he stands, his blow lands as though he were behind the man - and a
             // blow from behind goes round a shield wall rather than into it.
-            var sector = attacker.Has(AbilityKey.Backstab) ? HitSector.Back : defender.SectorHitFrom(attacker.Pos);
+            sector = attacker.Has(AbilityKey.Backstab) ? HitSector.Back : defender.SectorHitFrom(attacker.Pos);
 
             // A guard that met the blow head on: what the block is for, and paid for in rage.
             if (sector == HitSector.Front && defender.IsDefending) defender.BlockedFrontThisRound = true;

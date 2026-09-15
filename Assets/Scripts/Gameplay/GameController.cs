@@ -80,7 +80,7 @@ namespace ColosseumDuel.Gameplay
 
             Manager = new GameManager(RandomSeed != 0 ? new System.Random(RandomSeed) : null);
             Manager.PhaseChanged += OnPhaseChanged;
-            Manager.Damaged += OnDamaged;
+            Manager.BlowLanded += OnBlowLanded;
             Manager.PickedUp += OnPickedUp;
             Manager.Bled += OnBled;
             Manager.Scorched += OnScorched;
@@ -408,13 +408,14 @@ namespace ColosseumDuel.Gameplay
         /// <summary>Colour of an ability burst. Warm, matching the rage meter it spends.</summary>
         private static readonly Color AbilityBurstColor = new Color(1f, 0.75f, 0.25f);
 
-        private void OnDamaged(PlayerSide side, float amount)
+        private void OnBlowLanded(Blow blow)
         {
-            if (amount <= 0f) return;
+            if (blow.Damage <= 0f && !blow.Blocked) return;
 
-            // The event names the victim, so the swing belongs to the other one. Both sides can be
-            // dealt damage in the same exchange, and then both swing - which is exactly right.
-            var otherSide = side == PlayerSide.P1 ? PlayerSide.Bot : PlayerSide.P1;
+            // The blow names the victim and the striker. Both sides can be struck in the same
+            // exchange, and then both swing - which is exactly right.
+            var side = blow.Victim;
+            var otherSide = blow.Striker;
 
             // How long until the striker's weapon gets there - asked before any swing is started, so
             // a swing already on its way can be told from one about to begin. Then the swing goes
@@ -430,8 +431,8 @@ namespace ColosseumDuel.Gameplay
             // weapon that caused it.
             if (delay > 0f) ViewFor(side).HoldDeathFor(delay);
 
-            if (delay <= 0f) PlayBlowEffects(side, otherSide, amount);
-            else StartCoroutine(PlayBlowEffectsAfter(delay, side, otherSide, amount));
+            if (delay <= 0f) PlayBlowEffects(blow);
+            else StartCoroutine(PlayBlowEffectsAfter(delay, blow));
         }
 
         /// <summary>
@@ -442,28 +443,29 @@ namespace ColosseumDuel.Gameplay
         /// simulation resolves it, and the weapon arrives when the animation gets there - and those
         /// are the same moment only when there was room to start the swing early.
         /// </summary>
-        private void PlayBlowEffects(PlayerSide side, PlayerSide strikerSide, float amount)
+        private void PlayBlowEffects(Blow blow)
         {
-            // Whether the blow throws him is a property of the weapon that landed it, and that is
-            // readable from the striker rather than needing an event of its own. A flinch played
-            // over a body already sliding backwards reads as the ground moving, not the man.
-            var striker = Manager.State.Get(strikerSide).Active;
-            if (striker != null && striker.WeaponDef.Knockback > 0f) ViewFor(side).PlayKnockback();
+            var side = blow.Victim;
+
+            // Whether the blow throws him is a property of the weapon that landed it. A flinch
+            // played over a body already sliding backwards reads as the ground moving, not the man.
+            // A guard that held against the throw takes the plain hit.
+            bool thrown = WeaponDef.Get(blow.Weapon).Knockback > 0f && !blow.Blocked;
+            if (thrown) ViewFor(side).PlayKnockback();
             else ViewFor(side).PlayHit();
 
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             var victim = Manager.State.Get(side).Active;
             if (victim != null) Arena.PlayBlood(victim.Pos);
-            ShowDamage(side, amount, DamageNumbersView.Source.Blow);
+            ShowDamage(side, blow.Damage, DamageNumbersView.Source.Blow);
 
             // And a knock on the camera, so a blow is felt and not only seen. Only for blows: a
             // trap and a bleed go through their own events and leave the frame alone.
             if (_deathCamera != null) _deathCamera.Shake();
         }
 
-        private System.Collections.IEnumerator PlayBlowEffectsAfter(
-            float delay, PlayerSide side, PlayerSide strikerSide, float amount)
+        private System.Collections.IEnumerator PlayBlowEffectsAfter(float delay, Blow blow)
         {
             // Unscaled, because the delay was measured against the phase clock and the simulation is
             // ticked on unscaled time. They agree during the action phase, and this keeps them
@@ -477,7 +479,7 @@ namespace ColosseumDuel.Gameplay
 
             // The clash can end while this is in flight. The blood and the number belong to a blow
             // that did land, so they still go out; nothing here reads a gladiator that may be gone.
-            PlayBlowEffects(side, strikerSide, amount);
+            PlayBlowEffects(blow);
         }
 
 
