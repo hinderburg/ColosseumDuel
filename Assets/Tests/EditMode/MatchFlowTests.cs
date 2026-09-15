@@ -1064,7 +1064,15 @@ namespace ColosseumDuel.Tests
                 }
 
                 Assert.AreEqual(MatchPhase.MatchEnd, m.State.Phase, $"seed {seed} never finished");
-                Assert.IsTrue(m.State.WinnerSide.HasValue, $"seed {seed} finished without a winner");
+
+                // A draw is a real ending now - the last man on both sides falling in the one exchange -
+                // and only that: with nobody named the winner, nobody may be left standing anywhere.
+                if (!m.State.WinnerSide.HasValue)
+                {
+                    Assert.IsFalse(m.State.P1.HasAnyAlive || m.State.Bot.HasAnyAlive,
+                        $"seed {seed} finished without a winner while somebody was still standing");
+                    continue;
+                }
 
                 var loser = m.State.Get(m.State.WinnerSide.Value == PlayerSide.P1 ? PlayerSide.Bot : PlayerSide.P1);
                 Assert.IsFalse(loser.HasAnyAlive, $"seed {seed}: the loser should have no gladiators left");

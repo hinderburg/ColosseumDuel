@@ -1211,13 +1211,20 @@ namespace ColosseumDuel.Core
             if (p1Died) State.P1.Active = null;
             if (botDied) State.Bot.Active = null;
 
-            if (!State.P1.HasAnyAlive) { FinishMatch(PlayerSide.Bot); return; }
-            if (!State.Bot.HasAnyAlive) { FinishMatch(PlayerSide.P1); return; }
+            bool p1Left = State.P1.HasAnyAlive;
+            bool botLeft = State.Bot.HasAnyAlive;
+
+            // The last man on both sides falling in the one exchange is a draw. It was a win for the
+            // bot, for no better reason than that the player's side was the one asked about first.
+            if (!p1Left && !botLeft) { FinishMatch(null); return; }
+            if (!p1Left) { FinishMatch(PlayerSide.Bot); return; }
+            if (!botLeft) { FinishMatch(PlayerSide.P1); return; }
 
             BeginClashPick();
         }
 
-        private void FinishMatch(PlayerSide winner)
+        /// <summary>Ends the match. A null winner is a draw.</summary>
+        private void FinishMatch(PlayerSide? winner)
         {
             State.WinnerSide = winner;
             SetPhase(MatchPhase.MatchEnd);

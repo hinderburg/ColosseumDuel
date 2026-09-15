@@ -499,8 +499,13 @@ namespace ColosseumDuel.Gameplay.Hud
             // Keyed off NeedsPick rather than Phase: from clash two only the loser picks, so when the
             // player is the survivor the Pick phase is entered and left within the same frame and
             // would never be catchable by a phase check.
-            bool picking = state.P1.NeedsPick;
             bool matchOver = state.Phase == MatchPhase.MatchEnd;
+
+            // Never both at once. When the last exchange of a match takes both men and the player
+            // still has a man on the bench, he is left with nobody fighting and somebody to send -
+            // which reads as needing a pick - on a match that is already over; the pick screen was
+            // drawn over the one saying who had won.
+            bool picking = state.P1.NeedsPick && !matchOver;
             bool banner = state.Phase == MatchPhase.Reveal || state.Phase == MatchPhase.ClashEnd;
 
             bool visible = picking || matchOver || banner;
@@ -561,6 +566,15 @@ namespace ColosseumDuel.Gameplay.Hud
 
             if (matchOver)
             {
+                if (state.WinnerSide == null)
+                {
+                    // The last of both sides fell in the one exchange.
+                    _overlayTitle.text = "Draw";
+                    _overlayTitle.color = HudFactory.TextColor;
+                    _overlaySubtitle.text = "The last of both sides fell together.";
+                    return;
+                }
+
                 bool won = state.WinnerSide == PlayerSide.P1;
                 _overlayTitle.text = won ? "Victory" : "Defeat";
                 _overlayTitle.color = won ? HudFactory.HpColor : HudFactory.BotColor;

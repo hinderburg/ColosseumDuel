@@ -780,6 +780,77 @@ namespace ColosseumDuel.Tests
         }
 
         /// <summary>
+        /// A last exchange that takes both men ends the match on one screen. With the opponent's bench
+        /// empty and the player's not, the player has won - and is left with nobody fighting and men
+        /// to send, which used to put the pick screen up over the one saying so.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ADoubleKnockoutWithMenLeftOnOneSideEndsOnOneScreen()
+        {
+            yield return KillBothInOneExchange(emptyPlayerBench: false);
+
+            Assert.AreEqual(PlayerSide.P1, State.WinnerSide, "the opponent has nobody left, so the player has won");
+            Assert.IsTrue(State.P1.Roster.Any(g => g.Alive), "this test needs the player to have men left");
+            Assert.IsFalse(Find("PickRow").activeInHierarchy, "the pick screen is up over the end of the match");
+            Assert.IsTrue(FindButton("Restart").gameObject.activeInHierarchy, "the end of the match should be showing");
+            Assert.AreEqual("Victory", Find("Title").GetComponent<Text>().text);
+        }
+
+        /// <summary>
+        /// And one that takes the last man on both sides is a draw - not a win handed to whichever side
+        /// the code happened to ask about first.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ADoubleKnockoutOfBothLastMenIsADraw()
+        {
+            yield return KillBothInOneExchange(emptyPlayerBench: true);
+
+            Assert.IsNull(State.WinnerSide, "nobody is left on either side - nobody has won");
+            Assert.IsFalse(Find("PickRow").activeInHierarchy, "there is nobody to pick");
+            Assert.IsTrue(FindButton("Restart").gameObject.activeInHierarchy, "the end of the match should be showing");
+            Assert.AreEqual("Draw", Find("Title").GetComponent<Text>().text);
+        }
+
+        /// <summary>
+        /// Plays out an exchange that kills both men at once, the opponent's bench empty and the
+        /// player's too if asked, and waits for the match to end.
+        /// </summary>
+        private IEnumerator KillBothInOneExchange(bool emptyPlayerBench)
+        {
+            _controller.SubmitPlayerPick(GladiatorId.Brutius);
+            yield return RunUntil(() => State.Phase == MatchPhase.Planning, GameConstants.RevealTime + 1f);
+
+            foreach (var side in emptyPlayerBench ? new[] { State.P1, State.Bot } : new[] { State.Bot })
+                foreach (var g in side.Roster)
+                {
+                    if (ReferenceEquals(g, side.Active)) continue;
+                    g.Hp = 0f;
+                    g.Alive = false;
+                }
+
+            // Inside each other's reach, squared up and standing their ground, so the exchange is
+            // the first thing that happens in the action phase and both blows land in it together.
+            var p1 = State.P1.Active;
+            var bot = State.Bot.Active;
+            float gap = Mathf.Min(p1.WeaponDef.Reach, bot.WeaponDef.Reach) * 0.7f;
+            p1.Pos = new Vector2(-gap * 0.5f, 0f);
+            bot.Pos = new Vector2(gap * 0.5f, 0f);
+            p1.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+            p1.Hp = 0.01f;
+            bot.Hp = 0.01f;
+
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+
+            yield return RunUntil(() => State.Phase == MatchPhase.MatchEnd, 30f);
+            Assert.AreEqual(MatchPhase.MatchEnd, State.Phase, "the match should have ended");
+            Assert.IsFalse(p1.Alive, "this test needs both men to fall");
+            Assert.IsFalse(bot.Alive, "this test needs both men to fall");
+            yield return null;
+        }
+
+        /// <summary>
         /// The tutorial labels the blessing on the sand, over the blessing itself, with what it does -
         /// and takes the label away when there is nothing there to label.
         /// </summary>
