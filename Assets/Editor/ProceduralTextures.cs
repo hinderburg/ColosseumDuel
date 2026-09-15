@@ -623,17 +623,19 @@ namespace ColosseumDuel.EditorTools
         /// </summary>
         public static Texture2D EnsureRadialFade(string path)
         {
-            var existing = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-            if (existing != null) return existing;
-
+            // Written every time rather than kept once it exists, unlike the textures above: the
+            // fade is tuned by hand, and a kept file would go on drawing the last tuning. The same
+            // numbers write the same bytes, so an untouched fade leaves nothing to commit.
             const int width = 4;
             const int height = 64;
             var pixels = new Color32[width * height];
             for (int y = 0; y < height; y++)
             {
+                // A little more solid than the first pass (0.04 to 0.34, and 0.72 on the edge), on
+                // request: at those it was hard to find on bright sand.
                 float v = y / (float)(height - 1);
-                float alpha = Mathf.Lerp(0.04f, 0.34f, v * v);
-                if (v > 0.9f) alpha = Mathf.Lerp(alpha, 0.72f, (v - 0.9f) / 0.1f);
+                float alpha = Mathf.Lerp(0.07f, 0.46f, v * v);
+                if (v > 0.9f) alpha = Mathf.Lerp(alpha, 0.85f, (v - 0.9f) / 0.1f);
                 var color = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
                 for (int x = 0; x < width; x++) pixels[y * width + x] = color;
             }
