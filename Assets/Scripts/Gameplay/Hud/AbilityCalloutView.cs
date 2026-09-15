@@ -14,9 +14,11 @@ namespace ColosseumDuel.Gameplay.Hud
     /// with what it does beside it and the rounds it has left counting down.
     ///
     /// Each side has a strip by its own squad - the player's in the band between the arena and his
-    /// squad, the opponent's under his - and each strip has two places: the blessing on the left and
-    /// the ability on the right. Something still working is something the player has to keep in
-    /// mind, and a name that went up over a man once and faded is not remembered two rounds later.
+    /// squad, the opponent's under his - and each strip has three places: the blessing on the left,
+    /// the ability in the middle, and on the right a shelf with the pictures of the boons the side
+    /// has taken, which stays up for the whole match. Something still working is something the
+    /// player has to keep in mind, and a name that went up over a man once and faded is not
+    /// remembered two rounds later.
     ///
     /// Both sides, because the moment the bot's Bulwark goes up is the moment the player has to stop
     /// charging it head on - and a ring on the sand in a colour he has not learned says nothing.
@@ -78,13 +80,27 @@ namespace ColosseumDuel.Gameplay.Hud
 
         private static readonly Color DockBackColor = new Color(0.04f, 0.04f, 0.06f, 0.62f);
 
-        /// <summary>The two places in a side's strip.</summary>
+        /// <summary>
+        /// How the strip is divided, as shares of its width: the blessing and the ability get a place
+        /// each and the boon shelf the rest - three pictures' worth, which is as many boons as a side
+        /// can take in a match of three men.
+        /// </summary>
+        private const float BlessingShare = 0.36f, AbilityShare = 0.36f;
+
+        /// <summary>The pictures on the shelf, and the room round them.</summary>
+        private const float ShelfPictureWidth = 40f, ShelfPictureHeight = 27f, ShelfPadding = 6f;
+
+        /// <summary>The picture on a callout, beside the name: the boon's painting, for the boons.</summary>
+        private const float CalloutArtWidth = 66f, CalloutArtHeight = 44f;
+
+        /// <summary>The two counted places in a side's strip. The shelf is the third, and has no count.</summary>
         public enum Slot { Blessing = 0, Ability = 1 }
 
         private sealed class Callout
         {
             public RectTransform Root;
             public CanvasGroup Group;
+            public Image Art;
             public Text Name;
             public Text Description;
             public Vector2 From;
@@ -92,9 +108,30 @@ namespace ColosseumDuel.Gameplay.Hud
 
             /// <summary>Where it flies once it has been read; null for one that fades where it is.</summary>
             public Dock Target;
+
+            /// <summary>Or the shelf it flies to, carrying this boon's picture.</summary>
+            public Shelf ShelfTarget;
+            public BoonKey Boon;
+
             public bool HandedOver;
             public string DockDescription;
             public Func<int> RoundsLeft;
+        }
+
+        /// <summary>
+        /// The pictures of the boons a side has taken, in the order it took them. Filled as each
+        /// picture flies in, and kept true to the match by <see cref="SyncBoons"/> - a picture whose
+        /// flight was never seen still arrives, and a restart clears the shelf.
+        /// </summary>
+        private sealed class Shelf
+        {
+            public RectTransform Root;
+            public CanvasGroup Group;
+            public Image[] Pictures;
+            public readonly List<BoonKey> Keys = new List<BoonKey>();
+            public readonly HashSet<BoonKey> InFlight = new HashSet<BoonKey>();
+            public bool Showing;
+            public float Alpha;
         }
 
         private sealed class Dock
@@ -113,6 +150,7 @@ namespace ColosseumDuel.Gameplay.Hud
 
         private readonly List<Callout> _callouts = new List<Callout>();
         private readonly Dock[] _docks = new Dock[4];
+        private readonly Shelf[] _shelves = new Shelf[2];
         private RectTransform _root;
         private ArenaView _arena;
         private int _next;
@@ -131,6 +169,8 @@ namespace ColosseumDuel.Gameplay.Hud
             foreach (PlayerSide side in new[] { PlayerSide.P1, PlayerSide.Bot })
             foreach (Slot slot in new[] { Slot.Blessing, Slot.Ability })
                 view._docks[DockIndex(side, slot)] = BuildDock(root, side, slot, palette);
+            foreach (PlayerSide side in new[] { PlayerSide.P1, PlayerSide.Bot })
+                view._shelves[ShelfIndex(side)] = BuildShelf(root, side);
 
             for (int i = 0; i < Capacity; i++)
             {
@@ -140,6 +180,17 @@ namespace ColosseumDuel.Gameplay.Hud
                 var group = callout.gameObject.AddComponent<CanvasGroup>();
                 group.blocksRaycasts = false;
                 group.interactable = false;
+
+                // A picture on the left, for the callouts that have one; the words take the whole
+                // width when there is none (see Put).
+                var art = HudFactory.CreatePanel("Art", callout, Color.white);
+                art.raycastTarget = false;
+                art.preserveAspect = true;
+                art.rectTransform.anchorMin = art.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                art.rectTransform.pivot = new Vector2(0f, 0.5f);
+                art.rectTransform.sizeDelta = new Vector2(CalloutArtWidth, CalloutArtHeight);
+                art.rectTransform.anchoredPosition = new Vector2(8f, 0f);
+                art.enabled = false;
 
                 var name = HudFactory.CreateLabel("Name", callout, "", NameSize);
                 name.fontStyle = FontStyle.Bold;
@@ -157,7 +208,7 @@ namespace ColosseumDuel.Gameplay.Hud
                 Outline(description, 1.5f);
 
                 callout.gameObject.SetActive(false);
-                view._callouts.Add(new Callout { Root = callout, Group = group, Name = name, Description = description });
+                view._callouts.Add(new Callout { Root = callout, Group = group, Art = art, Name = name, Description = description });
             }
 
             return view;
@@ -165,33 +216,45 @@ namespace ColosseumDuel.Gameplay.Hud
 
         private static int DockIndex(PlayerSide side, Slot slot) => (side == PlayerSide.P1 ? 0 : 2) + (int)slot;
 
+        private static int ShelfIndex(PlayerSide side) => side == PlayerSide.P1 ? 0 : 1;
+
         /// <summary>
-        /// One place in a strip: a dark plate, the rounds left in a disc on the left, the name beside
-        /// it and what it does underneath. The blessing's half is on the left of the screen and the
-        /// ability's on the right, the same way round for both sides.
+        /// The frame of one place in a side's strip: across the share of the width it gets, in the
+        /// band by that side's squad, with a plate behind it - the strip lies over the wall, the
+        /// sand and the torches, and white type is unreadable on at least one of them.
         /// </summary>
-        private static Dock BuildDock(RectTransform root, PlayerSide side, Slot slot, ViewPalette palette)
+        private static RectTransform StripPlace(RectTransform root, string name, PlayerSide side,
+            float fromShare, float toShare, out CanvasGroup group)
         {
             bool top = side == PlayerSide.Bot;
-            bool left = slot == Slot.Blessing;
-
-            var rect = HudFactory.CreateRect($"Dock_{side}_{slot}", root);
-            rect.anchorMin = new Vector2(left ? 0f : 0.5f, top ? 1f : 0f);
-            rect.anchorMax = new Vector2(left ? 0.5f : 1f, top ? 1f : 0f);
+            var rect = HudFactory.CreateRect(name, root);
+            rect.anchorMin = new Vector2(fromShare, top ? 1f : 0f);
+            rect.anchorMax = new Vector2(toShare, top ? 1f : 0f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             float bottom = top ? -(BotDockTop + DockHeight) : PlayerDockBottom;
-            rect.offsetMin = new Vector2(left ? 12f : 4f, bottom);
-            rect.offsetMax = new Vector2(left ? -4f : -12f, bottom + DockHeight);
+            rect.offsetMin = new Vector2(fromShare <= 0f ? 12f : 3f, bottom);
+            rect.offsetMax = new Vector2(toShare >= 1f ? -12f : -3f, bottom + DockHeight);
 
-            var group = rect.gameObject.AddComponent<CanvasGroup>();
+            group = rect.gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
             group.interactable = false;
 
-            // A plate behind it: the strip lies over the wall, the sand and the torches, and white
-            // type is unreadable on at least one of them.
             var back = HudFactory.CreatePanel("Back", rect, DockBackColor);
             back.raycastTarget = false;
             HudFactory.Stretch(back.rectTransform);
+            return rect;
+        }
+
+        /// <summary>
+        /// One counted place in a strip: the rounds left in a disc on the left, the name beside it
+        /// and what it does underneath. The blessing's place is on the left of the screen and the
+        /// ability's in the middle, the same way round for both sides.
+        /// </summary>
+        private static Dock BuildDock(RectTransform root, PlayerSide side, Slot slot, ViewPalette palette)
+        {
+            bool left = slot == Slot.Blessing;
+            var rect = StripPlace(root, $"Dock_{side}_{slot}", side,
+                left ? 0f : BlessingShare, left ? BlessingShare : BlessingShare + AbilityShare, out var group);
 
             var badge = HudFactory.CreatePanel("TimerBadge", rect, Color.white);
             HudFactory.UseSprite(badge, palette != null && palette.Disc != null ? palette.Disc : HudFactory.RoundedSprite);
@@ -207,8 +270,13 @@ namespace ColosseumDuel.Gameplay.Hud
             HudFactory.Stretch(timer.rectTransform);
             Outline(timer, 1f);
 
+            // Both set to shrink to fit: the place is a third of the screen wide now that the boons
+            // have the rest, and the longest descriptions ran to three lines at their full size.
             var name = HudFactory.CreateLabel("Name", rect, "", DockNameSize, TextAnchor.MiddleLeft);
             name.fontStyle = FontStyle.Bold;
+            name.resizeTextForBestFit = true;
+            name.resizeTextMinSize = 14;
+            name.resizeTextMaxSize = DockNameSize;
             name.rectTransform.anchorMin = new Vector2(0f, 1f);
             name.rectTransform.anchorMax = new Vector2(1f, 1f);
             name.rectTransform.pivot = new Vector2(0.5f, 1f);
@@ -218,6 +286,9 @@ namespace ColosseumDuel.Gameplay.Hud
 
             var description = HudFactory.CreateLabel("Description", rect, "", DockDescriptionSize, TextAnchor.UpperLeft);
             description.horizontalOverflow = HorizontalWrapMode.Wrap;
+            description.resizeTextForBestFit = true;
+            description.resizeTextMinSize = 9;
+            description.resizeTextMaxSize = DockDescriptionSize;
             description.rectTransform.anchorMin = Vector2.zero;
             description.rectTransform.anchorMax = Vector2.one;
             description.rectTransform.offsetMin = new Vector2(8f, 3f);
@@ -226,6 +297,32 @@ namespace ColosseumDuel.Gameplay.Hud
 
             rect.gameObject.SetActive(false);
             return new Dock { Root = rect, Group = group, Badge = badge, Timer = timer, Name = name, Description = description };
+        }
+
+        /// <summary>
+        /// The shelf: the boons' pictures in a row, on the right of the strip. Three places, which is
+        /// as many boons as a side can take; one picture per boon, in the order they were taken.
+        /// </summary>
+        private static Shelf BuildShelf(RectTransform root, PlayerSide side)
+        {
+            var rect = StripPlace(root, $"Shelf_{side}", side, BlessingShare + AbilityShare, 1f, out var group);
+
+            var pictures = new Image[BoonDef.OfferSize];
+            for (int i = 0; i < pictures.Length; i++)
+            {
+                var picture = HudFactory.CreatePanel($"Boon_{i}", rect, Color.white);
+                picture.raycastTarget = false;
+                picture.preserveAspect = true;
+                picture.rectTransform.anchorMin = picture.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+                picture.rectTransform.pivot = new Vector2(0f, 0.5f);
+                picture.rectTransform.sizeDelta = new Vector2(ShelfPictureWidth, ShelfPictureHeight);
+                picture.rectTransform.anchoredPosition = new Vector2(ShelfPadding + i * (ShelfPictureWidth + ShelfPadding), 0f);
+                picture.enabled = false;
+                pictures[i] = picture;
+            }
+
+            rect.gameObject.SetActive(false);
+            return new Shelf { Root = rect, Group = group, Pictures = pictures };
         }
 
         /// <summary>
@@ -271,17 +368,38 @@ namespace ColosseumDuel.Gameplay.Hud
         public void ShowPickup(Vector2 virtualPos, PlayerSide side, string name, string description)
             => Put(virtualPos, side, name, description, description, null, null);
 
-        private void Put(Vector2 virtualPos, PlayerSide side, string name, string description,
-            string dockDescription, Dock target, Func<int> roundsLeft)
+        /// <summary>
+        /// A boon a side has just taken, over the man it sent out to earn it: its painting beside its
+        /// name, what it does underneath, and then down onto the shelf in his side's strip, where the
+        /// picture stays for the rest of the match.
+        /// </summary>
+        public void ShowBoon(Vector2 virtualPos, BoonKey key, PlayerSide side, Sprite picture)
         {
-            if (_arena == null) return;
+            var def = BoonDef.Get(key);
+            var shelf = _shelves[ShelfIndex(side)];
+            if (shelf.Keys.Contains(key)) return;
+            shelf.InFlight.Add(key);
+            var callout = Put(virtualPos, side, def.Name, Capitalised(def.Description), def.Description, null, null, picture);
+            if (callout == null)
+            {
+                shelf.InFlight.Remove(key);
+                return;
+            }
+            callout.ShelfTarget = shelf;
+            callout.Boon = key;
+        }
+
+        private Callout Put(Vector2 virtualPos, PlayerSide side, string name, string description,
+            string dockDescription, Dock target, Func<int> roundsLeft, Sprite picture = null)
+        {
+            if (_arena == null) return null;
             var camera = _arena.ArenaCamera;
-            if (camera == null) return;
+            if (camera == null) return null;
 
             var screen = camera.WorldToScreenPoint(_arena.ToWorld(virtualPos, SpawnHeight));
-            if (screen.z <= 0f) return;
+            if (screen.z <= 0f) return null;
             if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(_root, screen, UiCamera(), out var local))
-                return;
+                return null;
 
             var color = SideColor(side);
             var slot = Take();
@@ -294,9 +412,17 @@ namespace ColosseumDuel.Gameplay.Hud
                     && Vector2.Distance(other.From, local) < StackSpacing)
                     local.y += StackSpacing;
 
+            // Shifted over when it carries a picture, so the picture and the words together hang about
+
+            // centred over the man rather than the words alone.
+
+            if (picture != null) local.x += CalloutArtWidth * 0.6f;
+
+
             slot.From = local;
             slot.Age = 0f;
             slot.Target = target;
+            slot.ShelfTarget = null;
             slot.HandedOver = false;
             slot.RoundsLeft = roundsLeft;
             slot.DockDescription = dockDescription;
@@ -304,12 +430,70 @@ namespace ColosseumDuel.Gameplay.Hud
             slot.Name.color = color;
             slot.Description.text = description;
             slot.Description.color = HudFactory.TextColor;
+
+            // With a picture the words sit against it, and the pair is shifted so it hangs about
+            // centred over the man; without one the words are centred and take the width.
+            HudFactory.UseSprite(slot.Art, picture);
+            slot.Art.enabled = picture != null;
+            float textLeft = picture != null ? CalloutArtWidth + 16f : 0f;
+            slot.Name.rectTransform.offsetMin = new Vector2(textLeft, 0f);
+            slot.Description.rectTransform.offsetMin = new Vector2(textLeft, 0f);
+            slot.Name.alignment = picture != null ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
+            slot.Description.alignment = picture != null ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
+
             slot.Group.alpha = 1f;
             slot.Root.localScale = Vector3.one;
             slot.Root.anchoredPosition = local;
             slot.Root.SetAsLastSibling();
             slot.Root.gameObject.SetActive(true);
+            return slot;
         }
+
+        /// <summary>
+        /// Keeps a side's shelf true to the boons it has: one that arrived without its flight being
+        /// seen goes up at once, and one the match no longer has - a restart - comes down. A boon
+        /// whose picture is on its way is left to arrive.
+        /// </summary>
+        public void SyncBoons(PlayerSide side, IEnumerable<BoonKey> boons, Func<BoonKey, Sprite> pictureOf)
+        {
+            var shelf = _shelves[ShelfIndex(side)];
+            if (shelf == null) return;
+
+            var wanted = new List<BoonKey>(boons ?? System.Linq.Enumerable.Empty<BoonKey>());
+            bool changed = shelf.Keys.RemoveAll(k => !wanted.Contains(k)) > 0;
+            foreach (var key in wanted)
+                if (!shelf.Keys.Contains(key) && !shelf.InFlight.Contains(key) && shelf.Keys.Count < shelf.Pictures.Length)
+                {
+                    shelf.Keys.Add(key);
+                    changed = true;
+                }
+            shelf.InFlight.RemoveWhere(k => !wanted.Contains(k));
+
+            if (changed) LayOut(shelf, pictureOf);
+            shelf.Showing = shelf.Keys.Count > 0;
+            if (shelf.Showing && !shelf.Root.gameObject.activeSelf) shelf.Root.gameObject.SetActive(true);
+        }
+
+        private static void LayOut(Shelf shelf, Func<BoonKey, Sprite> pictureOf)
+        {
+            for (int i = 0; i < shelf.Pictures.Length; i++)
+            {
+                bool present = i < shelf.Keys.Count;
+                var sprite = present && pictureOf != null ? pictureOf(shelf.Keys[i]) : null;
+                HudFactory.UseSprite(shelf.Pictures[i], sprite);
+                shelf.Pictures[i].enabled = present && sprite != null;
+            }
+        }
+
+        /// <summary>Whether this boon's picture is on this side's shelf. For tests.</summary>
+        public bool IsShelved(PlayerSide side, BoonKey key)
+        {
+            var shelf = _shelves[ShelfIndex(side)];
+            return shelf != null && shelf.Keys.Contains(key) && shelf.Root.gameObject.activeSelf;
+        }
+
+        /// <summary>The shelf itself, for tests that read what is on it.</summary>
+        public RectTransform ShelfFor(PlayerSide side) => _shelves[ShelfIndex(side)]?.Root;
 
         private static Color SideColor(PlayerSide side) => side == PlayerSide.P1 ? HudFactory.PlayerColor : HudFactory.BotColor;
 
@@ -355,6 +539,37 @@ namespace ColosseumDuel.Gameplay.Hud
                 if (callout.Root.gameObject.activeSelf) AdvanceCallout(callout, dt);
             foreach (var dock in _docks)
                 if (dock != null && dock.Root.gameObject.activeSelf) AdvanceDock(dock, dt);
+            foreach (var shelf in _shelves)
+                if (shelf != null && shelf.Root.gameObject.activeSelf) AdvanceShelf(shelf, dt);
+        }
+
+        private static void AdvanceShelf(Shelf shelf, float dt)
+        {
+            shelf.Alpha = Mathf.MoveTowards(shelf.Alpha, shelf.Showing ? 1f : 0f, dt / DockFadeSeconds);
+            shelf.Group.alpha = shelf.Alpha;
+            if (!shelf.Showing && shelf.Alpha <= 0f) shelf.Root.gameObject.SetActive(false);
+        }
+
+        /// <summary>Where the next picture on the shelf will sit, in the space the callouts are placed in.</summary>
+        private Vector2 ShelfSlotCentre(Shelf shelf)
+        {
+            int index = Mathf.Min(shelf.Keys.Count, shelf.Pictures.Length - 1);
+            var rect = shelf.Pictures[index].rectTransform;
+            var world = rect.TransformPoint(rect.rect.center);
+            return _root.InverseTransformPoint(world);
+        }
+
+        /// <summary>The picture lands: onto the shelf, in the next free place, and the shelf comes up if it was empty.</summary>
+        private static void Arrive(Shelf shelf, Callout from)
+        {
+            shelf.InFlight.Remove(from.Boon);
+            if (shelf.Keys.Contains(from.Boon) || shelf.Keys.Count >= shelf.Pictures.Length) return;
+            int index = shelf.Keys.Count;
+            shelf.Keys.Add(from.Boon);
+            HudFactory.UseSprite(shelf.Pictures[index], from.Art.sprite);
+            shelf.Pictures[index].enabled = from.Art.sprite != null;
+            shelf.Showing = true;
+            shelf.Root.gameObject.SetActive(true);
         }
 
         private void AdvanceCallout(Callout callout, float dt)
@@ -370,9 +585,10 @@ namespace ColosseumDuel.Gameplay.Hud
             if (callout.Target != null && !callout.HandedOver && StillWorking(callout.RoundsLeft) <= 0)
                 callout.Target = null;
 
-            if (callout.Target == null || callout.Age < RiseSeconds)
+            bool flies = callout.Target != null || callout.ShelfTarget != null;
+            if (!flies || callout.Age < RiseSeconds)
             {
-                if (callout.Target == null && callout.Age >= Seconds)
+                if (!flies && callout.Age >= Seconds)
                 {
                     callout.Root.gameObject.SetActive(false);
                     return;
@@ -381,26 +597,32 @@ namespace ColosseumDuel.Gameplay.Hud
 
                 // Solid for most of its time and gone over the last third: a name that starts
                 // fading as it appears is hardest to read exactly when it is being read.
-                callout.Group.alpha = callout.Target != null ? 1f : Mathf.Clamp01((1f - rise) * 3f);
+                callout.Group.alpha = flies ? 1f : Mathf.Clamp01((1f - rise) * 3f);
                 SetAlpha(callout.Description, 1f);
                 return;
             }
 
-            // Down into the strip, shrinking to the size its name is set at there. What it does
-            // goes first - the strip says it again - and the name hands over to the strip's own as
-            // it arrives, so the two are never both there at full strength.
+            // Down into the strip, shrinking to the size its name is set at there - or, for a boon,
+            // to the size its picture is on the shelf. What it does goes first - the strip says it
+            // again - and the name hands over to the strip's own as it arrives, so the two are never
+            // both there at full strength.
             float f = Mathf.Clamp01((callout.Age - RiseSeconds) / FlySeconds);
             float eased = f * f * (3f - 2f * f);
             var start = callout.From + new Vector2(0f, RiseDistance * (1f - (1f - RiseSeconds / Seconds) * (1f - RiseSeconds / Seconds)));
-            callout.Root.anchoredPosition = Vector2.Lerp(start, DockCentre(callout.Target), eased);
-            callout.Root.localScale = Vector3.one * Mathf.Lerp(1f, DockNameSize / (float)NameSize, eased);
+            bool toShelf = callout.Target == null;
+            var destination = toShelf ? ShelfSlotCentre(callout.ShelfTarget) : DockCentre(callout.Target);
+            float endScale = toShelf ? ShelfPictureWidth / CalloutArtWidth : DockNameSize / (float)NameSize;
+            callout.Root.anchoredPosition = Vector2.Lerp(start, destination, eased);
+            callout.Root.localScale = Vector3.one * Mathf.Lerp(1f, endScale, eased);
             SetAlpha(callout.Description, 1f - Mathf.Clamp01(f * 2.5f));
+            if (toShelf) SetAlpha(callout.Name, 1f - Mathf.Clamp01(f * 2.5f));
             callout.Group.alpha = f < HandOver ? 1f : 1f - (f - HandOver) / (1f - HandOver);
 
             if (!callout.HandedOver && f >= HandOver)
             {
                 callout.HandedOver = true;
-                Fill(callout.Target, callout);
+                if (toShelf) Arrive(callout.ShelfTarget, callout);
+                else Fill(callout.Target, callout);
             }
             if (f >= 1f) callout.Root.gameObject.SetActive(false);
         }

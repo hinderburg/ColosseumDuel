@@ -73,6 +73,48 @@ namespace ColosseumDuel.Tests
             Assert.IsFalse(Find("BoonPick").activeInHierarchy, "and the cards gone");
         }
 
+        /// <summary>
+        /// The boon taken is announced over the man once the clash is - its picture beside its name -
+        /// and the picture then goes onto the shelf in the side's strip, where it stays. The bot's
+        /// goes onto its own shelf the same way.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBoonTakenIsAnnouncedOverTheMan_AndItsPictureGoesOntoTheShelf()
+        {
+            _controller.SubmitPlayerPick(_controller.Squad[0]);
+            yield return null;
+            var key = State.P1.BoonOffer[0];
+            _controller.SubmitPlayerBoon(key);
+            yield return null;
+            Assert.AreEqual(MatchPhase.Reveal, State.Phase);
+
+            var callouts = Object.FindFirstObjectByType<AbilityCalloutView>(FindObjectsInactive.Include);
+            var callout = _hud.GetComponentsInChildren<Transform>(true)
+                .FirstOrDefault(t => t.name.StartsWith("Callout_") && t.gameObject.activeSelf
+                                     && t.Find("Name").GetComponent<Text>().text == BoonDef.Get(key).Name);
+            Assert.IsNotNull(callout, "the boon's name should have gone up when the clash was announced");
+            Assert.IsTrue(callout.Find("Art").GetComponent<Image>().enabled, "and its picture beside it");
+            Assert.IsFalse(callouts.IsShelved(PlayerSide.P1, key), "the picture is still in the air");
+
+            yield return RunUntil(() => callouts.IsShelved(PlayerSide.P1, key),
+                AbilityCalloutView.RiseSeconds + AbilityCalloutView.FlySeconds + 1f);
+            Assert.IsTrue(callouts.IsShelved(PlayerSide.P1, key), "the picture never reached the shelf");
+            var shelf = callouts.ShelfFor(PlayerSide.P1);
+            var first = shelf.GetComponentsInChildren<Image>(true).First(i => i.name == "Boon_0");
+            Assert.IsTrue(first.enabled && first.sprite != null, "the shelf should show the painting");
+            Assert.Less(shelf.position.y, Screen.height * 0.3f, "the player's shelf belongs low, by his squad");
+
+            Assert.AreEqual(1, State.Bot.Boons.Count, "the bot took one too");
+            yield return RunUntil(() => callouts.IsShelved(PlayerSide.Bot, State.Bot.Boons.First()), 1f);
+            Assert.IsTrue(callouts.IsShelved(PlayerSide.Bot, State.Bot.Boons.First()), "and it should be on the bot's shelf");
+        }
+
+        private static IEnumerator RunUntil(System.Func<bool> done, float maxSeconds)
+        {
+            float end = Time.realtimeSinceStartup + maxSeconds;
+            while (!done() && Time.realtimeSinceStartup < end) yield return null;
+        }
+
         [UnityTest]
         public IEnumerator TheMenuChoosesTheFiveBoonsTakenIntoEveryMatch()
         {

@@ -85,6 +85,7 @@ namespace ColosseumDuel.Gameplay
             Manager.Bled += OnBled;
             Manager.Scorched += OnScorched;
             Manager.AbilityFired += OnAbilityFired;
+            Manager.BoonTaken += OnBoonTaken;
 
             if (AutoStartOnPlay) RestartMatch();
 
@@ -105,6 +106,9 @@ namespace ColosseumDuel.Gameplay
             // presses "again" has just played a match and does not need the labels back.
             bool tutorial = _matchesStarted == 0;
             _matchesStarted++;
+
+            // A boon chosen in a match thrown away mid-pick has no clash to be announced at.
+            foreach (var pending in _boonsToAnnounce) pending.Clear();
 
             // A fresh match gets fresh sand. Clashes do not: a clash is over when somebody falls, but
             // the sand he fell on is the same sand, and by the third clash it should look like it.
@@ -313,6 +317,17 @@ namespace ColosseumDuel.Gameplay
             Arena.Sync(state);
 
             foreach (var view in _pickupViews) view.Sync(state.Pickup(view.Kind)?.Position);
+
+            // The shelves follow the match: a boon whose callout was never seen still goes up, and
+            // a restart takes them all down.
+            // Less the ones still waiting to be announced: the bot takes its boon while the men are
+            // still being picked, and its picture has to fly in over him, not be there before he is.
+            var callouts = Callouts;
+            if (callouts != null)
+            {
+                callouts.SyncBoons(PlayerSide.P1, state.P1.Boons.Except(_boonsToAnnounce[0]), BoonPicture);
+                callouts.SyncBoons(PlayerSide.Bot, state.Bot.Boons.Except(_boonsToAnnounce[1]), BoonPicture);
+            }
         }
 
         private void OnPhaseChanged(MatchState state)
@@ -323,6 +338,11 @@ namespace ColosseumDuel.Gameplay
             {
                 EnterArena(_playerView, state.P1.Active);
                 EnterArena(_botView, state.Bot.Active);
+
+                // And the boon each side took for this clash goes up over the man it sent out to
+                // earn it - now, and not when it was chosen, because until now he was nowhere.
+                AnnounceBoons(PlayerSide.P1, state.P1.Active);
+                AnnounceBoons(PlayerSide.Bot, state.Bot.Active);
             }
 
             if (state.Phase == MatchPhase.Action) ScheduleSwings(state);
@@ -599,6 +619,27 @@ namespace ColosseumDuel.Gameplay
             Callouts.Show(g.Pos, g.Ability, side,
                 () => StillFighting(side, g) && g.Buff.IsActive ? g.Buff.RoundsLeft : 0);
         }
+
+        /// <summary>
+        /// The boons taken since the last clash was announced, a list per side. A boon is chosen while
+        /// the men are still being picked, before either is on the sand, so its callout waits for the
+        /// clash to be announced and the man to be standing somewhere it can go up over.
+        /// </summary>
+        private readonly List<BoonKey>[] _boonsToAnnounce = { new List<BoonKey>(), new List<BoonKey>() };
+
+        private void OnBoonTaken(PlayerSide side, BoonKey key) => _boonsToAnnounce[side == PlayerSide.P1 ? 0 : 1].Add(key);
+
+        private void AnnounceBoons(PlayerSide side, GladiatorInstance g)
+        {
+            var pending = _boonsToAnnounce[side == PlayerSide.P1 ? 0 : 1];
+            if (g != null && Callouts != null)
+                foreach (var key in pending)
+                    Callouts.ShowBoon(g.Pos, key, side, BoonPicture(key));
+            pending.Clear();
+        }
+
+        private Sprite BoonPicture(BoonKey key)
+            => Arena != null && Arena.Palette != null ? Arena.Palette.BoonIconFor(key) : null;
 
         /// <summary>Found on demand, like the damage numbers: the HUD builds it in its own Start.</summary>
         private AbilityCalloutView Callouts

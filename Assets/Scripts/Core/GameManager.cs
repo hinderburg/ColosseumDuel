@@ -44,6 +44,9 @@ namespace ColosseumDuel.Core
         /// <summary>A side's ability just fired.</summary>
         public event Action<PlayerSide> AbilityFired;
 
+        /// <summary>A side took a boon, for the rest of the match. Raised before the clash is announced.</summary>
+        public event Action<PlayerSide, BoonKey> BoonTaken;
+
         /// <summary>
         /// An open wound cost a side health at the top of a round.
         ///
@@ -305,6 +308,7 @@ namespace ColosseumDuel.Core
 
             player.Boons.Add(key);
             player.BoonOffer = null;
+            BoonTaken?.Invoke(side, key);
 
             if (State.Phase == MatchPhase.BoonPick && !State.P1.NeedsBoonPick && !State.Bot.NeedsBoonPick)
                 ConfirmPicksAndReveal();
