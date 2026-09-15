@@ -44,9 +44,9 @@ namespace ColosseumDuel.Gameplay.View
         public Material PullLine;
 
         /// <summary>
-        /// The wedge on the sand: the ground his weapon covers, and so who he can hit. White and see-
-        /// through, fading in from the man towards the edge of his reach - see the fade texture the
-        /// bootstrap gives it.
+        /// The wedge on the sand: the ground his weapon covers, and so who he can hit. Reddish and
+        /// see-through, fading in from the man towards the edge of his reach - see the fade texture
+        /// the bootstrap gives it.
         /// </summary>
         public Material StrikeZone;
 

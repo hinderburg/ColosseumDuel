@@ -131,14 +131,15 @@ namespace ColosseumDuel.Tests
                 "the circle should go with him");
         }
 
-        /// <summary>The wedge is white and fades in towards the edge of his reach, not a flat red.</summary>
+        /// <summary>The wedge is reddish and fades in towards the edge of his reach, not a flat fill.</summary>
         [Test]
-        public void TheWedgeIsWhiteAndFades()
+        public void TheWedgeIsReddishAndFades()
         {
             var material = _controller.Arena.Palette.StrikeZone;
-            Assert.AreEqual(1f, material.color.r, 0.01f, "the wedge should be white");
-            Assert.AreEqual(1f, material.color.g, 0.01f, "the wedge should be white");
-            Assert.AreEqual(1f, material.color.b, 0.01f, "the wedge should be white");
+            Assert.Greater(material.color.r, 0.9f, "the wedge should be reddish");
+            Assert.Greater(material.color.r - material.color.g, 0.3f, "the wedge should be reddish, not white");
+            Assert.Greater(material.color.r - material.color.b, 0.3f, "the wedge should be reddish, not white");
+            Assert.Greater(material.color.g, 0.2f, "a warm red, lighter than the flat wedge it replaced");
             Assert.IsNotNull(material.GetTexture("_BaseMap"), "the wedge should carry its fade");
         }
 

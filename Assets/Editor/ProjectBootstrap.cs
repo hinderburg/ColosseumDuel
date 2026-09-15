@@ -45,6 +45,9 @@ namespace ColosseumDuel.EditorTools
         private const string BlessingFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Nova/Fire/NovaFireRed.prefab";
         private const string BlessingSoundPath = "Assets/Epic Toon FX/Sound/etfx_shoot_magic.wav";
+
+        /// <summary>The strike wedge's colour, under its white fade: a warm red, lighter than a warning.</summary>
+        private static readonly Color StrikeZoneTint = new Color(1f, 0.45f, 0.40f, 1f);
         private const string AppleFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Magic/Buff/MagicBuffGreen.prefab";
         private const string HornFxPath =
@@ -507,9 +510,10 @@ namespace ColosseumDuel.EditorTools
 
             // The ground his weapon covers, drawn on the sand. Faint enough to read as light on the
             // floor rather than as paint, because the fight has to stay legible through it.
-            // White and fading out towards the man rather than a flat red: the fade carries the
-            // see-through, so the colour itself is full white.
-            palette.StrikeZone = TransparentUnlit("StrikeZone", Color.white);
+            // Fading out towards the man rather than a flat fill: the fade carries the see-through,
+            // so the colour itself is opaque. Reddish, on request - white read as a light on the sand
+            // rather than as a threat; a full red was the flat wedge this replaced.
+            palette.StrikeZone = TransparentUnlit("StrikeZone", StrikeZoneTint);
             palette.StrikeZone.SetTexture("_BaseMap", ProceduralTextures.EnsureRadialFade($"{TexturesDir}/StrikeZoneFade.png"));
             EditorUtility.SetDirty(palette.StrikeZone);
             palette.ReachRing = TransparentUnlit("ReachRing", new Color(1f, 1f, 1f, 0.5f));
