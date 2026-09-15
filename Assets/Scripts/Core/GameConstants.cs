@@ -30,6 +30,9 @@ namespace ColosseumDuel.Core
         // It no longer decides how far anybody goes. That is speed alone (see SpeedScale): a longer
         // phase is the same run at half the pace, not twice the ground.
         public const float ActionTime = 2.0f;
+        // A round with nothing in it - nobody running, nobody within reach, nobody in the fire - is
+        // over sooner: two seconds of two men standing still was two seconds of nothing to watch.
+        public const float QuietActionTime = 1.2f;
         // Picks stay on screen this long before the clash's first Planning - and the two men walk out
         // to their marks from the wall behind them in it (see GladiatorView.EntranceSeconds). A
         // second was over before the walk could be seen.

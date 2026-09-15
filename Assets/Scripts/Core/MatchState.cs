@@ -49,6 +49,12 @@ namespace ColosseumDuel.Core
         public int Round = 0;
         public float PhaseTimer = 0f;
 
+        /// <summary>
+        /// How long this action phase runs: the full ActionTime, or QuietActionTime for a round with
+        /// nothing in it - set as the phase begins, see GameManager.BeginActionPhase.
+        /// </summary>
+        public float ActionDuration = GameConstants.ActionTime;
+
         public PlayerState P1 = new PlayerState { Side = PlayerSide.P1 };
         public PlayerState Bot = new PlayerState { Side = PlayerSide.Bot };
 

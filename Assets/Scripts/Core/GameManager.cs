@@ -666,7 +666,7 @@ namespace ColosseumDuel.Core
                             break;
                         }
                     }
-                    if (State.PhaseTimer >= GameConstants.ActionTime)
+                    if (State.PhaseTimer >= State.ActionDuration)
                         EndActionPhase();
                     break;
 
@@ -728,7 +728,27 @@ namespace ColosseumDuel.Core
             _scorchTicksSent = 0;
 
             PredictStrikes();
+            State.ActionDuration = IsQuietRound() ? GameConstants.QuietActionTime : GameConstants.ActionTime;
             SetPhase(MatchPhase.Action);
+        }
+
+        /// <summary>
+        /// Whether nothing can happen this phase: nobody is running, the two are out of each other's
+        /// reach, and neither stands in a ring that burns this round or the next. Such a round is
+        /// cut short. The fire is checked because the spikes bite per phase - a shorter phase in
+        /// them would be a cheaper one.
+        /// </summary>
+        private bool IsQuietRound()
+        {
+            var a = State.P1.Active;
+            var b = State.Bot.Active;
+            if (a == null || b == null || !a.Alive || !b.Alive) return false;
+            if (a.IsRunning || b.IsRunning) return false;
+            if (Vector2.Distance(a.Pos, b.Pos) <= Mathf.Max(a.Reach, b.Reach) * 1.1f) return false;
+            foreach (var g in new[] { a, b })
+                if (HazardSystem.IsInActiveHazard(g.Pos, State.Round) || HazardSystem.IsInActiveHazard(g.Pos, State.Round + 1))
+                    return false;
+            return true;
         }
 
         private void Bleed(PlayerSide side, GladiatorInstance g)

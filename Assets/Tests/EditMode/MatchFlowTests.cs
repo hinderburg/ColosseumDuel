@@ -717,10 +717,11 @@ namespace ColosseumDuel.Tests
             var m = StartedClash();
             AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
 
-            // Far apart and standing still, so nothing cuts the phase short.
+            // Far apart, so no collision cuts the phase short - and one of them running away, so it
+            // is not a quiet round either (see AQuietRound_IsOverInAShorterActionPhase...).
             m.State.P1.Active.Pos = new Vector2(0f, -200f);
             m.State.Bot.Active.Pos = new Vector2(0f, 200f);
-            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.down, 0.3f, false);
             m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
             AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
 
@@ -1129,6 +1130,40 @@ namespace ColosseumDuel.Tests
                 Assert.Less(p1.Pos.x, -50f - GameConstants.MaceKnockback * 0.9f, "struck in the back, he was thrown");
                 Assert.IsFalse(p1.BlockedFrontThisRound);
             }
+        }
+
+        /// <summary>
+        /// A round in which nothing can happen - nobody running, nobody within reach, nobody in the
+        /// fire - is over in QuietActionTime; a round with a possible blow in it keeps the full phase.
+        /// </summary>
+        [Test]
+        public void AQuietRound_IsOverInAShorterActionPhase_AndOneWithinReachIsNot()
+        {
+            var m = StartedClash();
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Reveal);
+            var p1 = m.State.P1.Active;
+            var bot = m.State.Bot.Active;
+
+            // Round one: at their marks, a long way apart, both standing.
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            Assert.AreEqual(GameConstants.QuietActionTime, m.State.ActionDuration, 0.001f);
+            float quiet = 0f;
+            while (m.State.Phase == MatchPhase.Action) { m.Tick(Dt); quiet += Dt; }
+            Assert.AreEqual(GameConstants.QuietActionTime, quiet, 0.05f, "a quiet round should be over sooner");
+
+            // Round two: within a mace's reach, both standing - a blow is coming, so the full phase.
+            p1.Pos = new Vector2(-50f, 0f);
+            bot.Pos = new Vector2(50f, 0f);
+            p1.Hp = bot.Hp = 1000f;
+            m.SubmitPlanningAction(PlayerSide.P1, ActionType.Defend, Vector2.zero, 0f, false);
+            m.SubmitPlanningAction(PlayerSide.Bot, ActionType.Defend, Vector2.zero, 0f, false);
+            AdvanceUntilPhaseLeaves(m, MatchPhase.Planning);
+            Assert.AreEqual(GameConstants.ActionTime, m.State.ActionDuration, 0.001f);
+            float full = 0f;
+            while (m.State.Phase == MatchPhase.Action) { m.Tick(Dt); full += Dt; }
+            Assert.AreEqual(GameConstants.ActionTime, full, 0.05f, "a round with a blow in it keeps its full length");
         }
 
         /// <summary>A lock the other man put on him - Shackles - is over with the clash; only a lock beside his own running ability stays.</summary>
