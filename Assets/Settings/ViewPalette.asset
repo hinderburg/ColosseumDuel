@@ -117,6 +117,10 @@ MonoBehaviour:
   Torch: {fileID: 149928, guid: 0b5e7793d4d1e854385c5ce9b1e79f47, type: 3}
   Spike: {fileID: 2100000, guid: ca11de475b23eb5449464046fc126d39, type: 2}
   BloodHit: {fileID: 167524, guid: fdac75e990da47649b31f10049c400b0, type: 3}
+  WeaponTrail: {fileID: 2100000, guid: 454c63409b0bf894688cae55f3358ca3, type: 2}
+  BlockSparkFx: {fileID: 115120, guid: f00b7ce74a405d547ad157c971a52fb9, type: 3}
+  DustFx: {fileID: 187952, guid: c05e92eaee7a00844867e5edc8e0dde1, type: 3}
+  KnockoutSound: {fileID: 8300000, guid: f9ccdb916ca1dea4ea6ecbdd7dc4d9f9, type: 3}
   WallBlock: {fileID: 2189462429148424501, guid: 41ec6068ce141e64bb4966fb380c77b1, type: 3}
   WallPost: {fileID: 6231477085982915931, guid: 2d025f992500f354d885e93252787688, type: 3}
   GallerySlab: {fileID: 1506131158205574518, guid: eef496009fed37a4ab7f99fd9defacf2, type: 3}
