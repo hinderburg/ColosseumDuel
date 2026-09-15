@@ -75,14 +75,26 @@ namespace ColosseumDuel.Gameplay.View
         /// camera and two scripts writing the same transform would take turns undoing each other -
         /// most visibly during a knockout, when both would have something to say at once.
         /// </summary>
-        public void Shake()
+        public void Shake() => Shake(1f, Vector3.zero);
+
+        /// <summary>
+        /// The same, by the weight of the blow and along it: <paramref name="strength"/> scales the
+        /// knock (one is an ordinary blow), and <paramref name="kick"/> is the way the blow went, so
+        /// the camera is knocked the way the man was - with a little random on top, since a knock
+        /// that is exactly the same axis every time stops registering as an impact.
+        /// </summary>
+        public void Shake(float strength, Vector3 kick)
         {
             _shakeLeft = ShakeTime;
+            _shakeScale = Mathf.Max(0f, strength);
 
-            // A fresh direction per blow. One fixed axis reads as the same twitch every time, which
-            // stops registering as an impact after about three of them.
-            _shakeSeed = Random.insideUnitSphere;
+            var random = Random.insideUnitSphere;
+            _shakeSeed = kick.sqrMagnitude > 0.0001f
+                ? (kick.normalized * 0.8f + random * 0.45f).normalized
+                : random;
         }
+
+        private float _shakeScale = 1f;
 
         private void LateUpdate()
         {
@@ -124,7 +136,7 @@ namespace ColosseumDuel.Gameplay.View
             // during the planning slow-motion should still hit at full speed.
             float remaining = _shakeLeft / ShakeTime;
             float wobble = Mathf.Sin(remaining * Mathf.PI * 5f) * remaining * remaining;
-            return _shakeSeed * (wobble * ShakeStrength);
+            return _shakeSeed * (wobble * ShakeStrength * _shakeScale);
         }
 
         /// <summary>

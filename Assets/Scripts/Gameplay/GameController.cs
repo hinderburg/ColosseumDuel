@@ -292,6 +292,18 @@ namespace ColosseumDuel.Gameplay
         public void HitStop(float seconds)
             => _hitStopUntil = Mathf.Max(_hitStopUntil, Time.unscaledTime + Mathf.Max(0f, seconds));
 
+        /// <summary>
+        /// How hard the camera is knocked by this blow, one being an ordinary blow: by the share of
+        /// the man it took, more for a heavy weapon, half for one his guard met.
+        /// </summary>
+        public static float ShakeStrengthFor(Blow blow)
+        {
+            float strength = Mathf.Clamp(0.6f + blow.Share * 4f, 0.5f, 2.2f);
+            if (WeaponDef.Get(blow.Weapon).DamageMultiplier >= 1.2f) strength *= 1.3f;
+            if (blow.Blocked) strength *= 0.5f;
+            return strength;
+        }
+
         /// <summary>How long a hit-stop this blow is worth.</summary>
         public static float HitStopFor(Blow blow)
         {
@@ -501,9 +513,14 @@ namespace ColosseumDuel.Gameplay
             if (victim != null) Arena.PlayBlood(victim.Pos);
             ShowDamage(side, blow.Damage, DamageNumbersView.Source.Blow);
 
-            // And a knock on the camera, so a blow is felt and not only seen. Only for blows: a
-            // trap and a bleed go through their own events and leave the frame alone.
-            if (_deathCamera != null) _deathCamera.Shake();
+            // And a knock on the camera, so a blow is felt and not only seen - by the weight of the
+            // blow and along it. Only for blows: a trap and a bleed go through their own events and
+            // leave the frame alone.
+            if (_deathCamera != null)
+            {
+                var kick = victim != null ? Arena.ToWorld(victim.Pos) - Arena.ToWorld(blow.From) : Vector3.zero;
+                _deathCamera.Shake(ShakeStrengthFor(blow), kick);
+            }
         }
 
         private System.Collections.IEnumerator PlayBlowEffectsAfter(float delay, Blow blow)
