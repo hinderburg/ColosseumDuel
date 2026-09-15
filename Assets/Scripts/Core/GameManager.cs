@@ -323,6 +323,13 @@ namespace ColosseumDuel.Core
         {
             State.Clash++;
             State.Round = 0;
+
+            // Both men start the clash clean. The survivor keeps his health and his rage - what he
+            // earned by winning - and nothing else: no blessing, no running ability or its lock, no
+            // bleed, no net. The man just sent in was reset when he was picked; this is the survivor.
+            State.P1.Active?.ResetForNewClash();
+            State.Bot.Active?.ResetForNewClash();
+
             PlaceFightersForClash();
 
             // Battle Spirit: every man of the side steps out with a start on his rage.

@@ -495,7 +495,9 @@ namespace ColosseumDuel.Core
 
         public void ResetForNewClash()
         {
-            // Winner persists with current HP (not healed) - only a freshly-picked gladiator gets this.
+            // Everything but his health and his rage. Called for a man when he is picked, and for both
+            // men at the start of every clash - so a clash winner goes into the next one with the HP
+            // and rage he ended on (not healed, not emptied) and nothing else carried over.
             StopRunning();
             PlannedAction = ActionType.None;
             PlannedPath.Clear();
