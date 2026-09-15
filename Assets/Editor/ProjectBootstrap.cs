@@ -45,6 +45,7 @@ namespace ColosseumDuel.EditorTools
         private const string BlessingFxPath =
             "Assets/Epic Toon FX/Prefabs/Combat/Nova/Fire/NovaFireRed.prefab";
         private const string BlessingSoundPath = "Assets/Epic Toon FX/Sound/etfx_shoot_magic.wav";
+        private const string KnockoutSoundPath = "Assets/Epic Toon FX/Sound/etfx_explosion_dark01.wav";
 
         /// <summary>The strike wedge's colour, under its white fade: a warm red, lighter than a warning.</summary>
         private static readonly Color StrikeZoneTint = new Color(1f, 0.45f, 0.40f, 1f);
@@ -626,6 +627,11 @@ namespace ColosseumDuel.EditorTools
             if (palette.BlessingSound == null)
                 Debug.LogWarning($"[Colosseum] Sound not found at {BlessingSoundPath} - taking up the blessing " +
                                  "will sound like its effect's own fireball. Import Epic Toon FX to get it.");
+
+            palette.KnockoutSound = AssetDatabase.LoadAssetAtPath<AudioClip>(KnockoutSoundPath);
+            if (palette.KnockoutSound == null)
+                Debug.LogWarning($"[Colosseum] Sound not found at {KnockoutSoundPath} - a knockout will be silent. " +
+                                 "Import Epic Toon FX to get it.");
 
             palette.AppleFx = AssetDatabase.LoadAssetAtPath<GameObject>(AppleFxPath);
             palette.HornFx = AssetDatabase.LoadAssetAtPath<GameObject>(HornFxPath);

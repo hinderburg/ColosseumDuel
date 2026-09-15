@@ -1098,6 +1098,11 @@ namespace ColosseumDuel.Gameplay.View
 
         private float _deathShownFrom;
 
+        /// <summary>Where the blow that dropped him came from, in the world: he falls away from it.</summary>
+        private Vector3? _fallFrom;
+
+        public void FallFrom(Vector3 worldFrom) => _fallFrom = worldFrom;
+
         /// <summary>Whether he is drawn as dead yet: dead in the simulation, and past any hold.</summary>
         private bool ShownDead(GladiatorInstance g) => !g.Alive && Time.unscaledTime >= _deathShownFrom;
 
@@ -1174,6 +1179,7 @@ namespace ColosseumDuel.Gameplay.View
             _blowTrigger = -1;
             _sinceSwingStarted = float.MaxValue;
             _deathShownFrom = 0f;
+            _fallFrom = null;
             _hitPunchLeft = 0f;
             _burstLeft = 0f;
 
@@ -1238,6 +1244,16 @@ namespace ColosseumDuel.Gameplay.View
 
             if (ShownDead(g))
             {
+                // Turned to the blow that dropped him, so he falls from it rather than from wherever
+                // he happened to be looking - the clip falls backwards.
+                if (_fallFrom.HasValue)
+                {
+                    var toBlow = _fallFrom.Value - transform.position;
+                    toBlow.y = 0f;
+                    if (toBlow.sqrMagnitude > 0.0001f)
+                        _model.localRotation = Quaternion.LookRotation(toBlow.normalized, Vector3.up);
+                }
+
                 // Nothing above the head is worth reading on a body: an empty HP bar and the tags
                 // for gear he is no longer carrying only clutter the end of the clash.
                 _bars.gameObject.SetActive(false);

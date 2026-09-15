@@ -517,6 +517,17 @@ namespace ColosseumDuel.Gameplay
             if (blow.Blocked) ViewFor(side).PlayBlockSparks();
             if (thrown) StartCoroutine(PlayDustAfter(0.12f, side));
 
+            // The blow that dropped him: he falls from it, KO goes up over him in his side's colour,
+            // the frame flashes and the sting plays. The slow motion and the camera are elsewhere.
+            if (blow.Lethal)
+            {
+                ViewFor(side).FallFrom(Arena.ToWorld(blow.From));
+                if (victim != null) Knockouts?.Show(victim.Pos, side);
+                var sting = Arena.Palette != null ? Arena.Palette.KnockoutSound : null;
+                if (sting != null)
+                    AudioSource.PlayClipAtPoint(sting, Camera.main != null ? Camera.main.transform.position : Vector3.zero);
+            }
+
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
             if (victim != null) Arena.PlayBlood(victim.Pos);
@@ -722,6 +733,12 @@ namespace ColosseumDuel.Gameplay
 
         private Sprite BoonPicture(BoonKey key)
             => Arena != null && Arena.Palette != null ? Arena.Palette.BoonIconFor(key) : null;
+
+        /// <summary>The KO over a fallen man. Found on demand, like the callouts.</summary>
+        private KnockoutView Knockouts
+            => _knockouts != null ? _knockouts : (_knockouts = FindFirstObjectByType<KnockoutView>());
+
+        private KnockoutView _knockouts;
 
         /// <summary>Found on demand, like the damage numbers: the HUD builds it in its own Start.</summary>
         private AbilityCalloutView Callouts

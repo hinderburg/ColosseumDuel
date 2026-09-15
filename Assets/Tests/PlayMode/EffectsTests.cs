@@ -3,6 +3,7 @@ using System.Linq;
 using ColosseumDuel.Core;
 using ColosseumDuel.Gameplay;
 using ColosseumDuel.Gameplay.View;
+using ColosseumDuel.Gameplay.Hud;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -204,6 +205,41 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(position, camera.transform.position, "the camera must not move");
             Assert.AreEqual(rotation, camera.transform.rotation, "nor turn");
             Assert.AreEqual(fov, camera.fieldOfView, 0.0001f, "nor zoom");
+        }
+
+        /// <summary>A knockout puts KO up over the fallen man in his side's colour and flashes the frame.</summary>
+        [UnityTest]
+        public IEnumerator AKnockoutPutsKOOverTheFallenMan_AndFlashesTheFrame()
+        {
+            var bot = State.Bot.Active;
+            bot.Hp = 1f;
+            State.P1.Active.Pos = new Vector2(-40f, 0f);
+            bot.Pos = new Vector2(40f, 0f);
+            State.P1.Active.Facing = Vector2.right;
+            bot.Facing = Vector2.left;
+            _controller.Manager.SubmitPlanningAction(PlayerSide.P1, ActionType.Move, Vector2.right, 1f, false);
+            _controller.Manager.SubmitPlanningAction(PlayerSide.Bot, ActionType.Move, Vector2.left, 1f, false);
+
+            var knockouts = Object.FindFirstObjectByType<KnockoutView>(FindObjectsInactive.Include);
+            Assert.IsNotNull(knockouts, "the HUD should build the knockout view");
+
+            float t = 0f;
+            bool flashed = false;
+            while (t < GameConstants.PlanningTime + GameConstants.ActionTime + 2f && !knockouts.IsShowing)
+            {
+                yield return null;
+                t += Time.unscaledDeltaTime;
+                var flash = knockouts.GetComponentsInChildren<UnityEngine.UI.Image>(true).First(i => i.name == "KnockoutFlash");
+                if (flash.enabled && flash.color.a > 0.1f) flashed = true;
+            }
+
+            Assert.IsFalse(bot.Alive, "the blow did not kill him, so this proves nothing");
+            Assert.IsTrue(knockouts.IsShowing, "KO should be up over the fallen man");
+            var caption = knockouts.GetComponentsInChildren<UnityEngine.UI.Text>(true).First(l => l.name == "KnockoutCaption");
+            Assert.AreEqual(KnockoutView.Caption, caption.text);
+            Assert.AreEqual(HudFactory.BotColor.r, caption.color.r, 0.01f, "in the fallen side's colour");
+            Assert.AreEqual(HudFactory.BotColor.g, caption.color.g, 0.01f, "in the fallen side's colour");
+            Assert.IsTrue(flashed, "the frame should have flashed");
         }
 
         /// <summary>
