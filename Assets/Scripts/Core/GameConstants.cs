@@ -146,10 +146,11 @@ namespace ColosseumDuel.Core
 
         // --- rage / ability system ---
         public const float RagePerRoundPassive = 0.15f;
-        // Raised from 0.15 with the faster clashes: at four to six rounds a clash, a meter that
-        // filled on the third round brought the ability into the back half of the fight or later.
-        public const float RageBonusOnDealDamage = 0.20f;
-        public const float RageBonusOnTakeDamage = 0.10f;
+        // Raised twice with the faster clashes (0.20, now 0.25; taking 0.10 to 0.15): at four to six
+        // rounds a clash, a meter that filled on the third round brought the ability into the back
+        // half of the fight or later. Two rounds of blows fill it now, so it fires in the third.
+        public const float RageBonusOnDealDamage = 0.25f;
+        public const float RageBonusOnTakeDamage = 0.15f;
         public const float RageMax = 1.0f;
         public const int AbilityLockRounds = 1; // rounds rage cannot charge after activating an ability
 
