@@ -302,26 +302,28 @@ namespace ColosseumDuel.Core
         public const int HazardRingInterval = 3;
 
         // --- boons: taken for the rest of the match, on every man of the side (see BoonDef) ---
+        // Minor on purpose, about half what they first were: a boon is meant to tilt a clash, not
+        // decide it, and three of them stacked on a side should still lose to the better-played fight.
 
         /// <summary>Seconds the player has to choose a boon before one is chosen for him.</summary>
         public const float BoonPickTime = 10f;
 
-        public const float SharpenedSteelDamageMult = 1.12f;
-        public const float IronHideTakenMult = 0.88f;
-        public const float FleetFootSpeedMult = 1.2f;
-        public const float LongReachMult = 1.15f;
+        public const float SharpenedSteelDamageMult = 1.06f;
+        public const float IronHideTakenMult = 0.94f;
+        public const float FleetFootSpeedMult = 1.1f;
+        public const float LongReachMult = 1.08f;
 
         /// <summary>The rage every man of a side with Battle Spirit starts a clash with, at least.</summary>
-        public const float BattleSpiritRage = 0.35f;
+        public const float BattleSpiritRage = 0.2f;
 
         /// <summary>On top of the side and back multipliers, for a side with Flanker.</summary>
-        public const float FlankerDamageMult = 1.2f;
+        public const float FlankerDamageMult = 1.1f;
 
         /// <summary>What a guard lets through for a side with Stalwart, in place of DefendDamageMult.</summary>
-        public const float StalwartDefendMult = 0.5f;
+        public const float StalwartDefendMult = 0.6f;
 
-        public const float QuartermasterAppleHealFraction = 0.5f;
-        public const float QuartermasterHornRage = 0.5f;
+        public const float QuartermasterAppleHealFraction = 0.4f;
+        public const float QuartermasterHornRage = 0.45f;
         public const int QuartermasterBlessingExtraRounds = 1;
 
         // --- squads ---

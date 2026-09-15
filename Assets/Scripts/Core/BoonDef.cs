@@ -36,15 +36,15 @@ namespace ColosseumDuel.Core
 
         public static readonly IReadOnlyList<BoonDef> All = new List<BoonDef>
         {
-            new BoonDef(BoonKey.SharpenedSteel, "Sharpened Steel", "+12% damage"),
-            new BoonDef(BoonKey.IronHide, "Iron Hide", "-12% damage taken"),
-            new BoonDef(BoonKey.FleetFoot, "Fleet Foot", "+20% run distance"),
-            new BoonDef(BoonKey.LongReach, "Long Reach", "+15% weapon reach"),
-            new BoonDef(BoonKey.BattleSpirit, "Battle Spirit", "each clash starts with 35% rage"),
-            new BoonDef(BoonKey.Flanker, "Flanker", "+20% damage to the side or back"),
-            new BoonDef(BoonKey.Stalwart, "Stalwart", "a guard takes 50% off a blow, not 30%"),
+            new BoonDef(BoonKey.SharpenedSteel, "Sharpened Steel", "+6% damage"),
+            new BoonDef(BoonKey.IronHide, "Iron Hide", "-6% damage taken"),
+            new BoonDef(BoonKey.FleetFoot, "Fleet Foot", "+10% run distance"),
+            new BoonDef(BoonKey.LongReach, "Long Reach", "+8% weapon reach"),
+            new BoonDef(BoonKey.BattleSpirit, "Battle Spirit", "each clash starts with 20% rage"),
+            new BoonDef(BoonKey.Flanker, "Flanker", "+10% damage to the side or back"),
+            new BoonDef(BoonKey.Stalwart, "Stalwart", "a guard takes 40% off a blow, not 30%"),
             new BoonDef(BoonKey.Quartermaster, "Quartermaster",
-                "stronger pickups: blessing +1 round, apple heals half, horn gives 50% rage"),
+                "stronger pickups: blessing +1 round, apple heals 40%, horn gives 45% rage"),
         };
 
         private static readonly Dictionary<BoonKey, BoonDef> ByKey = All.ToDictionary(d => d.Key);
