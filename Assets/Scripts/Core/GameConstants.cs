@@ -103,13 +103,15 @@ namespace ColosseumDuel.Core
 
         /// <summary>
         /// Virtual units of run in one action phase for each point of Speed, however long the phase
-        /// is: Brutius at 10 draws 450, Barbarius 675, Hilius 900.
+        /// is: Brutius at 13 draws 455, Barbarius 525, Hilius 700.
         ///
-        /// Three times the 15 it was before speed was taken away. Speed came back to limit how long
-        /// a drawn run can be, and at 15 the budget was a short dash - drawing a shape with it left
-        /// no room for a shape.
+        /// Three times the 15 it was before speed was taken away, then down from 45 to 35. Speed came
+        /// back to limit how long a drawn run can be, and at 15 the budget was a short dash - drawing
+        /// a shape with it left no room for a shape. But at 45 the fastest man crossed half the arena
+        /// in one phase and the two met head on before either could go round the other; an approach
+        /// should take a round.
         /// </summary>
-        public const float SpeedScale = 45f;
+        public const float SpeedScale = 35f;
 
         /// <summary>
         /// How far the tutorial puts the sword and the tap point it asks for, measured from the
