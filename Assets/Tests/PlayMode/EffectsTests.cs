@@ -206,6 +206,38 @@ namespace ColosseumDuel.Tests
             Assert.AreEqual(fov, camera.fieldOfView, 0.0001f, "nor zoom");
         }
 
+        /// <summary>
+        /// A hit-stop freezes the world - the simulation does not tick and the time scale is zero -
+        /// and lets it go again when its moment is over.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AHitStopFreezesTheWorldForAMoment()
+        {
+            float before = State.PhaseTimer;
+            _controller.HitStop(0.3f);
+            yield return null;
+            yield return null;
+
+            Assert.IsTrue(_controller.IsHitStopped);
+            Assert.AreEqual(0f, Time.timeScale, 0.0001f, "the world should be stopped");
+            Assert.AreEqual(before, State.PhaseTimer, 0.0001f, "and the simulation waiting with it");
+
+            yield return RunSeconds(0.45f);
+            Assert.IsFalse(_controller.IsHitStopped);
+            Assert.Greater(Time.timeScale, 0f, "and running again once the moment is over");
+            Assert.Greater(State.PhaseTimer, before, "the simulation too");
+
+            // A blow from behind, or the one that drops him, is worth a longer stop than a plain one.
+            var plain = new Blow(PlayerSide.P1, PlayerSide.Bot, 10f, 100f, HitSector.Front, false, WeaponKind.SwordAndShield, Vector2.zero, false);
+            var behind = new Blow(PlayerSide.P1, PlayerSide.Bot, 10f, 100f, HitSector.Back, false, WeaponKind.SwordAndShield, Vector2.zero, false);
+            var killing = new Blow(PlayerSide.P1, PlayerSide.Bot, 10f, 100f, HitSector.Front, false, WeaponKind.SwordAndShield, Vector2.zero, true);
+            var guarded = new Blow(PlayerSide.P1, PlayerSide.Bot, 10f, 100f, HitSector.Front, true, WeaponKind.SwordAndShield, Vector2.zero, false);
+            Assert.AreEqual(GameController.HitStopSeconds, GameController.HitStopFor(plain), 0.0001f);
+            Assert.Greater(GameController.HitStopFor(behind), GameController.HitStopFor(plain));
+            Assert.Greater(GameController.HitStopFor(killing), GameController.HitStopFor(behind));
+            Assert.Less(GameController.HitStopFor(guarded), GameController.HitStopFor(plain));
+        }
+
         [UnityTest]
         public IEnumerator TakingAHitPlaysAVisibleReactionThatRecovers()
         {

@@ -262,10 +262,45 @@ namespace ColosseumDuel.Gameplay
             // The simulation runs on unscaled time on purpose. Planning slows the world down so the
             // wall torches visibly drag - but the four seconds the player gets to decide are four
             // real seconds, not twenty. Scaling the tick as well would stretch the phase itself.
-            Manager.Tick(Time.unscaledDeltaTime);
+            //
+            // Except in a hit-stop, when the simulation waits with the picture: a blow that landed a
+            // frame ago is being felt, and nothing moves until it has been.
+            if (!IsHitStopped) Manager.Tick(Time.unscaledDeltaTime);
 
             ApplyTimeScale();
             SyncViews();
+        }
+
+        // ------------------------------------------------------------------
+        // hit-stop
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// How long the world freezes when a blow lands, in real seconds: long enough to be felt as
+        /// weight, short enough not to be noticed as a pause. Longer for a blow from the side or
+        /// behind, for a heavy weapon and for the one that drops him; shorter for one a guard met.
+        /// </summary>
+        public const float HitStopSeconds = 0.07f;
+        public const float HitStopFlankMult = 1.5f, HitStopLethalMult = 2f, HitStopHeavyMult = 1.3f, HitStopBlockedMult = 0.6f;
+
+        private float _hitStopUntil;
+
+        /// <summary>Whether the world is frozen on a blow right now.</summary>
+        public bool IsHitStopped => Time.unscaledTime < _hitStopUntil;
+
+        /// <summary>Freezes everything - the simulation, the animation, the particles, the camera - for this long.</summary>
+        public void HitStop(float seconds)
+            => _hitStopUntil = Mathf.Max(_hitStopUntil, Time.unscaledTime + Mathf.Max(0f, seconds));
+
+        /// <summary>How long a hit-stop this blow is worth.</summary>
+        public static float HitStopFor(Blow blow)
+        {
+            float seconds = HitStopSeconds;
+            if (blow.Flanking) seconds *= HitStopFlankMult;
+            if (WeaponDef.Get(blow.Weapon).DamageMultiplier >= 1.2f) seconds *= HitStopHeavyMult;
+            if (blow.Blocked) seconds *= HitStopBlockedMult;
+            if (blow.Lethal) seconds *= HitStopLethalMult;
+            return seconds;
         }
 
         /// <summary>
@@ -281,6 +316,7 @@ namespace ColosseumDuel.Gameplay
             float target = 1f;
             if (Manager.State.Phase == MatchPhase.Planning) target = GameConstants.PlanningTimeScale;
             else if (Manager.State.Phase == MatchPhase.ClashEnd) target = DeathTimeScale;
+            if (IsHitStopped) target = 0f;
             if (!Mathf.Approximately(Time.timeScale, target)) Time.timeScale = target;
         }
 
@@ -453,6 +489,9 @@ namespace ColosseumDuel.Gameplay
             bool thrown = WeaponDef.Get(blow.Weapon).Knockback > 0f && !blow.Blocked;
             if (thrown) ViewFor(side).PlayKnockback();
             else ViewFor(side).PlayHit();
+
+            // The world stops on the blow for a moment, so it is felt before anything moves on.
+            HitStop(HitStopFor(blow));
 
             // Blood is spawned at the arena rather than parented to the gladiator: a burst that
             // follows a body still sprinting away reads as a trail, not as a blow landing.
